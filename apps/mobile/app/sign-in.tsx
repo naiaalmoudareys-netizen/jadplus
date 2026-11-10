@@ -6,6 +6,7 @@ import { Redirect } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ApiError } from '../src/api/client.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
+import { Hero } from '../src/ui/brand.js';
 import { Body, Button, Field, Heading, Notice, Page } from '../src/ui/kit.js';
 
 function message(err: unknown): string {
@@ -43,6 +44,7 @@ export default function SignIn(): ReactNode {
 
   return (
     <Page>
+      <Hero eyebrow="JAD Global" title="Welcome to JAD+" />
       <Heading>Sign in</Heading>
       {sentMessage === null ? (
         <>

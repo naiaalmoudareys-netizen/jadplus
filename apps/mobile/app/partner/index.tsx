@@ -11,7 +11,7 @@ import { arrivalLabel, dueLabel, isOverdue, jobTitle, statusLabel } from '../../
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { useLoad, useNow } from '../../src/ui/hooks.js';
 import { Body, Notice, Page } from '../../src/ui/kit.js';
-import { colors, radius, space } from '../../src/ui/theme.js';
+import { colors, fonts, radius, space } from '../../src/ui/theme.js';
 
 const REFRESH_MS = 30_000;
 
@@ -86,7 +86,7 @@ export default function PartnerJobs(): ReactNode {
 const styles = StyleSheet.create({
   list: { padding: space.md, gap: space.sm },
   header: { gap: space.sm, marginBottom: space.sm, alignItems: 'flex-end' },
-  link: { fontSize: 17, color: colors.navy, textDecorationLine: 'underline' },
+  link: { fontSize: 17, fontFamily: fonts.regular, color: colors.slate, textDecorationLine: 'underline' },
   row: {
     backgroundColor: colors.card,
     borderRadius: radius,
@@ -98,9 +98,9 @@ const styles = StyleSheet.create({
   emergency: { borderColor: colors.urgent, borderWidth: 2 },
   pressed: { opacity: 0.7 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 19, fontWeight: '600', color: colors.text },
-  ref: { fontSize: 15, color: colors.muted },
-  status: { fontSize: 16, color: colors.muted },
-  due: { fontSize: 17, fontWeight: '600', color: colors.text },
+  title: { fontSize: 19, fontFamily: fonts.semibold, color: colors.text },
+  ref: { fontSize: 15, fontFamily: fonts.regular, color: colors.muted },
+  status: { fontSize: 16, fontFamily: fonts.regular, color: colors.muted },
+  due: { fontSize: 17, fontFamily: fonts.semibold, color: colors.text },
   urgentText: { color: colors.urgent },
 });

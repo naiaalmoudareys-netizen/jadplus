@@ -22,7 +22,7 @@ import { useSession, useSessionController } from '../../../src/session/SessionPr
 import { Conversation } from '../../../src/ui/Conversation.js';
 import { useLoad, useNow } from '../../../src/ui/hooks.js';
 import { Body, Button, Heading, Loading, Notice, Page } from '../../../src/ui/kit.js';
-import { colors, radius, space } from '../../../src/ui/theme.js';
+import { colors, fonts, radius, space } from '../../../src/ui/theme.js';
 
 function Choice(props: { label: string; selected: boolean; onPress: () => void }): ReactNode {
   return (
@@ -168,7 +168,7 @@ export default function Job(): ReactNode {
 const styles = StyleSheet.create({
   section: { gap: space.sm, marginTop: space.md },
   card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.xs },
-  due: { fontSize: 20, fontWeight: '600', color: colors.text },
+  due: { fontSize: 20, fontFamily: fonts.semibold, color: colors.text },
   urgent: { color: colors.urgent },
   choice: {
     backgroundColor: colors.card,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     padding: space.md,
   },
-  chosen: { borderColor: colors.navy, borderWidth: 2 },
-  choiceText: { fontSize: 18, color: colors.text },
-  chosenText: { fontWeight: '600', color: colors.navy },
+  chosen: { borderColor: colors.slate, borderWidth: 2 },
+  choiceText: { fontSize: 18, fontFamily: fonts.regular, color: colors.text },
+  chosenText: { fontFamily: fonts.semibold, color: colors.navy },
 });

@@ -8,6 +8,7 @@ import {
   asksWhereFrom,
   callLink,
 } from '../src/emergency/options.js';
+import { projectKey } from '../src/brand/projects.js';
 import { placeLabel, residentStatusLabel } from '../src/jobs/format.js';
 
 describe('emergency choices', () => {
@@ -45,5 +46,16 @@ describe('what residents read', () => {
       placeLabel({ unitName: 'JAD288-1102', project: 'JAD 288', building: 'Building B', address: null }),
     ).toBe('JAD288-1102 · Building B · JAD 288');
     expect(placeLabel(null)).toBe('Unit details with JAD+');
+  });
+});
+
+describe('brand photos (docs/DESIGN.md)', () => {
+  it('each project gets its photo, whatever the spelling from Salesforce', () => {
+    expect(projectKey('JAD 288')).toBe('jad288');
+    expect(projectKey('J288')).toBe('jad288');
+    expect(projectKey('J188')).toBe('j188');
+    expect(projectKey('171 Garden Heights')).toBe('171gh');
+    expect(projectKey('Unknown Tower')).toBeNull();
+    expect(projectKey(null)).toBeNull();
   });
 });

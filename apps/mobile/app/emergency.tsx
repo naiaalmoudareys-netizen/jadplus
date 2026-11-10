@@ -21,7 +21,7 @@ import { placeLabel } from '../src/jobs/format.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { useLoad } from '../src/ui/hooks.js';
 import { Body, Button, Field, Heading, Loading, Notice, Page } from '../src/ui/kit.js';
-import { colors, radius, space } from '../src/ui/theme.js';
+import { colors, fonts, radius, space } from '../src/ui/theme.js';
 
 function Choice(props: {
   label: string;
@@ -224,9 +224,14 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     padding: space.md,
   },
-  chosen: { borderColor: colors.navy, borderWidth: 2 },
+  chosen: { borderColor: colors.slate, borderWidth: 2 },
   danger: { backgroundColor: colors.urgentSoft, borderColor: colors.urgent },
-  choiceText: { fontSize: 18, color: colors.text },
-  dangerText: { color: colors.urgent, fontWeight: '600' },
-  confirmation: { fontSize: 22, lineHeight: 30, fontWeight: '600', color: colors.navy },
+  choiceText: { fontSize: 18, fontFamily: fonts.regular, color: colors.text },
+  dangerText: { color: colors.urgent, fontFamily: fonts.semibold },
+  confirmation: {
+    fontSize: 22,
+    lineHeight: 30,
+    fontFamily: fonts.semibold,
+    color: colors.navy,
+  },
 });

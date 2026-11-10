@@ -9,7 +9,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ApiError, type ApiClient } from '../api/client.js';
 import { postMessage } from '../api/endpoints.js';
 import { Body, Button, Field, Heading, Notice } from './kit.js';
-import { colors, radius, space } from './theme.js';
+import { colors, fonts, radius, space } from './theme.js';
 
 const MAX_LENGTH = 1000;
 
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   bubble: { borderRadius: radius, padding: space.md, gap: space.xs, maxWidth: '90%' },
   mine: { backgroundColor: colors.navy, alignSelf: 'flex-end' },
   theirs: { backgroundColor: colors.card, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.line },
-  author: { fontSize: 13, color: colors.muted },
-  body: { fontSize: 17, lineHeight: 23, color: colors.text },
+  author: { fontSize: 13, fontFamily: fonts.regular, color: colors.muted },
+  body: { fontSize: 17, fontFamily: fonts.regular, lineHeight: 23, color: colors.text },
   onNavy: { color: colors.onNavy },
 });

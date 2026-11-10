@@ -6,12 +6,13 @@ import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { RequestSummary } from '@jadplus/shared';
-import { myRequests } from '../src/api/endpoints.js';
+import { myPlaces, myRequests } from '../src/api/endpoints.js';
 import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../src/jobs/format.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
+import { Hero } from '../src/ui/brand.js';
 import { useLoad } from '../src/ui/hooks.js';
 import { Body, Button, Heading, Notice, Page } from '../src/ui/kit.js';
-import { colors, radius, space } from '../src/ui/theme.js';
+import { colors, fonts, radius, space } from '../src/ui/theme.js';
 
 const REFRESH_MS = 30_000;
 
@@ -40,6 +41,9 @@ export default function Home(): ReactNode {
   const router = useRouter();
   const load = useCallback(() => myRequests(api), [api]);
   const requests = useLoad(load, REFRESH_MS);
+  const loadPlaces = useCallback(() => myPlaces(api), [api]);
+  const places = useLoad(loadPlaces);
+  const home = places.data?.[0]?.location ?? null;
   const { reload } = requests;
   useFocusEffect(
     useCallback(() => {
@@ -50,6 +54,11 @@ export default function Home(): ReactNode {
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   return (
     <Page>
+      <Hero
+        project={home?.project ?? null}
+        eyebrow={home?.project ?? 'JAD Global'}
+        title={home === null ? 'Welcome' : home.unitName}
+      />
       <Button
         title="Report an emergency"
         kind="danger"
@@ -87,9 +96,15 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.7 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 19, fontWeight: '600', color: colors.text },
-  ref: { fontSize: 15, color: colors.muted },
-  status: { fontSize: 16, color: colors.text },
-  place: { fontSize: 15, color: colors.muted },
-  link: { fontSize: 17, color: colors.navy, textDecorationLine: 'underline', marginTop: space.md },
+  title: { fontSize: 19, fontFamily: fonts.semibold, color: colors.text },
+  ref: { fontSize: 15, fontFamily: fonts.regular, color: colors.muted },
+  status: { fontSize: 16, fontFamily: fonts.regular, color: colors.text },
+  place: { fontSize: 15, fontFamily: fonts.regular, color: colors.muted },
+  link: {
+    fontSize: 17,
+    fontFamily: fonts.regular,
+    color: colors.slate,
+    textDecorationLine: 'underline',
+    marginTop: space.md,
+  },
 });
