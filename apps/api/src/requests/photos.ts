@@ -1,8 +1,9 @@
 /**
  * Photos on a request (ADR 0013; CLAUDE.md "Uploads").
  *
- * - POST /api/requests/:id/photos             a resident adds a photo (raw JPEG or PNG body, at most 10 MB,
- *                                             at most 3 per request, open requests only)
+ * - POST /api/requests/:id/photos             a resident adds a photo of the problem, or the partner a photo of
+ *                                             the finished work (ADR 0018); raw JPEG or PNG, at most 10 MB, at
+ *                                             most 3 of each kind, open requests only
  * - GET  /api/requests/:id/photos/:photoId    anyone who may see the request views it
  *
  * The type is taken from the file's own bytes, never from its name, and must match what the phone declared;
@@ -42,10 +43,16 @@ async function digest(bytes: Uint8Array): Promise<Uint8Array> {
 export function photoRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
 
-  r.post('/requests/:id/photos', requireRole('owner', 'tenant'), async (c) => {
+  r.post('/requests/:id/photos', requireRole('owner', 'tenant', 'partner', 'partner_admin'), async (c) => {
     const { id } = parseParams(c, requestIdParam);
     const row = await visibleRequest(c, id);
     if (!(await canMessage(c, row))) throw new ApiError(409, 'Photos can only be added to an open request.');
+    // Residents show the problem; the partner shows the finished work (E10, ADR 0018), only while working.
+    const byPartner = c.get('auth').role === 'partner' || c.get('auth').role === 'partner_admin';
+    const purpose = byPartner ? 'completion_photo' : 'request_photo';
+    if (byPartner && row.status !== 'in_progress' && row.status !== 'completed') {
+      throw new ApiError(409, 'Photos of the finished work can be added once the work has started.');
+    }
     const declared = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
     const bytes = new Uint8Array(await c.req.arrayBuffer());
     if (bytes.length === 0 || bytes.length > PHOTO_MAX_BYTES) {
@@ -58,8 +65,8 @@ export function photoRoutes(): Hono<AppEnv> {
 
     const db = c.env.DB;
     const count = await db
-      .prepare("SELECT count(*) AS n FROM attachments WHERE request_id = ? AND purpose = 'request_photo'")
-      .bind(id)
+      .prepare('SELECT count(*) AS n FROM attachments WHERE request_id = ? AND purpose = ?')
+      .bind(id, purpose)
       .first<{ n: number }>();
     if ((count?.n ?? 0) >= MAX_REQUEST_PHOTOS) {
       throw new ApiError(409, `A request can have up to ${String(MAX_REQUEST_PHOTOS)} photos.`);
@@ -73,9 +80,9 @@ export function photoRoutes(): Hono<AppEnv> {
       db
         .prepare(
           `INSERT INTO attachments (id, request_id, purpose, r2_key, content_type, byte_size, sha256, uploaded_by_user_id, uploaded_at)
-           VALUES (?, ?, 'request_photo', ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(photoId, id, key, type, clean.length, await digest(clean), actor.userId, now),
+        .bind(photoId, id, purpose, key, type, clean.length, await digest(clean), actor.userId, now),
       eventStatement(db, {
         requestId: id,
         at: now,

@@ -82,13 +82,34 @@ describe('request photos', () => {
     expect((await upload(w, id, jpegWithLocation())).status).toBe(409);
   });
 
-  it('C-AZ-1/C-AZ-2: only residents on the request add photos; others cannot see them', async () => {
+  it('C-AZ-2: the partner adds photos only of finished work; another partner can neither add nor see them', async () => {
     const w = await world();
     const id = await requestId(w);
-    expect((await upload(w, id, jpegWithLocation(), 'image/jpeg', w.primaryToken)).status).toBe(403);
+    expect((await upload(w, id, jpegWithLocation(), 'image/jpeg', w.primaryToken)).status).toBe(409);
+    expect((await upload(w, id, jpegWithLocation(), 'image/jpeg', w.backupToken)).status).toBe(404);
     const { id: photoId } = await (await upload(w, id, jpegWithLocation())).json<{ id: string }>();
     expect(
       (await w.h.request(`/api/requests/${id}/photos/${photoId}`, { token: w.backupToken })).status,
     ).toBe(404);
+  });
+
+  it('E10/ADR 0018: photos the partner adds while working show as finished-work photos', async () => {
+    const w = await world();
+    const id = await requestId(w);
+    const post = (path: string, json: object) =>
+      w.h.request(path, { method: 'POST', token: w.primaryToken, json });
+    // The job is an emergency: acknowledged first (E4), then the work starts.
+    await post(`/api/partner/jobs/${id}/acknowledge`, {
+      technicianId: 't-primary',
+      arrivalWindowStart: w.h.clock + 1_800_000,
+      arrivalWindowEnd: w.h.clock + 3_600_000,
+    });
+    expect((await post(`/api/partner/jobs/${id}/start`, {})).status).toBe(200);
+    expect((await upload(w, id, jpegWithLocation(), 'image/jpeg', w.primaryToken)).status).toBe(201);
+    const detail = requestDetailResponse.parse(
+      await (await w.h.request(`/api/requests/${id}`, { token: w.ownerToken })).json(),
+    );
+    expect(detail.completionPhotos).toHaveLength(1);
+    expect(detail.photos).toHaveLength(0);
   });
 });

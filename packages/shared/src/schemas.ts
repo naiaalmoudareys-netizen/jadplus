@@ -21,7 +21,7 @@ export const emailSchema = z
 export const signInCodeSchema = z.string().regex(/^\d{6}$/, 'The code is 6 digits.');
 
 const userRoleSchema = z.enum(ROLES).exclude(['system']);
-const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+export const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
 /** Mobile numbers are stored in international form (+971…), so the blind index is stable. */
 export const phoneSchema = z

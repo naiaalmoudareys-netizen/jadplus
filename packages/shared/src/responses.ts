@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
+import { JOB_ACTIONS } from './jobflow.js';
 import { ROLES, STATUSES } from './lifecycle.js';
 import { VISIT_SLOT_KEYS } from './visits.js';
 
@@ -131,6 +132,27 @@ export const requestDetailResponse = z.object({
   messages: z.array(message),
   /** Messages can be sent while the request is open and the person may act on it. */
   canMessage: z.boolean(),
+  /** The booked visit (ADR 0018): window and the technician's name (E4). */
+  visit: z
+    .object({ start: z.number().int(), end: z.number().int(), technician: z.string().nullable() })
+    .nullable(),
+  /** The latest quote (L4, A2, A3). */
+  quote: z
+    .object({
+      id: z.string(),
+      revision: z.number().int(),
+      amountAed: z.number(),
+      scope: z.string(),
+      status: z.enum(['pending', 'approved', 'declined', 'expired', 'withdrawn']),
+      sentAt: z.number().int(),
+      expiresAt: z.number().int(),
+    })
+    .nullable(),
+  /** Photos the partner added when finishing the work (E10). */
+  completionPhotos: z.array(z.object({ id: z.string() })),
+  rating: z.object({ stars: z.number().int(), comment: z.string().nullable() }).nullable(),
+  /** What the signed-in person can do now (jobflow.ts). */
+  actions: z.array(z.enum(JOB_ACTIONS)),
 });
 export type RequestDetail = z.infer<typeof requestDetailResponse>;
 

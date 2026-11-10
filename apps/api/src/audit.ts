@@ -35,6 +35,17 @@ export const AUDIT_ACTIONS = [
   'preferences_changed',
   'terms_accepted',
   'marketing_consent_changed',
+  'visit_booked',
+  'quote_sent',
+  'work_started',
+  'work_completed',
+  'quote_approved',
+  'quote_declined',
+  'work_confirmed',
+  'work_reopened',
+  'job_rated',
+  'quote_expired',
+  'request_auto_closed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

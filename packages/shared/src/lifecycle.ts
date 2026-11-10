@@ -60,7 +60,7 @@ type TransitionTable = Readonly<Partial<Record<Status, readonly Status[]>>>;
 const TRANSITIONS: Readonly<Partial<Record<Role, TransitionTable>>> = {
   owner: {
     awaiting_owner: ['submitted', 'closed'], // approve / decline tenant request (A1)
-    quote_sent: ['scheduled', 'closed'], // approve quote / decline (A3; revised quote handled by partner)
+    quote_sent: ['scheduled', 'assigned', 'closed'], // approve / decline: back to the partner for one revised quote, or close (A3)
     completed: ['closed', 'reopened'], // confirm / not done (U6: owner living in the unit)
     submitted: ['cancelled'],
     assigned: ['cancelled', 'closed'], // cancel / owner arranged (E19)

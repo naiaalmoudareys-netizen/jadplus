@@ -5,6 +5,7 @@ export * from './conversation.js';
 export * from './desk.js';
 export * from './emergency.js';
 export * from './escalation.js';
+export * from './jobflow.js';
 export * from './lifecycle.js';
 export * from './messages.js';
 export * from './oncall.js';

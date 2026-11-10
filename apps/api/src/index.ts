@@ -5,6 +5,7 @@ import type { Bindings } from './env.js';
 import { runDelivery } from './delivery/run.js';
 import type { Sender, Senders } from './delivery/senders.js';
 import { runEscalationSweep } from './jobs/escalation.js';
+import { runRequestClock } from './jobs/request-clock.js';
 import { runPartnerReview } from './jobs/partner-review.js';
 import { createLogger } from './logger.js';
 import { ownerPortalSource } from './portal/source.js';
@@ -55,14 +56,14 @@ export default {
   fetch: app.fetch,
   scheduled(controller, env, ctx) {
     const now = Date.now();
-    // wrangler.toml: every minute = escalation (E5-E7) then alert delivery, so new alerts go out the same
+    // wrangler.toml: every minute = escalation (E5-E7), the request clock (A2, A4), then alert delivery, so new alerts go out the same
     // minute; 02:00 UTC (06:00 Dubai) = daily partner check (S6, S7).
     const job =
       controller.cron === DAILY_PARTNER_CHECK
         ? runPartnerReview(env.DB, now, createLogger({ job: 'partner_review' }))
-        : runEscalationSweep(env.DB, now, createLogger({ job: 'escalation' })).then(() =>
-            runDelivery(env, sendersFor(env), now, createLogger({ job: 'delivery' })),
-          );
+        : runEscalationSweep(env.DB, now, createLogger({ job: 'escalation' }))
+            .then(() => runRequestClock(env.DB, now, createLogger({ job: 'request_clock' })))
+            .then(() => runDelivery(env, sendersFor(env), now, createLogger({ job: 'delivery' })));
     ctx.waitUntil(job.then(() => undefined));
   },
 } satisfies ExportedHandler<Bindings>;

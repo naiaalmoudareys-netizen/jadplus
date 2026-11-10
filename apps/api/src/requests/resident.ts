@@ -22,6 +22,7 @@ import {
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
+import { detailExtras } from './flow.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
@@ -65,6 +66,11 @@ export async function visibleRequest(c: Ctx, id: string): Promise<DetailRow> {
     throw new ApiError(404, NOT_FOUND);
   }
   return row;
+}
+
+/** Whether the person may act on this request at all (which action is jobflow.ts). */
+async function canActNow(c: Ctx, row: DetailRow): Promise<boolean> {
+  return canActOnRequest(c.get('auth'), await requestFacts(c.env.DB, row), dubaiDate(c.get('now')));
 }
 
 export async function canMessage(c: Ctx, row: DetailRow): Promise<boolean> {
@@ -174,6 +180,7 @@ export function residentRoutes(): Hono<AppEnv> {
         photos: photos.results,
         messages: results.map((m) => toMessage(m, viewer)),
         canMessage: await canMessage(c, row),
+        ...(await detailExtras(c, id, await canActNow(c, row))),
       });
     },
   );

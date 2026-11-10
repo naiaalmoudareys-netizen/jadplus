@@ -38,6 +38,10 @@ export type EventKind =
   | 'reminder_sent'
   | 'escalated'
   | 'attachment_added'
+  | 'visit_booked'
+  | 'quote_sent'
+  | 'quote_decided'
+  | 'rated'
   | 'note';
 
 export interface EventInput {
