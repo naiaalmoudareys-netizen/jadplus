@@ -24,6 +24,8 @@ export default function RootLayout(): ReactNode {
           <Stack.Screen name="home" options={{ title: 'JAD+', headerBackVisible: false }} />
           <Stack.Screen name="partner/index" options={{ title: 'My jobs', headerBackVisible: false }} />
           <Stack.Screen name="partner/job/[id]" options={{ title: 'Job' }} />
+          <Stack.Screen name="emergency" options={{ title: 'Emergency' }} />
+          <Stack.Screen name="request/[id]" options={{ title: 'Request' }} />
           <Stack.Screen name="settings" options={{ title: 'Account' }} />
         </Stack>
       </SessionProvider>

@@ -75,6 +75,9 @@ export const ownerLookupResponse = z.strictObject({
         dealId: sfId,
         unitName: text(80),
         project: text(120).nullable(),
+        /** Building name and project address: where a technician goes (ADR 0009). Not personal data. */
+        building: text(80).nullable(),
+        address: text(300).nullable(),
         role: z.enum(['Buyer', 'Joint buyer']),
       }),
     )

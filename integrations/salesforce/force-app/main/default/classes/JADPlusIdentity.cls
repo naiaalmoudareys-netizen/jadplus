@@ -7,7 +7,7 @@
  *
  * Answers for ONE person:
  *   { found, shared, person: { contactId, name, email, mobile } | null,
- *     units: [ { unitId, dealId, unitName, project, role: 'Buyer' | 'Joint buyer' } ] }
+ *     units: [ { unitId, dealId, unitName, project, building, address, role: 'Buyer' | 'Joint buyer' } ] }
  * A person is matched on their person account's email fields, or on Account.Mobile_Match_Key__c (last 9 digits).
  * Units are those of Sold or Booked deals where the person is the buyer or a contact role (joint buyer),
  * the same rule as JADPortalApi. If the email or number belongs to more than one different person, nobody is
@@ -108,16 +108,21 @@ global without sharing class JADPlusIdentity {
             if (!roles.containsKey(r.OpportunityId)) roles.put(r.OpportunityId, 'Joint buyer');
         }
         Set<Id> seenUnits = new Set<Id>();
-        for (Opportunity o : [SELECT Id, Unit__c, Unit__r.Name, Unit__r.Project__r.Name FROM Opportunity
+        for (Opportunity o : [SELECT Id, Unit__c, Unit__r.Name, Unit__r.Building_Name__c, Unit__r.Project__r.Name,
+                                     Unit__r.Project__r.Address__c FROM Opportunity
                               WHERE Id IN :roles.keySet() AND Unit__c != null WITH SYSTEM_MODE ORDER BY Unit__r.Name LIMIT 200]) {
             if (seenUnits.contains(o.Unit__c)) continue;
             seenUnits.add(o.Unit__c);
             String project = o.Unit__r.Project__r == null ? null : o.Unit__r.Project__r.Name;
+            String address = o.Unit__r.Project__r == null ? null : o.Unit__r.Project__r.Address__c;
+            String building = o.Unit__r.Building_Name__c;
             out.add(new Map<String, Object>{
                 'unitId' => o.Unit__c,
                 'dealId' => o.Id,
                 'unitName' => o.Unit__r.Name.left(80),
                 'project' => project == null ? null : project.left(120),
+                'building' => String.isBlank(building) ? null : building.left(80),
+                'address' => String.isBlank(address) ? null : address.left(300),
                 'role' => roles.get(o.Id)
             });
         }

@@ -22,6 +22,8 @@ const unit = {
   dealId: '006000000000001AAA',
   unitName: 'JAD288-1102',
   project: 'JAD 288',
+  building: 'Building B',
+  address: 'Jumeirah Village Circle, Dubai',
   role: 'Buyer' as const,
 };
 const found: OwnerLookup = { found: true, shared: false, person, units: [unit] };

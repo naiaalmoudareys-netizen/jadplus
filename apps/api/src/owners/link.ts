@@ -60,10 +60,11 @@ function unitStatements(db: D1Database, userId: string, units: OwnerLookup['unit
     ...units.map((u) =>
       db
         .prepare(
-          `INSERT INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, deal_role, synced_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, sf_unit_id) DO NOTHING`,
+          `INSERT INTO owner_units
+             (user_id, sf_unit_id, sf_deal_id, unit_name, project, building, address, deal_role, synced_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (user_id, sf_unit_id) DO NOTHING`,
         )
-        .bind(userId, u.unitId, u.dealId, u.unitName, u.project, u.role, now),
+        .bind(userId, u.unitId, u.dealId, u.unitName, u.project, u.building, u.address, u.role, now),
     ),
     db
       .prepare('UPDATE users SET owner_synced_at = ?, updated_at = MAX(updated_at, ?) WHERE id = ?')

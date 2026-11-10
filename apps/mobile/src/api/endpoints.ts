@@ -1,11 +1,22 @@
 /** The API calls the app makes, one function each, with the shared request and answer schemas. */
 import {
   codeSentResponse,
+  emergencyRaisedResponse,
+  messagePostedResponse,
+  myPlacesResponse,
+  myRequestsResponse,
+  requestDetailResponse,
   meResponse,
   partnerJobsResponse,
   partnerTeamResponse,
   sessionResponse,
   type AcknowledgeEmergencyBody,
+  type EmergencyRaised,
+  type MyPlace,
+  type RaiseEmergencyBody,
+  type RequestDetail,
+  type RequestMessage,
+  type RequestSummary,
   type MeResponse,
   type PartnerJob,
   type PartnerTeam,
@@ -53,3 +64,34 @@ export const acknowledge = (
   body: AcknowledgeEmergencyBody,
 ): Promise<unknown> =>
   api.post(`/api/partner/jobs/${encodeURIComponent(jobId)}/acknowledge`, body, z.unknown());
+
+export const myPlaces = async (api: ApiClient): Promise<MyPlace[]> =>
+  (await api.get('/api/me/places', myPlacesResponse)).places;
+
+export const myRequests = async (api: ApiClient): Promise<RequestSummary[]> =>
+  (await api.get('/api/requests', myRequestsResponse)).requests;
+
+export const requestDetail = (api: ApiClient, id: string): Promise<RequestDetail> =>
+  api.get(`/api/requests/${encodeURIComponent(id)}`, requestDetailResponse);
+
+export const postMessage = async (
+  api: ApiClient,
+  id: string,
+  body: string,
+): Promise<{ message: RequestMessage; masked: boolean }> =>
+  api.post(`/api/requests/${encodeURIComponent(id)}/messages`, { body }, messagePostedResponse);
+
+/** E1/E3: raise an emergency from a place the person may use (owner: unit; tenant: tenancy). */
+export const raiseEmergency = (
+  api: ApiClient,
+  place: MyPlace,
+  details: Pick<RaiseEmergencyBody, 'type' | 'faultSource' | 'description'>,
+): Promise<EmergencyRaised> =>
+  api.post(
+    '/api/emergencies',
+    {
+      ...(place.tenancyId === null ? { sfUnitId: place.sfUnitId } : { tenancyId: place.tenancyId }),
+      ...details,
+    },
+    emergencyRaisedResponse,
+  );

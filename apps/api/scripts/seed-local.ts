@@ -53,8 +53,8 @@ const sql = [
   `INSERT OR IGNORE INTO partner_documents (id, partner_id, kind, r2_key, expires_on, uploaded_at, uploaded_by) VALUES
     ('demo-doc-1', 'demo-partner', 'trade_licence', 'demo/licence.pdf', '2027-12-31', ${now}, 'demo-owner'),
     ('demo-doc-2', 'demo-partner', 'insurance', 'demo/insurance.pdf', '2027-12-31', ${now}, 'demo-owner');`,
-  `INSERT OR IGNORE INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, deal_role, synced_at)
-    VALUES ('demo-owner', '${UNIT}', '006DEMO0000000001A', 'JAD288-1102', 'JAD 288', 'Buyer', ${now});`,
+  `INSERT OR IGNORE INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, building, address, deal_role, synced_at)
+    VALUES ('demo-owner', '${UNIT}', '006DEMO0000000001A', 'JAD288-1102', 'JAD 288', 'Building B', 'Jumeirah Village Circle, Dubai', 'Buyer', ${now});`,
   `UPDATE users SET owner_synced_at = ${now} WHERE id = 'demo-owner';`,
   `INSERT INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, raised_by_user_id, raised_by_role, description,
     is_emergency, emergency_type, fault_source, status, partner_id, next_due_at, next_due_kind, created_at, updated_at, status_changed_at)

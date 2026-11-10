@@ -1,5 +1,11 @@
 /** How jobs are described on the partner screens (R3: "clock and next action due"). */
-import { EMERGENCY_TYPE_LABELS, dubaiClock, type PartnerJob } from '@jadplus/shared';
+import {
+  EMERGENCY_TYPE_LABELS,
+  dubaiClock,
+  type PartnerJob,
+  type RequestSummary,
+  type UnitLocation,
+} from '@jadplus/shared';
 
 const MIN = 60_000;
 
@@ -21,7 +27,32 @@ export function statusLabel(status: PartnerJob['status']): string {
   return STATUS_LABELS[status];
 }
 
-export function jobTitle(job: PartnerJob): string {
+const RESIDENT_STATUS_LABELS: Readonly<Record<RequestSummary['status'], string>> = {
+  awaiting_owner: 'Waiting for the owner',
+  submitted: 'Received by JAD+',
+  assigned: 'Sent to the service partner',
+  quote_sent: 'Quote waiting for the owner',
+  scheduled: 'Technician on the way',
+  in_progress: 'Work in progress',
+  on_hold: 'On hold',
+  completed: 'Work completed',
+  reopened: 'Reopened',
+  closed: 'Closed',
+  cancelled: 'Cancelled',
+};
+
+/** What a resident sees as the status of their request. */
+export function residentStatusLabel(status: RequestSummary['status']): string {
+  return RESIDENT_STATUS_LABELS[status];
+}
+
+/** "JAD288-1102 · Building B · JAD 288" */
+export function placeLabel(location: UnitLocation | null): string {
+  if (location === null) return 'Unit details with JAD+';
+  return [location.unitName, location.building, location.project].filter((x) => x !== null).join(' · ');
+}
+
+export function jobTitle(job: Pick<PartnerJob, 'emergency' | 'emergencyType'>): string {
   if (!job.emergency) return 'Maintenance request';
   return job.emergencyType === null ? 'Emergency' : EMERGENCY_TYPE_LABELS[job.emergencyType];
 }
@@ -53,7 +84,7 @@ export function needsAcknowledgement(job: PartnerJob): boolean {
 }
 
 /** "Arriving 14:30-16:00" in Dubai time, once acknowledged. */
-export function arrivalLabel(job: PartnerJob): string | null {
+export function arrivalLabel(job: Pick<PartnerJob, 'arrivalWindow'>): string | null {
   if (job.arrivalWindow === null) return null;
   return `Arriving ${dubaiClock(job.arrivalWindow.start)}-${dubaiClock(job.arrivalWindow.end)}`;
 }

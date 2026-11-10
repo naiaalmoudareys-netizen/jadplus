@@ -34,12 +34,20 @@ shared by two different people returns nobody.
     "mobile": "+971 50 000 0000"
   },
   "units": [
-    { "unitId": "a0X…", "dealId": "006…", "unitName": "JAD288-1102", "project": "JAD 288", "role": "Buyer" }
+    {
+      "unitId": "a0X…",
+      "dealId": "006…",
+      "unitName": "JAD288-1102",
+      "project": "JAD 288",
+      "building": "Building B",
+      "address": "Jumeirah Village Circle, Dubai",
+      "role": "Buyer"
+    }
   ]
 }
 ```
 
-JAD+ needs only these fields. It does not receive prices, payments, documents or passport details.
+JAD+ needs only these fields. Building and project address tell the technician where to go (ADR 0009). It does not receive prices, payments, documents or passport details.
 
 ## Steps to switch it on (in order)
 

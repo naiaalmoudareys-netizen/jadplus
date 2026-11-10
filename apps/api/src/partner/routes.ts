@@ -23,11 +23,12 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { eventStatement, notificationStatement, requestFacts } from '../requests/store.js';
 import { parseJsonBody, parseParams } from '../validate.js';
+import { LOCATION_COLUMNS, LOCATION_JOIN, toLocation, type LocationRow } from '../requests/views.js';
 import { versionGuard, withConflictCheck } from '../requests/concurrency.js';
 
 const MIN = 60_000;
 
-interface QueueRow {
+interface QueueRow extends LocationRow {
   id: string;
   ref: string;
   is_emergency: number;
@@ -59,15 +60,18 @@ export function partnerRoutes(): Hono<AppEnv> {
   const partner = new Hono<AppEnv>();
   partner.use('*', requireRole('partner', 'partner_admin'));
 
-  // R3: open jobs, emergencies first, then by the next deadline. No owner or tenant contact details.
+  // R3: open jobs, emergencies first, then by the next deadline, with where the unit is. No owner or tenant
+  // contact details: all contact goes through messages in JAD+ (ADR 0009).
   partner.get('/jobs', async (c) => {
     const { partnerId } = c.get('auth');
     const open = [...OPEN_STATUSES];
     const { results } = await c.env.DB.prepare(
-      `SELECT id, ref, is_emergency, emergency_type, status, description, next_due_at, next_due_kind,
-              technician_id, arrival_window_start, arrival_window_end, created_at
-       FROM requests WHERE partner_id = ? AND status IN (${open.map(() => '?').join(', ')})
-       ORDER BY is_emergency DESC, next_due_at IS NULL, next_due_at, created_at`,
+      `SELECT r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
+              r.next_due_kind, r.technician_id, r.arrival_window_start, r.arrival_window_end, r.created_at,
+              ${LOCATION_COLUMNS}
+       FROM requests r ${LOCATION_JOIN}
+       WHERE r.partner_id = ? AND r.status IN (${open.map(() => '?').join(', ')})
+       ORDER BY r.is_emergency DESC, r.next_due_at IS NULL, r.next_due_at, r.created_at`,
     )
       .bind(partnerId, ...open)
       .all<QueueRow>();
@@ -86,6 +90,7 @@ export function partnerRoutes(): Hono<AppEnv> {
           r.arrival_window_start === null
             ? null
             : { start: r.arrival_window_start, end: r.arrival_window_end },
+        location: toLocation(r),
         createdAt: r.created_at,
       })),
     });

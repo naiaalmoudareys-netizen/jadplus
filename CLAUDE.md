@@ -75,6 +75,9 @@ pnpm --filter @jadplus/mobile start   # Expo
 ## How to work in this repo
 
 - Start every task by reading the relevant BUILD_SPEC rows and the existing code; plan, then build with tests.
+- **Design (decided 10-Nov-2026):** every screen follows `docs/DESIGN.md`, the prototype's look (cream, slate,
+  navy, bronze, Hanken Grotesk) with the logos, project photos and videos in `apps/mobile/assets/brand/`.
+  The owner app also gets **News & exclusive offers (N1–N4)**, specified in `docs/DESIGN.md` (not in the Master Plan).
 - Build view by view in the order of BUILD_SPEC "Build order" (Phase A partner view + emergency engine first).
 - After each feature: run `pnpm check`, update BUILD_SPEC status (TODO → BUILT) and, if a decision was made, add an ADR.
 - Never deploy to production or touch real Salesforce data without Naya's explicit go-ahead in the chat.
@@ -111,15 +114,20 @@ pnpm --filter @jadplus/mobile start   # Expo
   with clocks, acknowledge with technician + arrival window, account (switch view, sign out everywhere).
   `GET /api/partner/team`; local demo seed `pnpm --filter @jadplus/api db:seed:local`; try-it guide in
   `apps/mobile/README.md` — ADR 0008. Android + iOS bundles build; end-to-end run against local API. 237 tests.
-  Known gap: technician job does not show unit location yet.
-- Waiting on Naya: (a) pushes: Claude's push is blocked by the permission check, Naya runs `git push`; (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
-  of `integrations/salesforce/README.md` (sandbox first); (d) Microsoft Graph sender for email codes and an
-  SMS/WhatsApp provider for mobile codes.
+- 10-Nov-2026 (session 3, cont.): Naya: providers, Salesforce deploy and store accounts wait until go-live;
+  **all contact goes through JAD+** (ADR 0009). Built: messages on requests (migration 0010, contact details
+  removed before saving), unit location on partner jobs (Salesforce building + address), owner/tenant app home
+  with "Report an emergency" (E3 numbers screen, exact L3 text), my requests, request page with messages
+  (`apps/api/src/requests/resident.ts`, `views.ts`). 257 tests; end-to-end run against local API.
+  Another session added `docs/DESIGN.md` + `apps/mobile/assets/brand/` (prototype look, News & offers N1-N4).
+- Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
+  deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
+  ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.
 - Next, in order:
   1. Connect providers once Naya confirms them (SMS/voice, Graph email, WhatsApp): one Sender each (ADR 0007),
      and use the same senders for sign-in codes.
-  2. Mobile: unit location on partner jobs (ADR 0008 gap), push notifications channel, screen tests; owner/tenant
-     screens with phase B.
+  2. Mobile: apply docs/DESIGN.md (colours, Hanken Grotesk, logos, project photos), owner tabs per DESIGN.md
+     (Home, My unit, Payments, Services, News N1-N4, Progress, Profile), message + push alerts, screen tests.
   3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
   4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).
 - Reference prototype: `Jad Global Share Point - IT/steven leads/portal-live` (in Naya's OneDrive).

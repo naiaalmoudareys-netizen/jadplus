@@ -8,16 +8,18 @@ import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../../../src/api/client.js';
-import { acknowledge, partnerJobs, partnerTeam } from '../../../src/api/endpoints.js';
+import { acknowledge, partnerJobs, partnerTeam, requestDetail } from '../../../src/api/endpoints.js';
 import {
   arrivalLabel,
   dueLabel,
   isOverdue,
   jobTitle,
   needsAcknowledgement,
+  placeLabel,
   statusLabel,
 } from '../../../src/jobs/format.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
+import { Conversation } from '../../../src/ui/Conversation.js';
 import { useLoad, useNow } from '../../../src/ui/hooks.js';
 import { Body, Button, Heading, Loading, Notice, Page } from '../../../src/ui/kit.js';
 import { colors, radius, space } from '../../../src/ui/theme.js';
@@ -114,6 +116,9 @@ export default function Job(): ReactNode {
   const now = useNow();
   const load = useCallback(async () => (await partnerJobs(api)).find((j) => j.id === id) ?? null, [api, id]);
   const job = useLoad(load);
+  // Messages with the resident and JAD+ (ADR 0009); refreshed every 30 seconds until push alerts exist.
+  const loadDetail = useCallback(() => requestDetail(api, id), [api, id]);
+  const detail = useLoad(loadDetail, 30_000);
 
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if (job.loading && job.data === null) return <Loading />;
@@ -140,16 +145,29 @@ export default function Job(): ReactNode {
       )}
       {arrival === null ? null : <Body>{arrival}</Body>}
       <View style={styles.card}>
+        <Body>{placeLabel(j.location)}</Body>
+        {j.location?.address ? <Body muted>{j.location.address}</Body> : null}
+      </View>
+      <View style={styles.card}>
         <Body>{j.description}</Body>
       </View>
       {needsAcknowledgement(j) ? <Acknowledge job={j} /> : null}
+      {detail.data === null ? null : (
+        <Conversation
+          api={api}
+          requestId={j.id}
+          messages={detail.data.messages}
+          canMessage={detail.data.canMessage}
+          onSent={() => void detail.reload()}
+        />
+      )}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
   section: { gap: space.sm, marginTop: space.md },
-  card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md },
+  card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.xs },
   due: { fontSize: 20, fontWeight: '600', color: colors.text },
   urgent: { color: colors.urgent },
   choice: {

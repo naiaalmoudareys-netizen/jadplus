@@ -4,6 +4,7 @@
  */
 import { z } from 'zod';
 import { CLIENTS } from './auth.js';
+import { MESSAGE_MAX_LENGTH } from './conversation.js';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { ROLES } from './lifecycle.js';
 import { isMonday } from './oncall.js';
@@ -121,3 +122,9 @@ export const setOnCallBody = z
 
 export type ResolveReviewBody = z.infer<typeof resolveReviewBody>;
 export type SetOnCallBody = z.infer<typeof setOnCallBody>;
+
+/** POST /api/requests/:id/messages — a message on a request, inside JAD+ (ADR 0009). */
+export const postMessageBody = z.strictObject({
+  body: z.string().trim().min(1).max(MESSAGE_MAX_LENGTH),
+});
+export type PostMessageBody = z.infer<typeof postMessageBody>;

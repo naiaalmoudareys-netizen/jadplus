@@ -34,6 +34,8 @@ export function ownerRecord(email: string | null, unitIds: readonly string[] = [
       dealId: `006TEST${String(contacts * 100 + i).padStart(11, '0')}`,
       unitName: `JAD288-11${String(i).padStart(2, '0')}`,
       project: 'JAD 288',
+      building: 'Building B',
+      address: 'Jumeirah Village Circle, Dubai',
       role: 'Buyer' as const,
     })),
   };
