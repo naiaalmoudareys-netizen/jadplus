@@ -2,32 +2,64 @@
  * Runs the real app against a fresh migrated database, with a controllable clock, a captured outbox
  * instead of email, and captured log lines (so tests can prove nothing sensitive is logged).
  */
-import type { UserRole } from '@jadplus/shared';
+import type { OwnerLookup, SignInIdentifier, UserRole } from '@jadplus/shared';
 import { createApp } from '../src/app.js';
 import { blindIndex, encryptField, importKeys, newId } from '../src/crypto.js';
 import type { Bindings } from '../src/env.js';
 import { d1 } from './d1.js';
-import { NOW, migratedDb } from './db.js';
+import { NOW, SF_UNIT, migratedDb } from './db.js';
 
 /** Fixed, obviously fake test keys (32 bytes each). Never used outside tests. */
 export const TEST_INDEX_KEY = btoa('i'.repeat(32));
 export const TEST_DATA_KEY = btoa('d'.repeat(32));
 
+export const NOT_OWNER: OwnerLookup = { found: false, shared: false, person: null, units: [] };
+
+let contacts = 0;
+
+/** A fictional Salesforce buyer of the given units (default: the test unit). */
+export function ownerRecord(email: string | null, unitIds: readonly string[] = [SF_UNIT]): OwnerLookup {
+  contacts += 1;
+  return {
+    found: true,
+    shared: false,
+    person: {
+      contactId: `003TEST${String(contacts).padStart(11, '0')}`,
+      name: 'Layla Haddad',
+      email,
+      mobile: '+971 50 000 0000',
+    },
+    units: unitIds.map((unitId, i) => ({
+      unitId,
+      dealId: `006TEST${String(contacts * 100 + i).padStart(11, '0')}`,
+      unitName: `JAD288-11${String(i).padStart(2, '0')}`,
+      project: 'JAD 288',
+      role: 'Buyer' as const,
+    })),
+  };
+}
+
 export interface Harness {
   readonly app: ReturnType<typeof createApp>;
   readonly env: Bindings;
   readonly sqlite: ReturnType<typeof migratedDb>;
-  readonly outbox: { email: string; code: string }[];
+  /** Codes "sent", with the email or number they went to. */
+  readonly outbox: { to: string; code: string }[];
   readonly logs: string[];
   clock: number;
-  /** Stand-in for the Salesforce unit → owner lookup. */
-  readonly unitOwners: Map<string, string>;
+  /** Stand-in for Salesforce, keyed "email:<address>" or "phone:<+number>". Unknown people are not owners. */
+  readonly salesforce: Map<string, OwnerLookup>;
+  /** When true, Salesforce cannot be reached. */
+  salesforceDown: boolean;
+  /** Every identifier Salesforce was asked about, in order. */
+  readonly salesforceCalls: string[];
   request(path: string, init?: RequestInit & { token?: string; json?: unknown }): Promise<Response>;
   addUser(opts: {
     email: string;
     roles: readonly (UserRole | readonly [UserRole, string])[];
   }): Promise<string>;
-  signIn(email: string, client?: 'mobile' | 'console'): Promise<string>;
+  /** Signs in by email (contains "@") or mobile number; returns the session token. */
+  signIn(identifier: string, client?: 'mobile' | 'console'): Promise<string>;
 }
 
 export function harness(): Harness {
@@ -39,7 +71,7 @@ export function harness(): Harness {
     INDEX_KEY: TEST_INDEX_KEY,
     DATA_KEY: TEST_DATA_KEY,
   };
-  const outbox: { email: string; code: string }[] = [];
+  const outbox: { to: string; code: string }[] = [];
   const logs: string[] = [];
   const h: Harness = {
     sqlite,
@@ -47,14 +79,21 @@ export function harness(): Harness {
     outbox,
     logs,
     clock: NOW,
-    unitOwners: new Map(),
+    salesforce: new Map(),
+    salesforceDown: false,
+    salesforceCalls: [],
     app: createApp({
       now: () => h.clock,
-      sendSignInCode: (_env, email, code) => {
-        outbox.push({ email, code });
+      sendSignInCode: (_env, to, code) => {
+        outbox.push({ to: to.value, code });
         return Promise.resolve();
       },
-      unitOwner: (_env, sfUnitId) => Promise.resolve(h.unitOwners.get(sfUnitId) ?? null),
+      ownerDirectory: (_env, who: SignInIdentifier) => {
+        const key = `${who.kind}:${who.value}`;
+        h.salesforceCalls.push(key);
+        if (h.salesforceDown) return Promise.reject(new Error('Salesforce unreachable (test)'));
+        return Promise.resolve(h.salesforce.get(key) ?? NOT_OWNER);
+      },
       logSink: (line) => logs.push(line),
     }),
     request(path, init = {}) {
@@ -79,6 +118,8 @@ export function harness(): Harness {
           NOW,
           NOW,
         );
+      // Owners exist because Salesforce says so (C-AUTH-3): register a fictional buyer with one unit.
+      if (roles.includes('owner')) h.salesforce.set(`email:${email}`, ownerRecord(email));
       for (const r of roles) {
         const [role, partnerId] = typeof r === 'string' ? [r, null] : r;
         if (partnerId !== null) {
@@ -94,13 +135,14 @@ export function harness(): Harness {
       }
       return id;
     },
-    async signIn(email, client = 'mobile') {
-      await h.request('/api/auth/code', { method: 'POST', json: { email } });
+    async signIn(identifier, client = 'mobile') {
+      const field = identifier.includes('@') ? 'email' : 'phone';
+      await h.request('/api/auth/code', { method: 'POST', json: { [field]: identifier } });
       const sent = outbox.at(-1);
-      if (sent?.email !== email) throw new Error('no code was sent');
+      if (sent === undefined) throw new Error('no code was sent');
       const res = await h.request('/api/auth/verify', {
         method: 'POST',
-        json: { email, code: sent.code, client },
+        json: { [field]: identifier, code: sent.code, client },
       });
       if (res.status !== 200) throw new Error(`sign-in failed: ${res.status}`);
       return (await res.json<{ token: string }>()).token;

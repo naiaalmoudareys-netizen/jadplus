@@ -54,7 +54,6 @@ export async function world(
     `INSERT INTO tenancies (id, sf_unit_id, owner_user_id, tenant_user_id, starts_on, ends_on, status, invited_at, accepted_at, created_by)
      VALUES ('ten-1', ?, ?, ?, '2026-01-01', '2026-12-31', 'active', ?, ?, ?)`,
   ).run(SF_UNIT, owner, tenant, NOW, NOW, owner);
-  h.unitOwners.set(SF_UNIT, owner);
 
   return {
     h,

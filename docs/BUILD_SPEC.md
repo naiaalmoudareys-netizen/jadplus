@@ -106,21 +106,21 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 7. Owners, tenants, units (p.15)
 
-| ID  | If                                  | Then                                                                                      | Status                                      | Phase |
-| --- | ----------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------- | ----- |
-| U1  | Owner logs in, unit missing         | One tap opens a case; fixed within 2 working days                                         | TODO                                        | C     |
-| U2  | Owner's mobile/email wrong in SF    | Can't get code; "Talk to a person" reaches admin who verifies ID and updates SF           | TODO                                        | C     |
-| U3  | Owner sells unit                    | Old owner loses access; open requests move to new owner; history stays with unit          | TODO                                        | C     |
-| U4  | Tenancy ends                        | Tenant warned 30 days before; access ends automatically on end date                       | TODO                                        | B     |
-| U5  | Tenant stays past end date          | Access still ends; owner alerted; extend in one tap                                       | TODO                                        | B     |
-| U6  | Owner lives in unit                 | Owner does resident steps (book, confirm)                                                 | BUILT                                       | -     |
-| U7  | Owns one, rents another             | Switch views without logging out                                                          | TODO · repo: API switch view DONE; app TODO | B     |
-| U8  | Family/manager acts for owner       | Launch: admin raises on their behalf (BUILT "log on behalf"); Phase 2 delegate role       | BUILT                                       | -     |
-| U9  | Owner dies/incapacitated            | Account frozen for changes; JAD deals with legal representative only                      | TODO                                        | C     |
-| U10 | Off-plan instalment overdue         | Shown overdue; Pay now opens payment link; collections stays with team                    | BUILT                                       | -     |
-| U11 | Payment link fails                  | Talk to a person; no card data in JAD+                                                    | PARTIAL                                     | C     |
-| U12 | Owner asks staff for advice         | No advice; connect to licensed partner                                                    | Process (admin script)                      | C     |
-| U13 | Owner blames JAD for partner's work | Terms name partner; admin connects to partner complaints + insurer; recorded on scorecard | TODO                                        | C     |
+| ID  | If                                  | Then                                                                                      | Status                                               | Phase |
+| --- | ----------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----- |
+| U1  | Owner logs in, unit missing         | One tap opens a case; fixed within 2 working days                                         | TODO                                                 | C     |
+| U2  | Owner's mobile/email wrong in SF    | Can't get code; "Talk to a person" reaches admin who verifies ID and updates SF           | TODO · repo: ambiguous match → JAD+ desk (409) DONE  | C     |
+| U3  | Owner sells unit                    | Old owner loses access; open requests move to new owner; history stays with unit          | TODO · repo: access ends at next sign-in / 24 h DONE | C     |
+| U4  | Tenancy ends                        | Tenant warned 30 days before; access ends automatically on end date                       | TODO                                                 | B     |
+| U5  | Tenant stays past end date          | Access still ends; owner alerted; extend in one tap                                       | TODO                                                 | B     |
+| U6  | Owner lives in unit                 | Owner does resident steps (book, confirm)                                                 | BUILT                                                | -     |
+| U7  | Owns one, rents another             | Switch views without logging out                                                          | TODO · repo: API switch view DONE; app TODO          | B     |
+| U8  | Family/manager acts for owner       | Launch: admin raises on their behalf (BUILT "log on behalf"); Phase 2 delegate role       | BUILT                                                | -     |
+| U9  | Owner dies/incapacitated            | Account frozen for changes; JAD deals with legal representative only                      | TODO                                                 | C     |
+| U10 | Off-plan instalment overdue         | Shown overdue; Pay now opens payment link; collections stays with team                    | BUILT                                                | -     |
+| U11 | Payment link fails                  | Talk to a person; no card data in JAD+                                                    | PARTIAL                                              | C     |
+| U12 | Owner asks staff for advice         | No advice; connect to licensed partner                                                    | Process (admin script)                               | C     |
+| U13 | Owner blames JAD for partner's work | Terms name partner; admin connects to partner complaints + insurer; recorded on scorecard | TODO                                                 | C     |
 
 ## 8. Partners and commercial (p.15-16)
 
@@ -138,7 +138,7 @@ Phase = build order (A first). Every view is published to the private preview (p
 | ID  | If                     | Then                                                           | Status                                           | Phase |
 | --- | ---------------------- | -------------------------------------------------------------- | ------------------------------------------------ | ----- |
 | T1  | App down               | Admin portal + WhatsApp keep working; status message to owners | TODO (status banner)                             | E     |
-| T2  | Salesforce link breaks | JAD+ runs on own data; nightly check                           | PARTIAL                                          | E     |
+| T2  | Salesforce link breaks | JAD+ runs on own data; nightly check                           | PARTIAL · repo: owners on stored units DONE      | E     |
 | T3  | Lost phone             | New login ends old session; only a session token on the phone  | PARTIAL (sign out everywhere) · repo: DONE (API) | B     |
 | T4  | Data breach            | Incident process (document)                                    | Process                                          | -     |
 

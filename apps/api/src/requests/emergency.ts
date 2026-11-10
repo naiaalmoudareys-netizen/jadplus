@@ -36,6 +36,7 @@ import {
   notificationStatement,
   servicePartners,
 } from './store.js';
+import { ownsUnit } from '../owners/units.js';
 
 type Ctx = Context<AppEnv>;
 
@@ -68,14 +69,7 @@ async function place(c: Ctx, deps: Deps, body: RaiseEmergencyBody, today: string
     return { sfUnitId: t.sfUnitId, ownerUserId: t.ownerUserId, tenancyId: t.id };
   }
   if (body.sfUnitId === undefined) throw new ApiError(404, NOT_FOUND);
-  let owner: string | null;
-  try {
-    owner = await deps.unitOwner(c.env, body.sfUnitId);
-  } catch (err) {
-    c.get('log').log('error', 'Unit ownership lookup failed', { err });
-    throw new ApiError(503, 'This service is temporarily unavailable. Please try again shortly.');
-  }
-  if (owner !== actor.userId) throw new ApiError(404, NOT_FOUND);
+  if (!(await ownsUnit(c, deps, actor.userId, body.sfUnitId))) throw new ApiError(404, NOT_FOUND);
   // If the unit is let, the tenancy is linked so the tenant can follow the job too.
   const current = await db
     .prepare(
@@ -83,7 +77,7 @@ async function place(c: Ctx, deps: Deps, body: RaiseEmergencyBody, today: string
     )
     .bind(body.sfUnitId, today, today)
     .first<{ id: string }>();
-  return { sfUnitId: body.sfUnitId, ownerUserId: owner, tenancyId: current?.id ?? null };
+  return { sfUnitId: body.sfUnitId, ownerUserId: actor.userId, tenancyId: current?.id ?? null };
 }
 
 export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBody): Promise<RaiseResult> {

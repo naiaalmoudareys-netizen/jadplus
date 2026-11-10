@@ -30,7 +30,9 @@ export function authRoutes(deps: Deps): Hono<AppEnv> {
     return c.json({ message: CODE_SENT_MESSAGE }, 202);
   });
 
-  auth.post('/verify', async (c) => c.json(await verifyCode(c, await parseJsonBody(c, verifyCodeBody))));
+  auth.post('/verify', async (c) =>
+    c.json(await verifyCode(c, deps, await parseJsonBody(c, verifyCodeBody))),
+  );
 
   auth.get('/me', requireRole(...EVERY_ROLE), async (c) => {
     const a = c.get('auth');

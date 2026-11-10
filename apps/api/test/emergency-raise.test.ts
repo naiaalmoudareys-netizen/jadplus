@@ -154,7 +154,6 @@ describe('raising an emergency', () => {
 
   it('C-AZ-2: nobody can raise on a unit or tenancy that is not theirs, or after the tenancy ended', async () => {
     const w = await world();
-    w.h.unitOwners.set('a0X000000000999AAA', 'someone-else');
     const notMine = await raise(
       w,
       { sfUnitId: 'a0X000000000999AAA', type: 'lockout', description: 'x' },

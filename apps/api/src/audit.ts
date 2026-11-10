@@ -16,6 +16,8 @@ export const AUDIT_ACTIONS = [
   'sign_out',
   'sign_out_everywhere',
   'session_role_switched',
+  'owner_linked',
+  'owner_access_removed',
   'emergency_raised',
   'emergency_acknowledged',
   'emergency_escalated',

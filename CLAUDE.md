@@ -94,10 +94,16 @@ pnpm --filter @jadplus/mobile start   # Expo
   partner queue + acknowledge (R3, E4, E17), escalation cron (E5-E7), SLA clocks (S4), scorecard + compliance
   rules (S6, S7), notifications outbox — ADR 0004. Verified end to end in `wrangler dev` (sign-in, cron move to backup).
   Tests use Node's built-in SQLite through a D1 stand-in (`apps/api/test/d1.ts`); Node 24 required.
-- Waiting on Naya: (a) review ADRs 0002-0004 and commit (suggested split in the session summary);
-  (b) remote `origin` = github.com/naiaalmoudareys-netizen/jadplus (added 10-Nov, empty, nothing pushed yet;
-  confirm it is private; move to a JAD organisation later); (c) go-ahead + details for the Salesforce
-  unit-owner lookup (owners cannot raise by unit until then); (d) Microsoft Graph sender for sign-in codes.
+- 10-Nov-2026 (session 3): first commit made (one commit, the work did not split cleanly). Owners sign in with
+  the email OR mobile number on their Salesforce record (ADR 0005): `packages/shared/src/owners.ts`,
+  `apps/api/src/salesforce/directory.ts` (finance worker via service binding FIN + PORTAL_KEY),
+  `apps/api/src/owners/` (link + unit check), migration 0007 `owner_units`. Salesforce side written but NOT
+  deployed: `integrations/salesforce` (new Apex class JADPlusIdentity + Account.Mobile_Match_Key__c +
+  finance-worker door snippet; Apex tests not yet run in the org). 183 tests, `pnpm check` green.
+- Waiting on Naya: (a) `git push -u origin main` (the push is blocked for Claude by the permission check;
+  repo is private, personal account); (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
+  of `integrations/salesforce/README.md` (sandbox first); (d) Microsoft Graph sender for email codes and an
+  SMS/WhatsApp provider for mobile codes.
 - Next, in order:
   1. Phase A remainder: outbox delivery worker (at least email + on-call SMS/call decision), daily scorecard and
      licence/insurance job (S6/S7 suspend → backup), on-call rota API, admin review list.

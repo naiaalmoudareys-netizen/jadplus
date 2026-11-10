@@ -3,20 +3,19 @@
  * Things that differ between production and tests (clock, email delivery) are passed in as Deps.
  */
 import type { MiddlewareHandler } from 'hono';
+import type { SignInIdentifier } from '@jadplus/shared';
 import { blindIndex, importKeys, type Keys } from './crypto.js';
 import type { AppEnv, Bindings } from './env.js';
 import { createLogger, type LogSink } from './logger.js';
+import type { OwnerDirectory } from './salesforce/directory.js';
 
 export interface Deps {
   /** Current time in UTC milliseconds. */
   readonly now: () => number;
-  /** Delivers a sign-in code. Must never log the code or the address (C-LOG-1). */
-  readonly sendSignInCode: (env: Bindings, email: string, code: string) => Promise<void>;
-  /**
-   * The JAD+ user id of the owner of a Salesforce unit, or null if the unit or its owner is unknown.
-   * Backed by the Salesforce proxy, which is not connected yet (ADR 0004): until then it rejects.
-   */
-  readonly unitOwner: (env: Bindings, sfUnitId: string) => Promise<string | null>;
+  /** Delivers a sign-in code by email or SMS. Must never log the code or the address (C-LOG-1). */
+  readonly sendSignInCode: (env: Bindings, to: SignInIdentifier, code: string) => Promise<void>;
+  /** Who is an owner and of which units, according to Salesforce (C-AUTH-3; ADR 0005). */
+  readonly ownerDirectory: OwnerDirectory;
   /** Where log lines go; defaults to the console. */
   readonly logSink?: LogSink;
 }

@@ -157,6 +157,7 @@ describe('verifying a code (C-AUTH-1, C-AUTH-2)', () => {
     const audit = h.sqlite.prepare('SELECT actor_user_id, action FROM audit_log ORDER BY seq').all();
     expect(audit).toEqual([
       { actor_user_id: null, action: 'sign_in_code_sent' },
+      { actor_user_id: null, action: 'owner_linked' },
       { actor_user_id: id, action: 'sign_in' },
     ]);
     const evidence = JSON.stringify(h.sqlite.prepare('SELECT * FROM audit_log').all()) + h.logs.join('\n');

@@ -4,3 +4,5 @@
 ENVIRONMENT=local
 INDEX_KEY=
 DATA_KEY=
+# Salesforce owner lookup (ADR 0005). Leave empty: without a FIN service binding, owners new to JAD+ get no code.
+PORTAL_KEY=

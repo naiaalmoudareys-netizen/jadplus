@@ -13,6 +13,10 @@ export interface Bindings {
   readonly INDEX_KEY: string;
   /** Secret (wrangler secret put): 32-byte base64 AES-256-GCM key for personal-data fields. */
   readonly DATA_KEY: string;
+  /** Service binding to the finance worker, the only way to Salesforce (C-AUTH-3). Absent until configured. */
+  readonly FIN?: Fetcher;
+  /** Secret (wrangler secret put): shared with the finance worker's portal door. */
+  readonly PORTAL_KEY?: string;
 }
 
 /** The signed-in person, set by the authenticate middleware (C-SES-1, C-AZ-1). */

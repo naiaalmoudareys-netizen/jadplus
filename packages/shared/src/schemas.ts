@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { CLIENTS } from './auth.js';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { ROLES } from './lifecycle.js';
+import { normalisePhone, type SignInIdentifier } from './owners.js';
 
 /** Emails are compared lower-cased and trimmed, so the blind index is stable. */
 export const emailSchema = z
@@ -20,15 +21,41 @@ export const signInCodeSchema = z.string().regex(/^\d{6}$/, 'The code is 6 digit
 const userRoleSchema = z.enum(ROLES).exclude(['system']);
 const idSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
-/** POST /api/auth/code — ask for a sign-in code by email. */
-export const requestCodeBody = z.strictObject({ email: emailSchema });
+/** Mobile numbers are stored in international form (+971…), so the blind index is stable. */
+export const phoneSchema = z
+  .string()
+  .max(25)
+  .transform((raw, ctx) => {
+    const phone = normalisePhone(raw);
+    if (phone === null) {
+      ctx.addIssue({ code: 'custom', message: 'Enter a valid mobile number.' });
+      return z.NEVER;
+    }
+    return phone;
+  });
+
+const identifierFields = { email: emailSchema.optional(), phone: phoneSchema.optional() };
+const ONE_IDENTIFIER = { message: 'Give either your email or your mobile number.' };
+const exactlyOne = (b: { email?: string | undefined; phone?: string | undefined }): boolean =>
+  (b.email === undefined) !== (b.phone === undefined);
+
+/** POST /api/auth/code — ask for a sign-in code by email or mobile number (C-AUTH-3). */
+export const requestCodeBody = z.strictObject(identifierFields).refine(exactlyOne, ONE_IDENTIFIER);
 
 /** POST /api/auth/verify — exchange the code for a session. */
-export const verifyCodeBody = z.strictObject({
-  email: emailSchema,
-  code: signInCodeSchema,
-  client: z.enum(CLIENTS),
-});
+export const verifyCodeBody = z
+  .strictObject({ ...identifierFields, code: signInCodeSchema, client: z.enum(CLIENTS) })
+  .refine(exactlyOne, ONE_IDENTIFIER);
+
+/** The email or mobile number a validated sign-in body names (exactly one is present). */
+export function identifierOf(b: {
+  email?: string | undefined;
+  phone?: string | undefined;
+}): SignInIdentifier {
+  if (b.email !== undefined) return { kind: 'email', value: b.email };
+  if (b.phone !== undefined) return { kind: 'phone', value: b.phone };
+  throw new Error('A sign-in body must name an email or a mobile number.');
+}
 
 /** POST /api/auth/switch — move the session to another view the person holds (R5, U7). */
 export const switchContextBody = z.strictObject({
