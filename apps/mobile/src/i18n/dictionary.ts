@@ -7,6 +7,7 @@ import { requestLabels } from './strings/labels-requests.js';
 import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
+import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
 import { screensJourney } from './strings/screens-journey.js';
@@ -26,6 +27,7 @@ export const PARTS = [
   screensOwner2,
   screensRequests,
   screensAccess,
+  screensHelp,
   screensJourney,
   screensInbox,
   screensExtras,

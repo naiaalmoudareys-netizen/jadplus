@@ -56,10 +56,19 @@ describe('my requests (R1, R2, R3)', () => {
           emergencyType: 'water_leak',
           status: 'assigned',
           partnerName: 'Primary Fixers LLC',
+          partnerVerified: true,
           location: LOCATION,
         }),
       ]);
     }
+    // S8: a suspended partner (e.g. lapsed insurance, S7) is no longer shown as JAD+ verified.
+    w.h.sqlite
+      .prepare(
+        "UPDATE partners SET status = 'suspended', status_reason = 'Insurance lapsed' WHERE id = 'p-primary'",
+      )
+      .run();
+    const after = myRequestsResponse.parse(await (await get(w, '/api/requests', w.ownerToken)).json());
+    expect(after.requests[0]?.partnerVerified).toBe(false);
     expect((await get(w, '/api/requests', w.primaryToken)).status).toBe(403);
   });
 

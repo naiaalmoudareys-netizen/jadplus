@@ -21,6 +21,7 @@ import { useSession, useSessionController } from '../../src/session/SessionProvi
 import { Conversation } from '../../src/ui/Conversation.js';
 import { useLoad } from '../../src/ui/hooks.js';
 import { Body, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
+import { PartnerName } from '../../src/ui/HelpBits.js';
 import { colors, radius, space } from '../../src/ui/theme.js';
 
 const REFRESH_MS = 30_000;
@@ -55,7 +56,10 @@ export default function RequestPage(): ReactNode {
       <View style={styles.card}>
         <Body>{residentStatusLabel(request.status, t)}</Body>
         {request.partnerName === null ? null : (
-          <Body muted>{t('req.handledBy', { name: request.partnerName })}</Body>
+          <PartnerName
+            name={t('req.handledBy', { name: request.partnerName })}
+            verified={request.partnerVerified}
+          />
         )}
         {arrival === null ? null : <Body>{arrival}</Body>}
         {arrival === null && preferred !== null ? <Body muted>{preferred}</Body> : null}

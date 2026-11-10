@@ -12,6 +12,7 @@ import { usePortal } from '../../src/portal/PortalProvider.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { DemoBadge, LineItem, Pill, PortalError, ProgressBar, UnitSwitcher } from '../../src/portal/ui.js';
 import { Body, Button, Card, Eyebrow, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
+import { DeskHelpLink } from '../../src/ui/HelpBits.js';
 import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
 
@@ -72,6 +73,8 @@ export default function Payments(): ReactNode {
       </Card>
       <Button title={t('owner.payments.payNow')} onPress={() => void Linking.openURL(data.payUrl)} />
       <Body muted>{t('owner.payments.payNote')}</Body>
+      {/* U11: the payment page failed: a person at the JAD+ desk helps; card details never go in a message. */}
+      <DeskHelpLink title="help.payProblem" note="help.payProblemNote" text="help.payProblemText" />
 
       <Heading>{t('owner.payments.plan')}</Heading>
       {deal.instalments.map((i) => {

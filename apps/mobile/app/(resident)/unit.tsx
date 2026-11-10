@@ -21,6 +21,7 @@ import { Photo } from '../../src/portal/Photo.js';
 import { DemoBadge, Fact, LineItem, PortalError, UnitSwitcher } from '../../src/portal/ui.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { Hero } from '../../src/ui/brand.js';
+import { DeskHelpLink } from '../../src/ui/HelpBits.js';
 import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { space } from '../../src/ui/theme.js';
@@ -197,6 +198,8 @@ export default function MyUnit(): ReactNode {
       <View style={styles.section} onLayout={scroll.onLayout('construction')}>
         <ConstructionSection project={u?.project ?? null} />
       </View>
+      {/* U1: a residence the owner bought is not listed: one tap opens a case with the JAD+ desk. */}
+      <DeskHelpLink title="help.unitMissing" note="help.unitMissingNote" text="help.unitMissingText" />
     </Page>
   );
 }

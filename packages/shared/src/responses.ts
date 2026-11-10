@@ -105,6 +105,8 @@ const requestSummary = z.object({
   status: z.enum(STATUSES),
   /** The company handling it, once assigned (residents see the company, never a person's contact). */
   partnerName: z.string().nullable(),
+  /** S8: the partner is signed and up to date with JAD+ (owners see this badge, never scorecards). */
+  partnerVerified: z.boolean(),
   arrivalWindow,
   preferredVisit,
   location: location.nullable(),
