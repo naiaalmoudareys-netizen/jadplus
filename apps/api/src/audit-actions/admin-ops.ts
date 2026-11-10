@@ -1,0 +1,20 @@
+/** Audit actions for JAD+ Admin operations (ADR 0025). Each module owns its list; audit.ts joins them. */
+export const ADMIN_OPS_ACTIONS = [
+  'request_note_added',
+  'request_reassigned_by_jad',
+  'request_reclassified',
+  'request_cancelled_by_jad',
+  'request_raised_on_behalf',
+  'person_viewed',
+  'person_signed_out_by_jad',
+  'account_frozen',
+  'account_unfrozen',
+  'tenancy_extended_by_jad',
+  'tenancy_ended_by_jad',
+  'desk_request_viewed',
+  'desk_request_updated',
+  'staff_list_viewed',
+  'staff_added',
+  'staff_removed',
+  'audit_log_viewed',
+] as const;

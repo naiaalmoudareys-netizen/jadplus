@@ -1,6 +1,8 @@
 export * from './access.js';
 export * from './auth.js';
 export * from './calendar.js';
+export * from './admin-ops.js';
+export * from './admin-platform.js';
 export * from './console.js';
 export * from './conversation.js';
 export * from './desk.js';
@@ -13,6 +15,7 @@ export * from './messages.js';
 export * from './oncall.js';
 export * from './news.js';
 export * from './owners.js';
+export * from './partner-office.js';
 export * from './payments.js';
 export * from './portal.js';
 export * from './preferences.js';

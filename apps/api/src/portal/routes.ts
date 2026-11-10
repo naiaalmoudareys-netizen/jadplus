@@ -57,7 +57,7 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
     // Desk requests: Salesforce's own list in production; JAD+'s log until it is connected (ADR 0011).
     const deskRequests =
       portal.source === 'demo'
-        ? await demoDeskRequests(c.env.DB, c.get('auth').userId, portal)
+        ? await demoDeskRequests(c.env.DB, c.get('auth').userId, portal, c.get('keys'))
         : portal.deskRequests;
     return c.json({ ...portal, deskRequests, interestedOfferIds: results.map((r) => r.post_id) });
   });

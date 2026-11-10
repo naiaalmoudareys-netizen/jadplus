@@ -3,7 +3,7 @@
  * request id → security headers → body size limit → request context → authentication (deny by default).
  * Routes then declare their roles with requireRole() and check object ownership (C-AZ-1, C-AZ-2).
  */
-import { PHOTO_MAX_BYTES } from '@jadplus/shared';
+import { PARTNER_DOCUMENT_MAX_BYTES, PHOTO_MAX_BYTES } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { except } from 'hono/combine';
 import { bodyLimit } from 'hono/body-limit';
@@ -23,6 +23,7 @@ import { residentRoutes } from './requests/resident.js';
 import { PHOTO_UPLOAD_PATH, photoRoutes } from './requests/photos.js';
 import { preferenceRoutes } from './me/preferences.js';
 import { inboxRoutes } from './me/inbox.js';
+import { residentBuildingRoutes } from './me/building.js';
 import { approvalRoutes } from './requests/approval.js';
 import { tenancyRoutes } from './tenancies/routes.js';
 import { partnerFlowRoutes } from './requests/partner-flow.js';
@@ -30,6 +31,10 @@ import { partnerVisitRoutes } from './requests/partner-visit.js';
 import { partnerStatsRoutes } from './partner/stats.js';
 import { partnerOfficeRoutes } from './partner/office.js';
 import { adminConsoleRoutes } from './admin/console.js';
+import { adminOpsRoutes } from './admin/ops.js';
+import { adminPlatformRoutes } from './admin/platform.js';
+import { adminPartnerExtrasRoutes } from './admin/partner-extras.js';
+import { PARTNER_DOCUMENT_UPLOAD_PATH, partnerCompanyRoutes } from './partner/company.js';
 import { residentFlowRoutes } from './requests/resident-flow.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
@@ -43,11 +48,14 @@ export function createApp(deps: Deps): Hono<AppEnv> {
 
   app.use('*', requestId());
   app.use('*', securityHeaders());
-  // JSON bodies are small; only the photo upload takes a photo-sized body (ADR 0013).
+  // JSON bodies are small; only the photo upload (ADR 0013) and a partner's document PDF (ADR 0025) take a
+  // file-sized body, each with its own limit.
   app.use(
     '/api/*',
     except(
-      (c) => c.req.method === 'POST' && PHOTO_UPLOAD_PATH.test(c.req.path),
+      (c) =>
+        c.req.method === 'POST' &&
+        (PHOTO_UPLOAD_PATH.test(c.req.path) || PARTNER_DOCUMENT_UPLOAD_PATH.test(c.req.path)),
       bodyLimit({ maxSize: MAX_JSON_BYTES, onError: (c) => c.json({ error: 'Request too large.' }, 413) }),
     ),
   );
@@ -56,6 +64,13 @@ export function createApp(deps: Deps): Hono<AppEnv> {
     bodyLimit({
       maxSize: PHOTO_MAX_BYTES,
       onError: (c) => c.json({ error: 'Photos can be up to 10 MB.' }, 413),
+    }),
+  );
+  app.post(
+    '/api/partner/documents/:kind',
+    bodyLimit({
+      maxSize: PARTNER_DOCUMENT_MAX_BYTES,
+      onError: (c) => c.json({ error: 'Documents can be up to 15 MB.' }, 413),
     }),
   );
   app.use('/api/*', requestContext(deps));
@@ -75,12 +90,17 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/partner', partnerVisitRoutes());
   app.route('/api/partner', partnerStatsRoutes());
   app.route('/api/partner', partnerOfficeRoutes());
+  app.route('/api/partner', partnerCompanyRoutes());
   app.route('/api', inboxRoutes());
+  app.route('/api', residentBuildingRoutes());
   app.route('/api', approvalRoutes());
   app.route('/api', tenancyRoutes(deps));
   app.route('/api', residentFlowRoutes());
   app.route('/api/admin', adminRoutes());
   app.route('/api/admin', adminConsoleRoutes());
+  app.route('/api/admin', adminOpsRoutes());
+  app.route('/api/admin', adminPlatformRoutes());
+  app.route('/api/admin', adminPartnerExtrasRoutes());
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
 

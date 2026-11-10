@@ -4,6 +4,9 @@
  * The table itself is append-only (migration 0002). `detail` must never hold personal data.
  */
 import type { UserRole } from '@jadplus/shared';
+import { ADMIN_OPS_ACTIONS } from './audit-actions/admin-ops.js';
+import { ADMIN_PLATFORM_ACTIONS } from './audit-actions/admin-platform.js';
+import { PARTNER_OFFICE_ACTIONS } from './audit-actions/partner-office.js';
 
 export type AuditActorRole = UserRole | 'system' | 'anonymous';
 
@@ -62,6 +65,9 @@ export const AUDIT_ACTIONS = [
   'technician_added',
   'technician_removed',
   'technician_assigned',
+  ...ADMIN_OPS_ACTIONS,
+  ...ADMIN_PLATFORM_ACTIONS,
+  ...PARTNER_OFFICE_ACTIONS,
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

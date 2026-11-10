@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { auditStatement } from '../audit.js';
 import { requireRole } from '../auth/middleware.js';
 import type { Deps } from '../context.js';
-import { encryptField, newId } from '../crypto.js';
+import { decryptField, encryptField, newId, toBytes, type Keys } from '../crypto.js';
 import type { AppEnv, Bindings } from '../env.js';
 import { ApiError } from '../errors.js';
 import { DIRECTORY_TIMEOUT_MS } from '../salesforce/directory.js';
@@ -66,32 +66,42 @@ interface DeskRow {
   status: DeskStatus;
   sf_request_ref: string | null;
   created_at: number;
+  reply_enc: unknown;
 }
 
-/** Demo (local, preview): the owner's desk requests as JAD+ logged them. */
+/**
+ * Demo (local, preview): the owner's desk requests as JAD+ logged them, with the reply JAD+ Admin wrote
+ * (admin/ops/desk.ts; encrypted at rest, so it is shown only when the keys are passed).
+ */
 export async function demoDeskRequests(
   db: D1Database,
   userId: string,
   portal: Pick<OwnerPortalAnswer, 'deals'>,
+  keys?: Keys,
 ): Promise<OwnerPortalAnswer['deskRequests']> {
   const { results } = await db
     .prepare(
-      `SELECT id, type, deal_id, status, sf_request_ref, created_at FROM desk_requests
+      `SELECT id, type, deal_id, status, sf_request_ref, created_at, reply_enc FROM desk_requests
        WHERE user_id = ? ORDER BY created_at DESC LIMIT 100`,
     )
     .bind(userId)
     .all<DeskRow>();
-  return results.map((r, i) => ({
-    id: r.id,
-    ref: r.sf_request_ref ?? `DEMO-JR-${String(results.length - i).padStart(3, '0')}`,
-    type: r.type,
-    status: r.status,
-    dealId: r.deal_id,
-    unitName: portal.deals.find((d) => d.id === r.deal_id)?.unit?.name ?? null,
-    reply: null,
-    createdAt: new Date(r.created_at).toISOString(),
-    fileIds: [],
-  }));
+  return Promise.all(
+    results.map(async (r, i) => ({
+      id: r.id,
+      ref: r.sf_request_ref ?? `DEMO-JR-${String(results.length - i).padStart(3, '0')}`,
+      type: r.type,
+      status: r.status,
+      dealId: r.deal_id,
+      unitName: portal.deals.find((d) => d.id === r.deal_id)?.unit?.name ?? null,
+      reply:
+        keys === undefined || r.reply_enc === null
+          ? null
+          : await decryptField(keys, toBytes(r.reply_enc), `desk_requests.reply:${r.id}`),
+      createdAt: new Date(r.created_at).toISOString(),
+      fileIds: [],
+    })),
+  );
 }
 
 export function deskRoutes(deps: Deps): Hono<AppEnv> {

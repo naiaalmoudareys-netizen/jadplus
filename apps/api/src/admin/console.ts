@@ -103,7 +103,8 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
         .all<Row>(),
       db
         .prepare(
-          `${BASE}, r.created_at + ? AS since ${FROM} WHERE r.status = 'awaiting_owner' AND r.created_at + ? <= ?`,
+          `${BASE}, r.created_at + ? AS since ${FROM} WHERE r.status = 'awaiting_owner' AND r.created_at + ? <= ?
+             AND NOT EXISTS (SELECT 1 FROM request_notes n WHERE n.request_id = r.id AND n.kind = 'owner_called')`,
         )
         .bind(OWNER_CALL_AFTER, OWNER_CALL_AFTER, now)
         .all<Row>(),
