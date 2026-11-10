@@ -1,6 +1,12 @@
 /** Service catalogue and routing: S1, S2, S3. */
 import { describe, expect, it } from 'vitest';
-import { SERVICES, SERVICE_GROUPS, raiseRequestBody, serviceRouting } from '../src/services.js';
+import {
+  SERVICES,
+  SERVICE_GROUPS,
+  raiseRequestBody,
+  serviceOpenTo,
+  serviceRouting,
+} from '../src/services.js';
 
 describe('service catalogue', () => {
   it('S1: 12 services, each in one of the three groups, codes unique', () => {
@@ -36,5 +42,15 @@ describe('service catalogue', () => {
     expect(
       raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: 'Tap' }).success,
     ).toBe(false);
+  });
+});
+
+describe('who may request what (R2)', () => {
+  it('R2: a tenant requests repairs only; an owner any service', () => {
+    expect(serviceOpenTo('tenant', 'maintenance')).toBe(true);
+    for (const code of ['resale', 'valuation', 'leasing', 'golden-visa', 'furnishing', 'snagging']) {
+      expect(serviceOpenTo('tenant', code)).toBe(false);
+      expect(serviceOpenTo('owner', code)).toBe(true);
+    }
   });
 });

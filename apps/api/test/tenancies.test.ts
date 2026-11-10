@@ -162,6 +162,25 @@ describe('owner approval (A1)', () => {
     ).toEqual([{ n: 1 }]);
   });
 
+  it('R2: a tenant sees and requests repairs only; every other service is the owner’s', async () => {
+    const w = await world();
+    const list = async (token: string) =>
+      (await (await get(w, '/api/services', token)).json<{ services: { code: string }[] }>()).services.map(
+        (s) => s.code,
+      );
+    expect(await list(w.tenantToken)).toEqual(['maintenance']);
+    expect((await list(w.ownerToken)).length).toBe(12);
+    const res = await post(w, '/api/requests', w.tenantToken, {
+      tenancyId: 'ten-1',
+      serviceCode: 'resale',
+      description: 'I would like to buy this flat.',
+      preferredDate: preferredDays(dubaiDate(w.h.clock), DEFAULT_CALENDAR)[0],
+      preferredSlot: 'morning',
+    });
+    expect(res.status).toBe(403);
+    expect(rows(w, 'SELECT count(*) AS n FROM requests')).toEqual([{ n: 0 }]);
+  });
+
   it('E1: emergencies never wait for the owner', async () => {
     const w = await world();
     const res = await post(w, '/api/emergencies', w.tenantToken, {

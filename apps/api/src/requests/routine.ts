@@ -6,7 +6,8 @@
  * - POST /api/requests   an owner raises a request for one of their units, or a tenant for their current home.
  *                        An owner's request goes straight to the service's partner (primary, or backup when the
  *                        primary is suspended) with the 4-working-hour response clock (S4), or to the JAD+ team.
- *                        A tenant's request first waits for the owner's approval (A1, approval.ts).
+ *                        A tenant's request first waits for the owner's approval (A1, approval.ts), and a
+ *                        tenant may request repairs (maintenance) only: everything else is the owner's (R2).
  */
 import {
   DEFAULT_CALENDAR,
@@ -16,6 +17,7 @@ import {
   dubaiDate,
   preferredDays,
   raiseRequestBody,
+  serviceOpenTo,
   serviceRouting,
   type ServiceDelivery,
   type ServiceRouting,
@@ -79,14 +81,18 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
       )
       .all<{ service_code: string }>();
     const withPartner = new Set(staffed.results.map((s) => s.service_code));
+    const role = c.get('auth').role === 'tenant' ? 'tenant' : 'owner';
     return c.json({
-      services: results.map((s) => ({
-        code: s.code,
-        name: s.name,
-        group: s.grp,
-        blurb: s.blurb,
-        routing: serviceRouting(s.delivery, withPartner.has(s.code)),
-      })),
+      // R2: a tenant sees only the services a tenant may request (repairs).
+      services: results
+        .filter((s) => serviceOpenTo(role, s.code))
+        .map((s) => ({
+          code: s.code,
+          name: s.name,
+          group: s.grp,
+          blurb: s.blurb,
+          routing: serviceRouting(s.delivery, withPartner.has(s.code)),
+        })),
     });
   });
 
@@ -100,6 +106,9 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     // ADR 0013: the preferred day must be one of the working days offered.
     if (!preferredDays(today, DEFAULT_CALENDAR).includes(body.preferredDate)) {
       throw new ApiError(400, 'Choose a working day within the next two weeks.');
+    }
+    if (actor.role === 'tenant' && !serviceOpenTo('tenant', body.serviceCode)) {
+      throw new ApiError(403, 'Only your owner can request this service.');
     }
     const route = await routeService(db, body.serviceCode);
     if (route === null) throw new ApiError(404, 'This service is not available.');

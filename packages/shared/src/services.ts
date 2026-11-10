@@ -113,6 +113,18 @@ export const SERVICE_CODES = SERVICES.map((s) => s.code) as [string, ...string[]
 /** Who takes a new request: the service's partner, the JAD+ team, or nobody yet ("coming soon", S2). */
 export type ServiceRouting = 'partner' | 'jad' | 'coming_soon';
 
+/**
+ * R2 (Naya, 10-Nov-2026): a tenant requests repairs in the home they live in, nothing else. Every other service
+ * (snagging, handover, leasing, resale, valuation, mortgage, Golden Visa, furnishing, design, education) is the
+ * owner's decision.
+ */
+export const TENANT_SERVICES: ReadonlySet<string> = new Set(['maintenance']);
+
+/** Whether this role may request this service. */
+export function serviceOpenTo(role: 'owner' | 'tenant', code: string): boolean {
+  return role === 'owner' || TENANT_SERVICES.has(code);
+}
+
 /** S2/S3: a partner service is available only with an active (primary or backup) partner. */
 export function serviceRouting(delivery: ServiceDelivery, partnerAvailable: boolean): ServiceRouting {
   if (delivery === 'inhouse') return 'jad';
