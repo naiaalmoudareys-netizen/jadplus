@@ -4,6 +4,7 @@
  */
 import type { OwnerLookup, SignInIdentifier, UserRole } from '@jadplus/shared';
 import { createApp } from '../src/app.js';
+import { demoPortal, type OwnerPortalSource } from '../src/portal/source.js';
 import { blindIndex, encryptField, importKeys, newId } from '../src/crypto.js';
 import type { Bindings } from '../src/env.js';
 import { d1 } from './d1.js';
@@ -55,6 +56,8 @@ export interface Harness {
   salesforceDown: boolean;
   /** Every identifier Salesforce was asked about, in order. */
   readonly salesforceCalls: string[];
+  /** The owner-app data source (demo by default; tests can swap it). */
+  portal: OwnerPortalSource;
   request(path: string, init?: RequestInit & { token?: string; json?: unknown }): Promise<Response>;
   addUser(opts: {
     email: string;
@@ -84,6 +87,7 @@ export function harness(): Harness {
     salesforce: new Map(),
     salesforceDown: false,
     salesforceCalls: [],
+    portal: demoPortal,
     app: createApp({
       now: () => h.clock,
       sendSignInCode: (_env, to, code) => {
@@ -96,6 +100,7 @@ export function harness(): Harness {
         if (h.salesforceDown) return Promise.reject(new Error('Salesforce unreachable (test)'));
         return Promise.resolve(h.salesforce.get(key) ?? NOT_OWNER);
       },
+      ownerPortal: (env, email, now) => h.portal(env, email, now),
       logSink: (line) => logs.push(line),
     }),
     request(path, init = {}) {

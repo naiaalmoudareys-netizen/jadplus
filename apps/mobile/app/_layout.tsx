@@ -38,7 +38,7 @@ export default function RootLayout(): ReactNode {
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-          <Stack.Screen name="home" options={{ title: 'JAD+', headerBackVisible: false }} />
+          <Stack.Screen name="(resident)" options={{ headerShown: false }} />
           <Stack.Screen name="partner/index" options={{ title: 'My jobs', headerBackVisible: false }} />
           <Stack.Screen name="partner/job/[id]" options={{ title: 'Job' }} />
           <Stack.Screen name="emergency" options={{ title: 'Emergency' }} />

@@ -7,6 +7,7 @@ import type { Sender, Senders } from './delivery/senders.js';
 import { runEscalationSweep } from './jobs/escalation.js';
 import { runPartnerReview } from './jobs/partner-review.js';
 import { createLogger } from './logger.js';
+import { ownerPortalSource } from './portal/source.js';
 import { financeWorkerDirectory } from './salesforce/directory.js';
 
 /**
@@ -43,7 +44,12 @@ function sendersFor(env: Bindings): Senders {
 /** Must match the second cron in wrangler.toml. */
 const DAILY_PARTNER_CHECK = '0 2 * * *';
 
-const app = createApp({ now: () => Date.now(), sendSignInCode, ownerDirectory: financeWorkerDirectory });
+const app = createApp({
+  now: () => Date.now(),
+  sendSignInCode,
+  ownerDirectory: financeWorkerDirectory,
+  ownerPortal: ownerPortalSource,
+});
 
 export default {
   fetch: app.fetch,

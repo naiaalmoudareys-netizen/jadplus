@@ -23,19 +23,19 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 1. Roles (p.4)
 
-| ID  | Requirement                                                                          | View    | Status                                       | Phase |
-| --- | ------------------------------------------------------------------------------------ | ------- | -------------------------------------------- | ----- |
-| R1  | Owner: units, approvals waiting, open requests, payment plan first                   | Owner   | BUILT (approvals waiting TODO with tenants)  | B     |
-| R2  | Tenant: their unit, one "Request a service" button, request status; invited by owner | Tenant  | TODO · repo: app home + emergency DONE       | B     |
-| R3  | Supplier: job queue with SLA clocks and next action due; partner + its technicians   | Partner | TODO · repo: API + app queue DONE (ADR 0008) | A     |
-| R4  | JAD admin: every request, SLA risk list, provider scorecards                         | Admin   | PARTIAL (scorecard thresholds, risk list)    | A/C   |
-| R5  | One person owns one unit and rents another: switch views without logging out         | All     | TODO · repo: API switch view DONE; app TODO  | B     |
+| ID  | Requirement                                                                          | View    | Status                                                                               | Phase |
+| --- | ------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------ | ----- |
+| R1  | Owner: units, approvals waiting, open requests, payment plan first                   | Owner   | BUILT (approvals waiting TODO with tenants) · repo: app tabs on demo data (ADR 0010) | B     |
+| R2  | Tenant: their unit, one "Request a service" button, request status; invited by owner | Tenant  | TODO · repo: app home + emergency DONE                                               | B     |
+| R3  | Supplier: job queue with SLA clocks and next action due; partner + its technicians   | Partner | TODO · repo: API + app queue DONE (ADR 0008)                                         | A     |
+| R4  | JAD admin: every request, SLA risk list, provider scorecards                         | Admin   | PARTIAL (scorecard thresholds, risk list)                                            | A/C   |
+| R5  | One person owns one unit and rents another: switch views without logging out         | All     | TODO · repo: API switch view DONE; app TODO                                          | B     |
 
 ## 2. Owner journey (p.4)
 
 | ID  | Requirement                                                                                                                                 | Status                                                                                       | Phase |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ----- |
-| O1  | Off-plan: construction progress, payment plan, "Pay now" (Salesforce data)                                                                  | BUILT (pay.jadglobal.ae link)                                                                | -     |
+| O1  | Off-plan: construction progress, payment plan, "Pay now" (Salesforce data)                                                                  | BUILT (pay.jadglobal.ae link) · repo: app Payments + Progress (ADR 0010)                     | -     |
 | O2  | Handover: checklist to key collection                                                                                                       | TODO                                                                                         | D     |
 | O3  | Book independent snagging; inspector uploads standard PDF report; owner opens it; track each snag to closure                                | PARTIAL (snagging request only)                                                              | D     |
 | O4  | Living/leasing: maintenance requests, invite tenant, approve tenant requests and quotes in one tap, hand to Harbor for leasing / management | PARTIAL (no tenant)                                                                          | B     |

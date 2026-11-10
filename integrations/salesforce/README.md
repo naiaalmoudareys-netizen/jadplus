@@ -83,7 +83,34 @@ JAD+ needs only these fields. Building and project address tell the technician w
    }
    ```
 
-   Place it before the existing `x-portal-key` check (that check compares against `PORTAL_KEY`). Then run
+   The owner app's residence data (ADR 0010) uses the existing read-only `JADPortalApi.owner` through a second
+   JAD+ route, with the same secret and one verified email per call:
+
+   ```js
+   // JAD+ owner app: units, payment plan, receipts, construction updates, news. One email per call.
+   if (action === 'jadplus-owner' && request.method === 'GET') {
+     const key = request.headers.get('x-portal-key') || '';
+     if (!env.JADPLUS_KEY || key.length !== env.JADPLUS_KEY.length || key !== env.JADPLUS_KEY) {
+       return new Response('forbidden', { status: 403 });
+     }
+     const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+     if (!/^[^@\s]{1,64}@[^@\s]{1,100}\.[^@\s]{2,20}$/.test(email))
+       return new Response('bad email', { status: 400 });
+     const target = `${env.SF_INSTANCE_URL}/services/apexrest/jadportal/owner?${new URLSearchParams({ email })}`;
+     let res = await fetch(target, { headers: { authorization: `Bearer ${await sfToken(env)}` } });
+     if (res.status === 401) {
+       await setMeta(env, { sf_token_at: new Date(0).toISOString() });
+       res = await fetch(target, { headers: { authorization: `Bearer ${await sfToken(env)}` } });
+     }
+     return new Response(res.body, { status: res.status, headers: { 'content-type': 'application/json' } });
+   }
+   ```
+
+   JAD+ drops the passport/Emirates ID list, nationality and desk requests that this answer also contains, so
+   they never reach the app. News and offers need the JAD+ Post object and `posts()` from the portal package
+   (`steven leads/JAD DOCUMENT/salesforce-build/portal_api`, not deployed yet).
+
+   Place both before the existing `x-portal-key` check (that check compares against `PORTAL_KEY`). Then run
    `npx wrangler secret put JADPLUS_KEY` on the finance worker (generate it with
    `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`) and deploy it.
 

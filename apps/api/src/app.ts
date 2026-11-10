@@ -15,6 +15,7 @@ import { ApiError } from './errors.js';
 import type { AppEnv } from './env.js';
 import { createLogger } from './logger.js';
 import { partnerRoutes } from './partner/routes.js';
+import { portalRoutes } from './portal/routes.js';
 import { residentRoutes } from './requests/resident.js';
 import { requestRoutes } from './requests/routes.js';
 import { securityHeaders } from './security.js';
@@ -41,6 +42,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/auth', authRoutes(deps));
   app.route('/api', requestRoutes(deps));
   app.route('/api', residentRoutes());
+  app.route('/api/owner', portalRoutes(deps));
   app.route('/api/partner', partnerRoutes());
   app.route('/api/admin', adminRoutes());
 

@@ -120,14 +120,20 @@ pnpm --filter @jadplus/mobile start   # Expo
   with "Report an emergency" (E3 numbers screen, exact L3 text), my requests, request page with messages
   (`apps/api/src/requests/resident.ts`, `views.ts`). 257 tests; end-to-end run against local API.
   Another session added `docs/DESIGN.md` + `apps/mobile/assets/brand/` (prototype look, News & offers N1-N4).
+- 10-Nov-2026 (session 3, cont.): design pass (DESIGN.md tokens, Hanken Grotesk, logo, project photos);
+  sign-in fixes from Naya's iPhone test. Owner tabs (ADR 0010): Home (next payment, latest news), My unit,
+  Payments (prototype rules in `packages/shared/src/payments.ts`, Pay now → pay.jadglobal.ae), News & offers
+  (N1-N3, "I'm interested" → migration 0011 `offer_interests`), Progress, Profile. `GET /api/owner/portal`:
+  Salesforce `JADPortalApi.owner` via finance-worker route `jadplus-owner` in production only; demo owner
+  elsewhere (app shows "DEMO DATA"). 276 tests. Not yet: PDFs (receipts, SPA), floor plan, photos, N4/L1 switches.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.
 - Next, in order:
   1. Connect providers once Naya confirms them (SMS/voice, Graph email, WhatsApp): one Sender each (ADR 0007),
      and use the same senders for sign-in codes.
-  2. Mobile: apply docs/DESIGN.md (colours, Hanken Grotesk, logos, project photos), owner tabs per DESIGN.md
-     (Home, My unit, Payments, Services, News N1-N4, Progress, Profile), message + push alerts, screen tests.
+  2. Mobile: documents/receipts as PDFs through a secure file route, notification + marketing switches (N4, L1),
+     message + push alerts, screen tests.
   3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
   4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).
 - Reference prototype: `Jad Global Share Point - IT/steven leads/portal-live` (in Naya's OneDrive).

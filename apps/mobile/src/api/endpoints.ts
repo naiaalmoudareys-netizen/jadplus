@@ -5,6 +5,7 @@ import {
   messagePostedResponse,
   myPlacesResponse,
   myRequestsResponse,
+  ownerPortalResponse,
   requestDetailResponse,
   meResponse,
   partnerJobsResponse,
@@ -13,6 +14,7 @@ import {
   type AcknowledgeEmergencyBody,
   type EmergencyRaised,
   type MyPlace,
+  type OwnerPortalAnswer,
   type RaiseEmergencyBody,
   type RequestDetail,
   type RequestMessage,
@@ -95,3 +97,11 @@ export const raiseEmergency = (
     },
     emergencyRaisedResponse,
   );
+
+/** R1/O1/N1: the owner's residence data (demo until Salesforce is connected, ADR 0010). */
+export const ownerPortal = (api: ApiClient): Promise<OwnerPortalAnswer> =>
+  api.get('/api/owner/portal', ownerPortalResponse);
+
+/** N2: tell JAD+ the owner is interested in an exclusive offer. */
+export const interestedInOffer = (api: ApiClient, postId: string): Promise<unknown> =>
+  api.post(`/api/owner/offers/${encodeURIComponent(postId)}/interest`, {}, z.unknown());

@@ -7,6 +7,7 @@ import type { SignInIdentifier } from '@jadplus/shared';
 import { blindIndex, importKeys, type Keys } from './crypto.js';
 import type { AppEnv, Bindings } from './env.js';
 import { createLogger, type LogSink } from './logger.js';
+import type { OwnerPortalSource } from './portal/source.js';
 import type { OwnerDirectory } from './salesforce/directory.js';
 
 export interface Deps {
@@ -16,6 +17,8 @@ export interface Deps {
   readonly sendSignInCode: (env: Bindings, to: SignInIdentifier, code: string) => Promise<void>;
   /** Who is an owner and of which units, according to Salesforce (C-AUTH-3; ADR 0005). */
   readonly ownerDirectory: OwnerDirectory;
+  /** The owner's residence data for the owner app: Salesforce in production, demo elsewhere (ADR 0010). */
+  readonly ownerPortal: OwnerPortalSource;
   /** Where log lines go; defaults to the console. */
   readonly logSink?: LogSink;
 }
