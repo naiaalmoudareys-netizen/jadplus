@@ -82,7 +82,7 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
         }}
         style={styles.cardBody}
       >
-        <Photo id={post.photos[0] ?? null} project={post.project} shape="banner" label={post.title} />
+        <Photo id={post.photos[0] ?? null} project={post.project} label={post.title} />
         <Text style={[styles.eyebrow, offer && styles.offerEyebrow]}>
           {`${kind} · ${longDate(post.date)}`.toUpperCase()}
         </Text>

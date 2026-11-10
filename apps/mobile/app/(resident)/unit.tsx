@@ -29,12 +29,7 @@ export default function MyUnit(): ReactNode {
     <Page>
       <DemoBadge />
       <UnitSwitcher />
-      <Hero
-        project={u?.project ?? null}
-        eyebrow={u?.project ?? 'Your residence'}
-        title={unitTitle(deal)}
-        shape="portrait"
-      />
+      <Hero project={u?.project ?? null} eyebrow={u?.project ?? 'Your residence'} title={unitTitle(deal)} />
       {u === null ? (
         <Body muted>The unit details are not available yet. Please contact the JAD+ desk.</Body>
       ) : (

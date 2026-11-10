@@ -130,7 +130,6 @@ export default function Home(): ReactNode {
         project={home?.project ?? null}
         eyebrow={home?.project ?? 'JAD Global'}
         title={home === null ? 'Welcome' : home.unitName}
-        shape="landscape"
       />
       <Button
         title="Report an emergency"

@@ -15,9 +15,7 @@ import { colors, fonts, space } from '../../src/ui/theme.js';
 function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
   const { width } = useWindowDimensions();
   if (update.photos.length <= 1) {
-    return (
-      <Photo id={update.photos[0] ?? null} project={update.project} shape="landscape" label={update.title} />
-    );
+    return <Photo id={update.photos[0] ?? null} project={update.project} label={update.title} />;
   }
   // Several photos: swipe sideways, each nearly the card's width.
   const photoWidth = width - 2 * space.lg - 2 * space.md - space.lg;
@@ -25,12 +23,7 @@ function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
       {update.photos.map((id, i) => (
         <View key={id} style={{ width: photoWidth }}>
-          <Photo
-            id={id}
-            project={update.project}
-            shape="landscape"
-            label={`${update.title}, photo ${String(i + 1)}`}
-          />
+          <Photo id={id} project={update.project} label={`${update.title}, photo ${String(i + 1)}`} />
         </View>
       ))}
     </ScrollView>

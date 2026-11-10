@@ -40,26 +40,26 @@ export function Logo({ onPhoto = false }: { onPhoto?: boolean }): ReactNode {
 }
 
 /**
- * Frame shapes for photos. Project photos are tall towers, so the taller frames show the whole building
- * instead of a cropped strip (Naya, 10-Nov-2026: "too zoomed in").
+ * Width ÷ height of a bundled image. Photo frames take the photo's own proportions, so the whole photo is
+ * always shown and never cropped (Naya, 10-Nov-2026: "it must fit the entire image").
  */
-export const PHOTO_SHAPES = { banner: 16 / 10, landscape: 4 / 3, portrait: 3 / 4 } as const;
-export type PhotoShape = keyof typeof PHOTO_SHAPES;
+export function naturalAspect(asset: number): number {
+  const resolved = Image.resolveAssetSource(asset);
+  const width = resolved?.width ?? 0;
+  const height = resolved?.height ?? 0;
+  return width > 0 && height > 0 ? width / height : 4 / 3;
+}
 
-/** A photo with a slate veil, the logo, a bronze eyebrow and a title (sign-in, owner home, my unit). */
-export function Hero(props: {
-  project?: string | null;
-  eyebrow: string;
-  title: string;
-  shape?: PhotoShape;
-}): ReactNode {
+/** The whole photo (no cropping) with a slate veil, the logo, a bronze eyebrow and a title. */
+export function Hero(props: { project?: string | null; eyebrow: string; title: string }): ReactNode {
   const key = projectKey(props.project ?? null);
+  const photo = key === null ? signinPoster : PROJECT_PHOTOS[key];
   return (
-    <View style={[styles.hero, { aspectRatio: PHOTO_SHAPES[props.shape ?? 'banner'] }]}>
+    <View style={[styles.hero, { aspectRatio: naturalAspect(photo) }]}>
       <Image
-        source={key === null ? signinPoster : PROJECT_PHOTOS[key]}
+        source={photo}
         style={StyleSheet.absoluteFill}
-        resizeMode="cover"
+        resizeMode="contain"
         accessibilityIgnoresInvertColors
       />
       <View style={styles.veil}>
@@ -77,7 +77,7 @@ export function Hero(props: {
 
 const styles = StyleSheet.create({
   logo: { width: 134, height: 23 },
-  hero: { minHeight: 200, borderRadius: radius, overflow: 'hidden' },
+  hero: { width: '100%', borderRadius: radius, overflow: 'hidden', backgroundColor: colors.slate },
   veil: {
     flex: 1,
     justifyContent: 'space-between',
