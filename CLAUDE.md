@@ -162,6 +162,9 @@ pnpm --filter @jadplus/mobile start   # Expo
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.
+- Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
+  via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
+  home guide per building. Tenants request repairs only (ADR 0021).
 - Next, in order:
   1. Connect providers once Naya confirms them (SMS/voice, Graph email, WhatsApp): one Sender each (ADR 0007),
      and use the same senders for sign-in codes.
