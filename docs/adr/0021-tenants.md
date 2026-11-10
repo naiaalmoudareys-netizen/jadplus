@@ -22,7 +22,7 @@ invitation then waits in the tenant's notifications.
 A tenant raises routine requests for their current home, for **repairs (Maintenance) only** (Naya, 10-Nov-2026:
 tenants should not raise the same requests as owners). Every other service (snagging, handover, leasing, resale,
 valuation, mortgage, Golden Visa, furnishing, interior design, education) is the owner's: a tenant does not see
-it and the API refuses it ( in ). They first wait for the owner
+it and the API refuses it (`TENANT_SERVICES` in `packages/shared/src/services.ts`). They first wait for the owner
 ("awaiting owner"): the owner is told at once, reminded after 24 hours, and the JAD+ team calls the owner after
 48 hours (admin console, to come). Approve: the request goes to the service's partner (or the JAD+ team) and the
 4-working-hour response clock starts then. Decline: the request closes as "owner declined". The tenant is told
