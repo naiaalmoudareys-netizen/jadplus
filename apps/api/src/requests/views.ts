@@ -27,6 +27,7 @@ export function toLocation(row: LocationRow): UnitLocation | null {
 
 /** Columns for a request summary; needs `r`, LOCATION_JOIN and `LEFT JOIN partners p ON p.id = r.partner_id`. */
 export const SUMMARY_COLUMNS = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, p.name AS partner_name,
+  (SELECT name FROM services WHERE code = r.service_code) AS service_name,
   r.arrival_window_start, r.arrival_window_end, r.created_at, ${LOCATION_COLUMNS}`;
 
 export interface SummaryRow extends LocationRow {
@@ -34,6 +35,7 @@ export interface SummaryRow extends LocationRow {
   ref: string;
   is_emergency: number;
   emergency_type: RequestSummary['emergencyType'];
+  service_name: string | null;
   status: RequestSummary['status'];
   partner_name: string | null;
   arrival_window_start: number | null;
@@ -47,6 +49,7 @@ export function toSummary(r: SummaryRow): RequestSummary {
     ref: r.ref,
     emergency: r.is_emergency === 1,
     emergencyType: r.emergency_type,
+    serviceName: r.service_name,
     status: r.status,
     partnerName: r.partner_name,
     arrivalWindow:

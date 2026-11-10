@@ -7,6 +7,8 @@ import {
   myRequestsResponse,
   ownerPortalResponse,
   requestDetailResponse,
+  requestRaisedResponse,
+  servicesResponse,
   meResponse,
   partnerJobsResponse,
   partnerTeamResponse,
@@ -17,13 +19,16 @@ import {
   type MyPlace,
   type OwnerPortalAnswer,
   type RaiseEmergencyBody,
+  type RaiseRequestBody,
   type RequestDetail,
   type RequestMessage,
+  type RequestRaised,
   type RequestSummary,
   type MeResponse,
   type PartnerJob,
   type PartnerTeam,
   type RoleContextView,
+  type ServiceView,
   type SessionResponse,
 } from '@jadplus/shared';
 import { z } from 'zod';
@@ -110,3 +115,22 @@ export const interestedInOffer = (api: ApiClient, postId: string): Promise<unkno
 /** ADR 0011: a request to the JAD+ desk (a document or an account change). */
 export const deskRequest = (api: ApiClient, body: DeskRequestBody): Promise<unknown> =>
   api.post('/api/owner/desk-requests', body, z.unknown());
+
+/** S1/S2: the service catalogue with who takes a request now. */
+export const services = async (api: ApiClient): Promise<ServiceView[]> =>
+  (await api.get('/api/services', servicesResponse)).services;
+
+/** A routine request for one of the owner's units (ADR 0012). */
+export const raiseRequest = (
+  api: ApiClient,
+  place: MyPlace,
+  details: Pick<RaiseRequestBody, 'serviceCode' | 'description'>,
+): Promise<RequestRaised> =>
+  api.post(
+    '/api/requests',
+    {
+      ...(place.tenancyId === null ? { sfUnitId: place.sfUnitId } : { tenancyId: place.tenancyId }),
+      ...details,
+    },
+    requestRaisedResponse,
+  );

@@ -11,6 +11,7 @@ const job = (over: Partial<PartnerJob> = {}): PartnerJob => ({
   ref: 'JAD-7KQ4M2',
   emergency: true,
   emergencyType: 'water_leak',
+  serviceName: 'Maintenance',
   status: 'assigned',
   description: 'Water coming through the ceiling.',
   nextDueAt: NOW + 12 * MIN,
@@ -40,7 +41,13 @@ describe('job clock (R3)', () => {
 
   it('names the job and shows the promised arrival in Dubai time', () => {
     expect(jobTitle(job())).toBe('Water leak');
-    expect(jobTitle(job({ emergency: false, emergencyType: null }))).toBe('Maintenance request');
+    expect(jobTitle(job({ emergency: false, emergencyType: null }))).toBe('Maintenance');
+    expect(jobTitle(job({ emergency: false, emergencyType: null, serviceName: 'Furnishing' }))).toBe(
+      'Furnishing',
+    );
+    expect(jobTitle(job({ emergency: false, emergencyType: null, serviceName: null }))).toBe(
+      'Service request',
+    );
     expect(arrivalLabel(job({ arrivalWindow: { start: NOW, end: NOW + 120 * MIN } }))).toBe(
       'Arriving 12:00-14:00',
     );

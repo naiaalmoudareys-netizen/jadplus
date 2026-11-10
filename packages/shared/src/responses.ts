@@ -55,6 +55,8 @@ export const partnerJobsResponse = z.object({
       ref: z.string(),
       emergency: z.boolean(),
       emergencyType: emergencyType.nullable(),
+      /** The service, e.g. "Maintenance" or "Furnishing". */
+      serviceName: z.string().nullable(),
       status: z.enum(STATUSES),
       description: z.string(),
       nextDueAt: z.number().int().nullable(),
@@ -93,6 +95,8 @@ const requestSummary = z.object({
   ref: z.string(),
   emergency: z.boolean(),
   emergencyType: emergencyType.nullable(),
+  /** The service, e.g. "Maintenance" or "Furnishing". */
+  serviceName: z.string().nullable(),
   status: z.enum(STATUSES),
   /** The company handling it, once assigned (residents see the company, never a person's contact). */
   partnerName: z.string().nullable(),

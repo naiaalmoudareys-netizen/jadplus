@@ -29,6 +29,7 @@ import { versionGuard, withConflictCheck } from '../requests/concurrency.js';
 const MIN = 60_000;
 
 interface QueueRow extends LocationRow {
+  service_name: string | null;
   id: string;
   ref: string;
   is_emergency: number;
@@ -67,6 +68,7 @@ export function partnerRoutes(): Hono<AppEnv> {
     const open = [...OPEN_STATUSES];
     const { results } = await c.env.DB.prepare(
       `SELECT r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
+              (SELECT name FROM services WHERE code = r.service_code) AS service_name,
               r.next_due_kind, r.technician_id, r.arrival_window_start, r.arrival_window_end, r.created_at,
               ${LOCATION_COLUMNS}
        FROM requests r ${LOCATION_JOIN}
@@ -81,6 +83,7 @@ export function partnerRoutes(): Hono<AppEnv> {
         ref: r.ref,
         emergency: r.is_emergency === 1,
         emergencyType: r.emergency_type,
+        serviceName: r.service_name,
         status: r.status,
         description: r.description,
         nextDueAt: r.next_due_at,

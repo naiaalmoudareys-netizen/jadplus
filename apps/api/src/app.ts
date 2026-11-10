@@ -18,6 +18,7 @@ import { partnerRoutes } from './partner/routes.js';
 import { deskRoutes } from './portal/desk.js';
 import { portalRoutes } from './portal/routes.js';
 import { residentRoutes } from './requests/resident.js';
+import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
 import { securityHeaders } from './security.js';
 
@@ -43,6 +44,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/auth', authRoutes(deps));
   app.route('/api', requestRoutes(deps));
   app.route('/api', residentRoutes());
+  app.route('/api', routineRoutes(deps));
   app.route('/api/owner', portalRoutes(deps));
   app.route('/api/owner', deskRoutes(deps));
   app.route('/api/partner', partnerRoutes());

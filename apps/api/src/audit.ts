@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = [
   'owner_linked',
   'owner_access_removed',
   'emergency_raised',
+  'request_raised',
   'emergency_acknowledged',
   'emergency_escalated',
   'job_reassigned',

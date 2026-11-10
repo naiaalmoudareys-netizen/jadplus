@@ -52,8 +52,9 @@ export function placeLabel(location: UnitLocation | null): string {
   return [location.unitName, location.building, location.project].filter((x) => x !== null).join(' · ');
 }
 
-export function jobTitle(job: Pick<PartnerJob, 'emergency' | 'emergencyType'>): string {
-  if (!job.emergency) return 'Maintenance request';
+/** An emergency by its kind ("Water leak"); a routine request by its service ("Furnishing"). */
+export function jobTitle(job: Pick<PartnerJob, 'emergency' | 'emergencyType' | 'serviceName'>): string {
+  if (!job.emergency) return job.serviceName ?? 'Service request';
   return job.emergencyType === null ? 'Emergency' : EMERGENCY_TYPE_LABELS[job.emergencyType];
 }
 

@@ -51,14 +51,19 @@ export type RaiseResult =
 
 const NOT_FOUND = 'Not found.';
 
-interface Placement {
+export interface Placement {
   readonly sfUnitId: string;
   readonly ownerUserId: string;
   readonly tenancyId: string | null;
 }
 
-/** Where the emergency is, checked against who is asking (C-AZ-2). Unknown and not-yours look the same. */
-async function place(c: Ctx, deps: Deps, body: RaiseEmergencyBody, today: string): Promise<Placement> {
+/** Where a request is (emergency or routine), checked against who is asking (C-AZ-2). Unknown and not-yours look the same. */
+export async function place(
+  c: Ctx,
+  deps: Deps,
+  body: Pick<RaiseEmergencyBody, 'tenancyId' | 'sfUnitId'>,
+  today: string,
+): Promise<Placement> {
   const actor = c.get('auth');
   const db = c.env.DB;
   if (actor.role === 'tenant') {

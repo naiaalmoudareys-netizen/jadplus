@@ -137,6 +137,11 @@ pnpm --filter @jadplus/mobile start   # Expo
   (Reservation Form, SPA, statement, NOC, title deed) with Request / status / Open, Profile "JAD+ desk"
   (contact change, close account, other). Production → Salesforce `jadplus-desk` route. 292 tests.
   Next: Profile switches (N4, L1), then the console.
+- 10-Nov-2026 (session 3, cont.): Naya: tabs Home · My unit · Payments · Requests · Profile (news at the end of
+  Home, construction at the end of My unit). Routine requests (ADR 0012, migration 0013 catalogue):
+  `GET /api/services`, `POST /api/requests` (owners; partner / JAD+ team / "coming soon"; 4-working-hour
+  clock), New request screen. Mr. Omar real-data pilot postponed by Naya. 302 tests.
+  Next: tenant requests with owner approval (A1), partner routine steps, Profile switches, console.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

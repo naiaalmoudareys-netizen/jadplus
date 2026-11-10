@@ -1,7 +1,7 @@
 /**
- * Owner and tenant tabs: Home · My unit · Payments · Profile for owners (news & offers at the end of Home,
- * construction at the end of My unit: Naya, 10-Nov-2026); Home · Profile for tenants (the unit's payments
- * and owner news are the owner's). Services join in phase B.
+ * Owner and tenant tabs (Naya, 10-Nov-2026): Home · My unit · Payments · Requests · Profile for owners (news &
+ * offers at the end of Home, construction at the end of My unit); Home · Requests · Profile for tenants (the
+ * unit's payments and owner news are the owner's).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
@@ -46,6 +46,7 @@ export default function ResidentTabs(): ReactNode {
         name="payments"
         options={{ title: 'Payments', tabBarIcon: icon('card-outline'), href: owner ? '/payments' : null }}
       />
+      <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: icon('construct-outline') }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
     </Tabs>
   );

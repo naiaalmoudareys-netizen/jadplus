@@ -1,15 +1,12 @@
 /**
- * Home for owners and tenants (R1, R2, U6, docs/DESIGN.md): project photo, the emergency button, then for
- * owners the next payment, everyone's requests with status, and for owners news & offers at the end
- * (Naya, 10-Nov-2026: moved here from their own tab).
- * Routine requests and approvals come in phase B.
+ * Home for owners and tenants (R1, R2, U6, docs/DESIGN.md): project photo, the emergency button, the next
+ * payment (owners), and news & offers at the end (owners). Requests have their own tab (Naya, 10-Nov-2026).
  */
-import { Redirect, useFocusEffect, useRouter } from 'expo-router';
+import { dubaiDate, planSummary } from '@jadplus/shared';
+import { Redirect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
-import { myPlaces, myRequests } from '../../src/api/endpoints.js';
-import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../../src/jobs/format.js';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { myPlaces } from '../../src/api/endpoints.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { NewsSection } from '../../src/portal/NewsSection.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
@@ -17,29 +14,8 @@ import { DemoBadge } from '../../src/portal/ui.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Hero } from '../../src/ui/brand.js';
 import { useLoad } from '../../src/ui/hooks.js';
-import { Body, Button, Card, Heading, Notice, Page } from '../../src/ui/kit.js';
-import { colors, fonts, radius, space } from '../../src/ui/theme.js';
-
-const REFRESH_MS = 30_000;
-
-function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => void }): ReactNode {
-  const arrival = arrivalLabel(r);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
-      <View style={styles.rowTop}>
-        <Text style={styles.title}>{jobTitle(r)}</Text>
-        <Text style={styles.ref}>{r.ref}</Text>
-      </View>
-      <Text style={styles.status}>{residentStatusLabel(r.status)}</Text>
-      {arrival === null ? null : <Text style={styles.status}>{arrival}</Text>}
-      <Text style={styles.place}>{placeLabel(r.location)}</Text>
-    </Pressable>
-  );
-}
+import { Body, Button, Card, Page } from '../../src/ui/kit.js';
+import { colors, fonts } from '../../src/ui/theme.js';
 
 /** Owners only: next payment (or overdue). */
 function OwnerSummary(): ReactNode {
@@ -49,34 +25,28 @@ function OwnerSummary(): ReactNode {
   if (data === null) return null;
   const today = dubaiDate(Date.now());
   const deal = data.deals[portal?.dealIndex ?? 0] ?? data.deals[0];
-  const s = deal === undefined ? null : planSummary(deal.instalments, deal.price, today);
-  const nextDue = s === null || s.overdueAmount > 1 ? null : (s.next?.instalment.due ?? null);
+  if (deal === undefined) return null;
+  const s = planSummary(deal.instalments, deal.price, today);
+  const overdue = s.overdueAmount > 1;
+  const nextDue = overdue ? null : (s.next?.instalment.due ?? null);
   return (
-    <>
-      {deal === undefined || s === null ? null : (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            router.push('/payments');
-          }}
-        >
-          <Card>
-            <Text style={styles.kpiLabel}>{s.overdueAmount > 1 ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
-            <Text style={[styles.kpi, s.overdueAmount > 1 && styles.overdue]}>
-              {s.overdueAmount > 1
-                ? aed(s.overdueAmount)
-                : s.next === null
-                  ? 'Nothing due'
-                  : aed(s.next.state.balance)}
-            </Text>
-            <Body muted>
-              {unitTitle(deal)}
-              {nextDue === null ? '' : ` · ${longDate(nextDue)}`}
-            </Body>
-          </Card>
-        </Pressable>
-      )}
-    </>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => {
+        router.push('/payments');
+      }}
+    >
+      <Card>
+        <Text style={styles.kpiLabel}>{overdue ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
+        <Text style={[styles.kpi, overdue && styles.overdue]}>
+          {overdue ? aed(s.overdueAmount) : s.next === null ? 'Nothing due' : aed(s.next.state.balance)}
+        </Text>
+        <Body muted>
+          {unitTitle(deal)}
+          {nextDue === null ? '' : ` · ${longDate(nextDue)}`}
+        </Body>
+      </Card>
+    </Pressable>
   );
 }
 
@@ -94,18 +64,9 @@ export default function Home(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
-  const load = useCallback(() => myRequests(api), [api]);
-  const requests = useLoad(load, REFRESH_MS);
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
   const home = places.data?.[0]?.location ?? null;
-  const { reload } = requests;
-  useFocusEffect(
-    useCallback(() => {
-      void reload();
-    }, [reload]),
-  );
-
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   return (
     <Page>
@@ -123,38 +84,12 @@ export default function Home(): ReactNode {
         }}
       />
       <OwnerSummary />
-      <Heading>My requests</Heading>
-      {requests.error === null ? null : <Notice tone="error">{requests.error}</Notice>}
-      {requests.data !== null && requests.data.length === 0 ? <Body muted>No requests yet.</Body> : null}
-      {(requests.data ?? []).map((r) => (
-        <RequestRow
-          key={r.id}
-          r={r}
-          onPress={() => {
-            router.push({ pathname: '/request/[id]', params: { id: r.id } });
-          }}
-        />
-      ))}
       <NewsIfOwner />
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    backgroundColor: colors.card,
-    borderRadius: radius,
-    padding: space.md,
-    gap: space.xs,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  pressed: { opacity: 0.7 },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 19, fontFamily: fonts.semibold, color: colors.text },
-  ref: { fontSize: 15, fontFamily: fonts.regular, color: colors.muted },
-  status: { fontSize: 16, fontFamily: fonts.regular, color: colors.text },
-  place: { fontSize: 15, fontFamily: fonts.regular, color: colors.muted },
   kpiLabel: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.muted },
   kpi: { fontFamily: fonts.light, fontSize: 26, color: colors.navy, fontVariant: ['tabular-nums'] },
   overdue: { color: colors.urgent },

@@ -43,6 +43,7 @@ export default function RootLayout(): ReactNode {
           <Stack.Screen name="partner/job/[id]" options={{ title: 'Job' }} />
           <Stack.Screen name="emergency" options={{ title: 'Emergency' }} />
           <Stack.Screen name="request/[id]" options={{ title: 'Request' }} />
+          <Stack.Screen name="new-request" options={{ title: 'New request' }} />
           <Stack.Screen name="desk-request" options={{ title: 'JAD+ desk' }} />
           <Stack.Screen name="settings" options={{ title: 'Account' }} />
         </Stack>
