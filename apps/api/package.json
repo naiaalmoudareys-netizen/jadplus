@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "dev:phone": "wrangler dev --ip 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json && tsc -p scripts/tsconfig.json",
     "test": "vitest run --config test/vitest.config.ts",
     "db:migrate:local": "wrangler d1 migrations apply jadplus-preview --local",
