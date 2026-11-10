@@ -1,0 +1,62 @@
+# JAD+ security: threat model and controls
+
+Status: living document, started 09-Nov-2026. Every control has an ID (C-xxx) referenced from code and tests.
+Audience: the external auditor, Naya (IT), JAD legal counsel. Update this file in the same commit as any
+security-relevant change.
+
+## 1. What we protect
+
+| Asset              | Examples                                                               | Sensitivity              |
+| ------------------ | ---------------------------------------------------------------------- | ------------------------ |
+| Buyer identity     | Name, email, mobile, nationality                                       | Personal data (UAE PDPL) |
+| Identity documents | Emirates ID, passport, visa scans                                      | **Highly sensitive**     |
+| Property and money | Units owned, deal value, payment plan, overdue amounts, penalties      | Confidential             |
+| Tenancy            | Tenant name, contact, tenancy dates                                    | Personal data            |
+| Service history    | Requests, photos inside homes, quotes, ratings                         | Personal data            |
+| Partner data       | Licences, insurance, technician names, scorecards                      | Confidential (business)  |
+| Credentials        | Session tokens, sign-in codes, API keys, Salesforce integration access | Secret                   |
+
+## 2. Actors and trust boundaries
+
+- **Owner / tenant / technician** on the mobile app (untrusted device, untrusted network).
+- **Partner office / JAD+ Admin / viewer** on the web console (behind Cloudflare Access + app roles).
+- **Scheduled jobs** (SLA timers, escalation, reminders) inside the Worker.
+- **Salesforce** via the finance-worker proxy (separate trust zone; integration user, least privilege).
+- **Email / WhatsApp providers** (outbound only; no personal data beyond what the message needs).
+
+## 3. Threats (STRIDE) and controls
+
+| Threat                 | Example                                                        | Controls                                                                                                                                                                                                                                                                   |
+| ---------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Spoofing               | Someone signs in as an owner                                   | C-AUTH-1 one-time codes (6 digits, 10 min, single use, hashed, constant-time compare); C-AUTH-2 rate limits per IP and identity + lockout; C-AUTH-3 identity must exist in Salesforce and not be shared between people; C-AUTH-4 Cloudflare Access + role list for console |
+| Tampering              | Changing another owner's request or a quote amount             | C-AZ-1 deny-by-default role table (`packages/shared/lifecycle.ts`); C-AZ-2 object-ownership check on every read/write; C-VAL-1 zod validation, unknown keys rejected; C-AUD-1 append-only audit log                                                                        |
+| Repudiation            | "I never approved that quote"                                  | C-AUD-1 audit log with actor, role, time, IP hash; C-LEG-1 terms/consent versions with timestamps                                                                                                                                                                          |
+| Information disclosure | Leaking IDs, phones, documents                                 | C-PD-1 minimum data; C-PD-2 app-layer encryption of sensitive columns (AES-GCM, key in secrets); C-PD-3 private R2 + short-lived signed URLs after authZ; C-LOG-1 logger redacts personal data; C-HDR security headers; no personal data in URLs                           |
+| Denial of service      | Flooding sign-in or uploads                                    | C-RL-1 Cloudflare rate limiting; C-SZ-1 body/upload size limits; Cloudflare edge protection                                                                                                                                                                                |
+| Elevation of privilege | Tenant acting as owner; technician seeing other partners' jobs | C-AZ-1/2; sessions bound to one role context; C-SES-1 hashed session tokens, idle + absolute expiry, rotation, sign out everywhere                                                                                                                                         |
+
+## 4. Controls checklist (to be ticked with evidence before the audit)
+
+| ID          | Control                                                                                                          | Evidence                                                                                                                                                      | Status                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| C-HDR       | Security headers on every response                                                                               | `apps/api/src/security.ts`, `apps/api/test/app.test.ts`                                                                                                       | Done                                                                                                            |
+| C-SZ-1      | JSON body limit 64 KB                                                                                            | `apps/api/src/app.ts`, test "refuses oversized bodies"                                                                                                        | Done                                                                                                            |
+| C-ERR-1     | No stack traces or internals in errors (request id only)                                                         | `apps/api/src/app.ts`                                                                                                                                         | Done                                                                                                            |
+| C-AUTH-1..4 | Sign-in                                                                                                          | `apps/api/src/auth/signin.ts`, `throttle.ts`, `packages/shared/src/auth.ts`; tests `auth-signin.test.ts`, `shared/test/auth.test.ts`; ADR 0003                | Done: 1, 2, 4 (mobile side). To do: 3 (Salesforce owner linking), email delivery, Cloudflare Access for console |
+| C-SES-1     | Sessions                                                                                                         | `apps/api/src/auth/sessions.ts`, `middleware.ts`; tests `auth-sessions.test.ts`; ADR 0003                                                                     | Done (bearer). To do: console cookies + CSRF                                                                    |
+| C-AZ-1      | Role transition table; deny by default; roles per route                                                          | `packages/shared/src/lifecycle.ts`, `apps/api/src/auth/middleware.ts`; tests `rules.test.ts`, `auth-sessions.test.ts` (every route refuses without a session) | Done                                                                                                            |
+| C-AZ-2      | Object ownership checks                                                                                          | `packages/shared/src/access.ts`, `access.test.ts`                                                                                                             | Done (rules) / To do (called by request endpoints)                                                              |
+| C-VAL-1     | zod on every input                                                                                               | `packages/shared/src/schemas.ts`, `apps/api/src/validate.ts`, `app.test.ts`                                                                                   | Done for every endpoint built so far                                                                            |
+| C-PD-1..3   | Personal data handling                                                                                           | `apps/api/src/crypto.ts` (AES-GCM fields, blind indexes), migrations 0001/0003, `crypto-logger.test.ts`; ADR 0002                                             | Done: 2 (encryption + blind index). To do: 1 (review per feature), 3 (signed URLs)                              |
+| C-LOG-1     | Redacting logger                                                                                                 | `apps/api/src/logger.ts`, `crypto-logger.test.ts`, `app.test.ts`                                                                                              | Done                                                                                                            |
+| C-AUD-1     | Audit log                                                                                                        | migration 0002 (append-only triggers, 1-year retention), `apps/api/src/audit.ts`, `migrations.test.ts`                                                        | Done for sign-in/session actions; extend with every new action                                                  |
+| C-RL-1      | Rate limits                                                                                                      | App level: sign-in throttles (ADR 0003). Edge: Cloudflare rules                                                                                               | Partly done (app level)                                                                                         |
+| C-UPL-1     | Upload checks (sniffing, size, EXIF strip)                                                                       |                                                                                                                                                               | To do                                                                                                           |
+| C-DEP-1     | `pnpm audit`, Dependabot, CodeQL, gitleaks in CI                                                                 | `.github/workflows/ci.yml`                                                                                                                                    | Done (pipeline)                                                                                                 |
+| C-MOB-1     | Mobile: token in SecureStore, no data cached unencrypted, certificate pinning decision, no debug logs in release |                                                                                                                                                               | To do                                                                                                           |
+| C-LEG-1     | Terms/consent versions + timestamps                                                                              | migration 0001 `consents` (append-only), `migrations.test.ts`                                                                                                 | Storage done / To do (acceptance flow)                                                                          |
+
+## 5. Before go-live
+
+Independent penetration test (budgeted separately, p.6), data-protection review, incident response plan
+(contain, assess, report to the UAE Data Office, inform users — T4), restore test of backups, secrets rotation.

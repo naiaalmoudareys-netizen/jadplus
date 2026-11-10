@@ -1,0 +1,22 @@
+{
+  "name": "@jadplus/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test/tsconfig.json",
+    "test": "vitest run --config test/vitest.config.ts",
+    "db:migrate:local": "wrangler d1 migrations apply jadplus-preview --local"
+  },
+  "dependencies": {
+    "@jadplus/shared": "workspace:*",
+    "hono": "4.13.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261109.1",
+    "@types/node": "24.19.2",
+    "wrangler": "4.158.0"
+  }
+}

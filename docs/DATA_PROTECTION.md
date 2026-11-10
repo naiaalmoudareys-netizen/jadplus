@@ -1,0 +1,17 @@
+# JAD+ record of personal data processing (UAE PDPL)
+
+Draft for JAD legal counsel. Started 09-Nov-2026.
+
+| Data                     | Whose                               | Why (purpose)                      | Where stored                                     | Kept for                                         | Who can see                                                                        |
+| ------------------------ | ----------------------------------- | ---------------------------------- | ------------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Name, email, mobile      | Owners, tenants                     | Sign-in, service updates           | Salesforce (owners); JAD+ D1 encrypted (tenants) | While account active + 1 year                    | The person; JAD+ Admin; the partner assigned to their request (name + mobile only) |
+| Unit, deal, payment plan | Owners                              | Show their residence and payments  | Salesforce (read live)                           | Not copied                                       | The owner                                                                          |
+| Emirates ID / passport   | Owners, tenants (lockout check E15) | Identity verification              | R2 private, encrypted                            | While needed + legal minimum                     | JAD+ Admin; technician sees only "verified"                                        |
+| Request details, photos  | Owners, tenants                     | Deliver the service                | D1, R2 private                                   | 5 years (warranty/disputes) — confirm with legal | Requester, owner, assigned partner, JAD+ Admin                                     |
+| Ratings, comments        | Owners, tenants                     | Partner scorecards (internal)      | D1                                               | 3 years                                          | JAD+ Admin                                                                         |
+| Consent records          | All users                           | Prove terms/marketing consent (L1) | D1                                               | 5 years after account closes                     | JAD+ Admin, legal                                                                  |
+| Audit log                | Staff and users                     | Security, disputes                 | D1                                               | 1 year minimum                                   | Naya, auditor                                                                      |
+
+Rights: access, correction (via "Talk to a person", U2), deletion on account closure (except where law
+requires keeping records), marketing opt-out at any time. Breach process: see SECURITY.md section 5.
+Hosting location (UAE expectation, Q&A tech 4): to be confirmed — Cloudflare data localisation options.

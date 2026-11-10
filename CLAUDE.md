@@ -1,0 +1,108 @@
+# JAD+ — project guide for Claude
+
+JAD+ is JAD Global Real Estate Development's after-sales platform: "Every request, on the clock."
+One backend, a native iPhone/Android app (owners, tenants, partner technicians) and a web console
+(JAD+ Admin, partner offices). It stores personal data of property buyers (names, emails, phones,
+Emirates ID / passport documents) and **will be audited line by line before launch**.
+Every change must be clean, tested, secure and explainable to an auditor.
+
+Product source of truth: `docs/BUILD_SPEC.md` (requirement IDs R/O/S/L/E/A/U/P/T/V, from the
+JAD+ Master Plan of 15-Oct-2026). Cite the requirement ID in code comments, tests and commits.
+
+## People
+
+- **Naya** (IT / Tech Manager): owner of this codebase. Non-developer stakeholders read our summaries,
+  so explain in plain language.
+- Steven (Marketing Director) owns the plan; Mr. Omar (GM) approves all payments; Dr. Mohanad approves the plan.
+- Never put personal data, phone numbers or partner contact details in code, tests, fixtures, docs or commits.
+  Fixtures use obviously fictional people (e.g. "Layla Haddad", `demo@jadplus.ae`, `+971 50 000 0000`).
+
+## Architecture (pnpm monorepo)
+
+| Path              | What                                                                                                                                                        | Stack                                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/shared` | Domain logic and types shared by every app: statuses + allowed transitions, SLA clock, working calendar, emergency rules, zod schemas for every API payload | TypeScript, zod, Vitest                                           |
+| `apps/api`        | The only backend. REST JSON API on Cloudflare Workers; D1 (SQLite) + R2 (photos/PDFs) + KV; scheduled jobs (SLA timers, escalation, reminders)              | TypeScript, Hono, zod, Vitest (`@cloudflare/vitest-pool-workers`) |
+| `apps/mobile`     | Owner / tenant / partner-technician app for iOS and Android                                                                                                 | Expo (React Native), TypeScript, expo-router, expo-secure-store   |
+| `apps/console`    | JAD+ Admin console and partner office console (web)                                                                                                         | TypeScript, React, Vite                                           |
+| `docs/`           | BUILD_SPEC, ARCHITECTURE, SECURITY (threat model), DATA_PROTECTION, `adr/` decision records                                                                 | Markdown                                                          |
+
+Salesforce stays the system of record for owners, units, deals, payment plans and construction progress.
+JAD+ reads it through the existing finance worker proxy (integration user, read-only + lead creation) —
+never store Salesforce credentials in this repo or in the apps.
+
+The previous prototype lives at `Jad Global Share Point - IT\steven leads\portal-live` (plain JS, deployed as
+the private preview on portal.jadglobal.ae). Use it as the **reference for proven logic** (SLA clock, calendar,
+sign-in hardening, Salesforce proxy, service catalogue); port it into TypeScript with tests — never copy-paste blindly.
+
+## Non-negotiable engineering rules
+
+1. **TypeScript strict** everywhere (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`). No `any`, no `@ts-ignore`, no non-null `!` without a comment saying why it is safe.
+2. **Zero warnings**: `pnpm lint`, `pnpm typecheck`, `pnpm test` must pass with no warnings before any commit. ESLint `--max-warnings 0`.
+3. **Every input validated** with a zod schema at the API boundary (body, query, params, headers we rely on). Reject unknown keys.
+4. **Business rules live in `packages/shared`** as pure functions with unit tests (every rule in BUILD_SPEC gets at least one test named after its ID, e.g. `E6: emergency moves to backup after 30 min`).
+5. **Database changes only through numbered migration files** in `apps/api/migrations` (`wrangler d1 migrations`). Never edit an applied migration.
+6. **Small, readable modules**; no file over ~400 lines; no dead code, no commented-out code, no `console.log` (use the structured logger, which redacts personal data).
+7. **Dependencies**: only well-maintained packages; pin via lockfile; `pnpm audit --prod` must be clean; justify every new dependency in the commit message.
+8. **Commits**: conventional commits (`feat(api): …`, `fix(shared): …`), small, with requirement IDs. Never commit secrets, `.dev.vars`, `.env`, keys or real data.
+
+## Security standard (highest — personal data of buyers)
+
+Full threat model and controls: `docs/SECURITY.md`. Minimum on every change:
+
+- **AuthN**: passwordless email (later WhatsApp) one-time code, 6 digits, single use, 10-minute expiry, hashed at rest, constant-time compare, rate-limited per IP and per identity, lockout after repeated failures. Sessions: random 256-bit tokens, stored **hashed**, idle + absolute expiry, revocable ("sign out everywhere"), rotated on privilege change. Mobile stores the token only in `expo-secure-store`.
+- **AuthZ**: deny by default. Every endpoint declares its role(s) (owner, tenant, partner, partner_admin, jad_admin, jad_viewer) and checks **object ownership** (an owner sees only their units; a tenant only their tenancy; a partner only jobs assigned to it). Never trust IDs from the client without an ownership check. Admin console additionally behind Cloudflare Access.
+- **Personal data**: collect the minimum. Emirates ID / passport files only in R2 with private access, served through short-lived signed URLs after an authZ check. Sensitive columns (phone, email, ID numbers) encrypted at the application layer (AES-GCM, key in Workers secrets) where stored outside Salesforce. Never log personal data; the logger redacts emails, phones and tokens.
+- **Web security**: strict CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `frame-ancestors 'none'`, CSRF protection (same-origin + token for cookie sessions), CORS allow-list only (app origins), `SameSite=Strict` HttpOnly Secure cookies on the web.
+- **Uploads**: type sniffing (not just extension), size limits, images re-encoded/stripped of EXIF location, PDFs size-limited; filenames never trusted.
+- **Secrets**: only in Cloudflare secrets / EAS secrets; `.dev.vars` is git-ignored; secret scanning (gitleaks) in CI.
+- **Audit trail**: every state change and every admin action written to an append-only `audit_log` (who, role, what, when, IP hash). Kept 1 year minimum.
+- **Legal (L1-L4)**: terms + make-safe cap + marketing consent accepted with timestamp and version; the app never gives instructions; emergency screen text is exactly as in the spec.
+- When in doubt, choose the safer option and write it down in `docs/adr/`.
+
+## Commands
+
+```
+pnpm install            # once
+pnpm lint               # eslint, max-warnings 0
+pnpm typecheck          # tsc --noEmit in every package
+pnpm test               # vitest in every package
+pnpm check              # all three — must be green before every commit
+pnpm --filter @jadplus/api dev        # local API (wrangler dev)
+pnpm --filter @jadplus/mobile start   # Expo
+```
+
+## How to work in this repo
+
+- Start every task by reading the relevant BUILD_SPEC rows and the existing code; plan, then build with tests.
+- Build view by view in the order of BUILD_SPEC "Build order" (Phase A partner view + emergency engine first).
+- After each feature: run `pnpm check`, update BUILD_SPEC status (TODO → BUILT) and, if a decision was made, add an ADR.
+- Never deploy to production or touch real Salesforce data without Naya's explicit go-ahead in the chat.
+  The private preview (portal.jadglobal.ae, demo data only) is the place to show progress.
+- Report to Naya in plain language: what was built, how it was verified, what is left.
+
+## Current state and next steps (update at the end of every session)
+
+- 09-Nov-2026: repo created. Done: strict tooling, CI (lint/typecheck/test/audit/CodeQL/gitleaks, Dependabot),
+  `packages/shared` calendar + emergency rules + role/status transitions (17 tests), `apps/api` foundation
+  (security headers, request id, body limit, safe errors; 4 tests), docs (SECURITY, ARCHITECTURE, DATA_PROTECTION, ADR 0001).
+- 09-Nov-2026 (session 2, autonomous, nothing committed yet): 158 tests, `pnpm check` green.
+  Done: D1 migrations 0001-0006 (STRICT tables, CHECK lists mirrored from shared + drift tests, append-only
+  triggers; applied to real local D1) — ADR 0002. Sign-in by email code, rate limits/lockout, hashed sessions,
+  switch view, sign out everywhere, deny-by-default + requireRole, ownership rules, redacting logger, audit log,
+  AES-GCM field encryption + blind indexes — ADR 0003. Phase A engine: raise emergency (E1-E3, E12, E14, L3),
+  partner queue + acknowledge (R3, E4, E17), escalation cron (E5-E7), SLA clocks (S4), scorecard + compliance
+  rules (S6, S7), notifications outbox — ADR 0004. Verified end to end in `wrangler dev` (sign-in, cron move to backup).
+  Tests use Node's built-in SQLite through a D1 stand-in (`apps/api/test/d1.ts`); Node 24 required.
+- Waiting on Naya: (a) review ADRs 0002-0004 and commit (suggested split in the session summary);
+  (b) remote `origin` = github.com/naiaalmoudareys-netizen/jadplus (added 10-Nov, empty, nothing pushed yet;
+  confirm it is private; move to a JAD organisation later); (c) go-ahead + details for the Salesforce
+  unit-owner lookup (owners cannot raise by unit until then); (d) Microsoft Graph sender for sign-in codes.
+- Next, in order:
+  1. Phase A remainder: outbox delivery worker (at least email + on-call SMS/call decision), daily scorecard and
+     licence/insurance job (S6/S7 suspend → backup), on-call rota API, admin review list.
+  2. `apps/mobile` Expo scaffold (expo-router, TypeScript strict, ESLint, SecureStore session); partner technician screens first.
+  3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
+  4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).
+- Reference prototype: `Jad Global Share Point - IT/steven leads/portal-live` (in Naya's OneDrive).
+- Flow deck (all views, cases, edge cases): Desktop `JAD+ Complete Flow.pptx` (produced 09-Nov).

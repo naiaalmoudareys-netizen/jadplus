@@ -1,0 +1,6 @@
+# Copy to .dev.vars (git-ignored) for `pnpm --filter @jadplus/api dev`. Never commit real keys.
+# Generate each key with:  node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# Preview and production keys are set with `wrangler secret put INDEX_KEY` / `DATA_KEY`, never in files.
+ENVIRONMENT=local
+INDEX_KEY=
+DATA_KEY=

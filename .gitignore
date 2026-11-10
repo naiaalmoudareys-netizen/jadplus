@@ -1,0 +1,23 @@
+node_modules/
+dist/
+build/
+coverage/
+.wrangler/
+.expo/
+.turbo/
+*.log
+.DS_Store
+# secrets — never commit
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+*.key
+*.jks
+google-services.json
+GoogleService-Info.plist
+!.dev.vars.example

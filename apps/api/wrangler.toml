@@ -1,0 +1,24 @@
+# JAD+ API. Resource IDs are filled in per environment when the Cloudflare resources are created
+# (see docs/ARCHITECTURE.md "Environments"). Secrets are set with `wrangler secret put`, never written here.
+name = "jadplus-api"
+main = "src/index.ts"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+[vars]
+ENVIRONMENT = "preview"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jadplus-preview"
+database_id = "TO_BE_CREATED"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "jadplus-preview-media"
+
+# Emergency escalation sweep (E5-E7): every minute.
+[triggers]
+crons = ["* * * * *"]
