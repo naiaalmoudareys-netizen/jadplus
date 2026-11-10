@@ -1,7 +1,8 @@
 /**
  * JAD+ Admin API, phase A (BUILD_SPEC S6, S7, P3, E6, E7, section 11; ADR 0006):
  * - the partner review list the daily check fills, and resolving an item with a note;
- * - the weekly on-call rota (JAD+ Admin + a second person).
+ * - the weekly on-call rota (JAD+ Admin + a second person);
+ * - alerts that could not be delivered (ADR 0007).
  * Reading: jad_admin and jad_viewer. Changing: jad_admin only. Every change is audited (C-AUD-1).
  */
 import {
@@ -178,6 +179,45 @@ export function adminRoutes(): Hono<AppEnv> {
       }),
     ]);
     return c.json({ weekStarting: week, first: body.first, second: body.second });
+  });
+
+  // ADR 0007: alerts that could not be delivered in the last 7 days, newest first, with why. JAD+ Admin acts on
+  // these by phone. No addresses or message text are returned, only the request and the short reason codes.
+  admin.get('/notifications/undelivered', requireRole('jad_admin', 'jad_viewer'), async (c) => {
+    const since = c.get('now') - 7 * 86_400_000;
+    const { results } = await c.env.DB.prepare(
+      `SELECT n.id, r.ref, n.request_id, n.template, n.recipient_kind, n.urgent, n.created_at, n.failed_at, n.failure,
+              (SELECT group_concat(DISTINCT d.channel || ':' || d.last_error) FROM notification_deliveries d
+                WHERE d.notification_id = n.id AND d.status = 'failed') AS errors
+       FROM notifications n JOIN requests r ON r.id = n.request_id
+       WHERE n.failed_at IS NOT NULL AND n.failed_at > ? ORDER BY n.failed_at DESC LIMIT 200`,
+    )
+      .bind(since)
+      .all<{
+        id: string;
+        ref: string;
+        request_id: string;
+        template: string;
+        recipient_kind: string;
+        urgent: number;
+        created_at: number;
+        failed_at: number;
+        failure: string;
+        errors: string | null;
+      }>();
+    return c.json({
+      notifications: results.map((n) => ({
+        id: n.id,
+        request: { id: n.request_id, ref: n.ref },
+        template: n.template,
+        recipient: n.recipient_kind,
+        urgent: n.urgent === 1,
+        createdAt: n.created_at,
+        failedAt: n.failed_at,
+        failure: n.failure,
+        errors: n.errors === null ? [] : n.errors.split(','),
+      })),
+    });
   });
 
   return admin;

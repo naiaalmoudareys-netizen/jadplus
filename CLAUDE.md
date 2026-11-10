@@ -103,11 +103,15 @@ pnpm --filter @jadplus/mobile start   # Expo
 - 10-Nov-2026 (session 3, cont.): pushed to GitHub by Naya. Daily partner check (S6, S7, P3: auto-suspend on
   lapsed documents, waiting jobs to backup, review list), admin review list API, on-call rota API — ADR 0006,
   migration 0008. 203 tests.
+- 10-Nov-2026 (session 3, cont.): alert delivery engine (fan-out, SMS/email senders as plug-in points, retries,
+  undelivered list for admin) — ADR 0007, migration 0009. No provider connected yet: every alert is marked
+  undelivered. 218 tests.
 - Waiting on Naya: (a) pushes: Claude's push is blocked by the permission check, Naya runs `git push`; (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
   of `integrations/salesforce/README.md` (sandbox first); (d) Microsoft Graph sender for email codes and an
   SMS/WhatsApp provider for mobile codes.
 - Next, in order:
-  1. Phase A remainder: outbox delivery worker (at least email + on-call SMS/call decision).
+  1. Connect providers once Naya confirms them (SMS/voice, Graph email, WhatsApp): one Sender each (ADR 0007),
+     and use the same senders for sign-in codes.
   2. `apps/mobile` Expo scaffold (expo-router, TypeScript strict, ESLint, SecureStore session); partner technician screens first.
   3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
   4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).

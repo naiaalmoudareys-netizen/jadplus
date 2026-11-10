@@ -3,7 +3,14 @@
  * partner lookup and ownership facts. Statements are returned unrun so callers can batch them with the
  * change they belong to (a change and its history are saved together or not at all).
  */
-import type { DispatchPartner, RequestFacts, Role, Status, TenancyFacts } from '@jadplus/shared';
+import type {
+  DispatchPartner,
+  NotificationTemplate,
+  RequestFacts,
+  Role,
+  Status,
+  TenancyFacts,
+} from '@jadplus/shared';
 import { newId, randomBytes } from '../crypto.js';
 
 /** The service the emergency engine dispatches to (migration 0006). */
@@ -57,16 +64,6 @@ export function eventStatement(db: D1Database, e: EventInput): D1PreparedStateme
       e.data === undefined ? null : JSON.stringify(e.data),
     );
 }
-
-export type NotificationTemplate =
-  | 'emergency_new_job'
-  | 'emergency_owner_notice'
-  | 'emergency_reminder'
-  | 'emergency_backup_alert'
-  | 'emergency_on_call'
-  | 'emergency_life_safety'
-  | 'emergency_acknowledged'
-  | 'emergency_owner_update';
 
 export type Recipient =
   | { readonly kind: 'user'; readonly userId: string }

@@ -27,6 +27,7 @@ export const AUDIT_ACTIONS = [
   'partner_flagged',
   'partner_review_resolved',
   'on_call_rota_set',
+  'notification_failed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

@@ -23,7 +23,7 @@ export interface Deps {
 /** Keys are imported once per Worker instance; the cache is keyed by the secret values themselves. */
 let keyCache: { readonly source: string; readonly keys: Promise<Keys> } | null = null;
 
-function keysFor(env: Bindings): Promise<Keys> {
+export function keysFor(env: Bindings): Promise<Keys> {
   const source = `${env.INDEX_KEY}:${env.DATA_KEY}`;
   if (keyCache?.source !== source) keyCache = { source, keys: importKeys(env.INDEX_KEY, env.DATA_KEY) };
   return keyCache.keys;

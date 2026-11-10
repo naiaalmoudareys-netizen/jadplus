@@ -3,10 +3,12 @@
  * Controls: C-AZ-1 (roles), C-AUD-1 (append-only audit log + request history), C-LEG-1 (consents).
  */
 import {
+  CHANNELS,
   CLOSE_REASONS,
   EMERGENCY_TYPES,
   ESCALATION_STAGES,
   LIFE_SAFETY_TYPES,
+  NOTIFICATION_TEMPLATES,
   ROLES,
   SLA_METRICS,
   STATUSES,
@@ -150,6 +152,54 @@ describe('schema mirrors packages/shared (no drift)', () => {
     });
     expect(() => {
       insert(db, 'sla_outcomes', { id: 'o-bad', ...outcome, metric: 'vibes' });
+    }).toThrow(/CHECK/);
+  });
+});
+
+describe('notifications mirror messages.ts (ADR 0007)', () => {
+  it('every template and channel in messages.ts is accepted, and nothing else', () => {
+    const db = migratedDb();
+    seedWorld(db);
+    insert(db, 'requests', requestRow());
+    NOTIFICATION_TEMPLATES.forEach((template, i) => {
+      insert(db, 'notifications', {
+        id: `n-${i}`,
+        created_at: NOW,
+        recipient_kind: 'on_call',
+        template,
+        urgent: 1,
+        request_id: 'req-1',
+      });
+    });
+    expect(() => {
+      insert(db, 'notifications', {
+        id: 'n-bad',
+        created_at: NOW,
+        recipient_kind: 'on_call',
+        template: 'spam',
+        urgent: 0,
+        request_id: 'req-1',
+      });
+    }).toThrow(/CHECK/);
+    CHANNELS.forEach((channel) => {
+      insert(db, 'notification_deliveries', {
+        id: `d-${channel}`,
+        notification_id: 'n-0',
+        channel,
+        recipient_user_id: 'u-admin',
+        next_attempt_at: NOW,
+        created_at: NOW,
+      });
+    });
+    expect(() => {
+      insert(db, 'notification_deliveries', {
+        id: 'd-bad',
+        notification_id: 'n-0',
+        channel: 'pigeon',
+        recipient_user_id: 'u-admin',
+        next_attempt_at: NOW,
+        created_at: NOW,
+      });
     }).toThrow(/CHECK/);
   });
 });
