@@ -162,6 +162,12 @@ pnpm --filter @jadplus/mobile start   # Expo
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.
+- 10-Nov-2026 (session 3, cont.): web console `apps/console` (React 19.3 + Vite 8, ADR 0022/0023): cookie sign-in
+  with origin + anti-forgery checks (verified end to end on wrangler), JAD+ Admin (Needs action, Requests,
+  request page, Partners, review list) and partner office (Jobs board with assign, Team, Our numbers). Technician
+  app tabs Today / Jobs / Done / Profile. Tenants (ADR 0021), repairs only. 504 tests. Console local run:
+  `apps/console/README.md` (Chrome/Firefox, http://localhost:5173). Gaps: request timeline API, admin reply box,
+  on-call rota and undelivered-alert screens, partner document upload.
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

@@ -1,0 +1,239 @@
+/* Cards, tables, buttons, forms, tags and notices (docs/DESIGN.md). */
+.card {
+  background: var(--paper);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  color: var(--night);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.count {
+  display: inline-block;
+  min-width: 24px;
+  padding: 0 8px;
+  margin-left: 6px;
+  border-radius: 12px;
+  background: var(--cream-2);
+  color: var(--ink);
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.ref {
+  color: var(--muted);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* Tables */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.num {
+  text-align: right;
+}
+
+.plain {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plain li + li {
+  margin-top: 4px;
+}
+
+/* Buttons */
+.btn {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius-button);
+  background: var(--slate);
+  color: var(--cream);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 0.3s var(--ease),
+    color 0.3s var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--slate-2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--slate);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--cream-2);
+}
+
+/* Forms */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.grow {
+  flex: 1 1 220px;
+}
+
+input,
+select,
+textarea {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid rgba(57, 69, 81, 0.3);
+  border-radius: var(--radius-button);
+  background: #fff;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Tags and notices */
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  margin-right: 6px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tag-good,
+.notice-good {
+  background: var(--good-bg);
+  color: var(--good);
+}
+
+.tag-warn,
+.notice-warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.tag-bad,
+.notice-bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.tag-calm,
+.notice-calm {
+  background: var(--calm-bg);
+  color: var(--calm);
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: var(--radius-button);
+  margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+  .table thead {
+    display: none;
+  }
+
+  .table td {
+    display: block;
+    border-bottom: none;
+    padding: 4px 0;
+  }
+
+  .table tr {
+    display: block;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .num {
+    text-align: left;
+  }
+}

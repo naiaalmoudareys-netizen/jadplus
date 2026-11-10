@@ -1,0 +1,32 @@
+/* Design tokens from docs/DESIGN.md: warm cream, slate, night navy, bronze; calm by design. */
+:root {
+  --cream: #f4f0eb;
+  --cream-2: #eae4db;
+  --paper: #fbf9f6;
+  --slate: #394551;
+  --slate-2: #4b5867;
+  --night: #000229;
+  --bronze: #937831;
+  --bronze-soft: #c9b278;
+  --mist: #d2dee8;
+  --ink: #1b1f26;
+  --ink-2: #4a525c;
+  --muted: #7a818a;
+  --line: rgba(57, 69, 81, 0.12);
+
+  --good: #4e7a5e;
+  --good-bg: #e5eee7;
+  --warn: #9a6b1f;
+  --warn-bg: #f4ead6;
+  --bad: #a2412e;
+  --bad-bg: #f5e3de;
+  --calm: #4b5867;
+  --calm-bg: #e3e9ef;
+
+  --font: 'Hanken Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --radius-card: 14px;
+  --radius-button: 6px;
+  --shadow: 0 12px 32px -12px rgba(0, 2, 41, 0.12);
+  --ease: cubic-bezier(0.22, 0.8, 0.24, 1);
+  --nav-width: 220px;
+}
