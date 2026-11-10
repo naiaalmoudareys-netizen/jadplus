@@ -23,5 +23,11 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.1",
     "vitest": "5.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "glob@>=9.0.0 <14.0.2": "14.0.4",
+      "minimatch@>=7.0.0 <11.0.1": "11.0.1"
+    }
   }
 }

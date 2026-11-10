@@ -106,13 +106,20 @@ pnpm --filter @jadplus/mobile start   # Expo
 - 10-Nov-2026 (session 3, cont.): alert delivery engine (fan-out, SMS/email senders as plug-in points, retries,
   undelivered list for admin) — ADR 0007, migration 0009. No provider connected yet: every alert is marked
   undelivered. 218 tests.
+- 10-Nov-2026 (session 3, cont.): `apps/mobile` Expo SDK 58 app (expo-router, SecureStore session, API client
+  validating answers with `packages/shared/src/responses.ts`): sign-in by email/mobile code, partner job queue
+  with clocks, acknowledge with technician + arrival window, account (switch view, sign out everywhere).
+  `GET /api/partner/team`; local demo seed `pnpm --filter @jadplus/api db:seed:local`; try-it guide in
+  `apps/mobile/README.md` — ADR 0008. Android + iOS bundles build; end-to-end run against local API. 237 tests.
+  Known gap: technician job does not show unit location yet.
 - Waiting on Naya: (a) pushes: Claude's push is blocked by the permission check, Naya runs `git push`; (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
   of `integrations/salesforce/README.md` (sandbox first); (d) Microsoft Graph sender for email codes and an
   SMS/WhatsApp provider for mobile codes.
 - Next, in order:
   1. Connect providers once Naya confirms them (SMS/voice, Graph email, WhatsApp): one Sender each (ADR 0007),
      and use the same senders for sign-in codes.
-  2. `apps/mobile` Expo scaffold (expo-router, TypeScript strict, ESLint, SecureStore session); partner technician screens first.
+  2. Mobile: unit location on partner jobs (ADR 0008 gap), push notifications channel, screen tests; owner/tenant
+     screens with phase B.
   3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
   4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).
 - Reference prototype: `Jad Global Share Point - IT/steven leads/portal-live` (in Naya's OneDrive).

@@ -8,6 +8,7 @@ import {
   EMERGENCY_ON_SITE_MINUTES,
   OPEN_STATUSES,
   acknowledgeEmergencyBody,
+  arrivalWindowAllowed,
   canActOnRequest,
   canTransition,
   dubaiDate,
@@ -17,7 +18,7 @@ import {
 import { Hono } from 'hono';
 import { auditStatement } from '../audit.js';
 import { requireRole } from '../auth/middleware.js';
-import { newId } from '../crypto.js';
+import { decryptField, newId, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { eventStatement, notificationStatement, requestFacts } from '../requests/store.js';
@@ -25,11 +26,6 @@ import { parseJsonBody, parseParams } from '../validate.js';
 import { versionGuard, withConflictCheck } from '../requests/concurrency.js';
 
 const MIN = 60_000;
-/** Longest arrival window a partner may give, and how far ahead it may start (ADR 0004). */
-const MAX_WINDOW_MS = 4 * 60 * MIN;
-const MAX_START_AHEAD_MS = 24 * 60 * MIN;
-/** Small allowance for clock differences between the phone and the server. */
-const CLOCK_SKEW_MS = 5 * MIN;
 
 interface QueueRow {
   id: string;
@@ -95,6 +91,36 @@ export function partnerRoutes(): Hono<AppEnv> {
     });
   });
 
+  // E4/E17: the partner's active technicians, to choose who attends. Names only, and only of this partner's
+  // own team; "self" marks the signed-in technician so the app can preselect them.
+  partner.get('/team', async (c) => {
+    const { partnerId, userId } = c.get('auth');
+    const db = c.env.DB;
+    const company = await db
+      .prepare('SELECT id, name, status FROM partners WHERE id = ?')
+      .bind(partnerId)
+      .first<{ id: string; name: string; status: string }>();
+    const { results } = await db
+      .prepare(
+        `SELECT t.id, t.user_id, u.name_enc FROM technicians t JOIN users u ON u.id = t.user_id
+         WHERE t.partner_id = ? AND t.status = 'active' AND u.status = 'active' ORDER BY t.created_at`,
+      )
+      .bind(partnerId)
+      .all<{ id: string; user_id: string; name_enc: unknown }>();
+    const keys = c.get('keys');
+    const technicians = await Promise.all(
+      results.map(async (t) => ({
+        id: t.id,
+        name:
+          t.name_enc === null
+            ? 'Team member'
+            : await decryptField(keys, toBytes(t.name_enc), `users.name:${t.user_id}`),
+        self: t.user_id === userId,
+      })),
+    );
+    return c.json({ partner: company, technicians });
+  });
+
   // E4: acknowledge within 15 minutes, naming the technician and the arrival window.
   partner.post('/jobs/:id/acknowledge', async (c) => {
     const { id } = parseParams(c, requestIdParam);
@@ -127,12 +153,7 @@ export function partnerRoutes(): Hono<AppEnv> {
       .first<{ id: string }>();
     if (tech === null) throw new ApiError(400, 'Choose an active technician from your team.');
     const { arrivalWindowStart: start, arrivalWindowEnd: end } = body;
-    if (
-      start < now - CLOCK_SKEW_MS ||
-      end <= start ||
-      end - start > MAX_WINDOW_MS ||
-      start > now + MAX_START_AHEAD_MS
-    ) {
+    if (!arrivalWindowAllowed(start, end, now)) {
       throw new ApiError(400, 'Give an arrival window of up to 4 hours, starting within the next 24 hours.');
     }
 

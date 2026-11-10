@@ -12,6 +12,8 @@ export default tseslint.config(
       '**/.wrangler/**',
       '**/.expo/**',
       'eslint.config.js',
+      // Metro (the app bundler) loads this CommonJS file itself; it holds no app code.
+      'apps/mobile/metro.config.js',
     ],
   },
   js.configs.recommended,

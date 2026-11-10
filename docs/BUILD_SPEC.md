@@ -23,13 +23,13 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 1. Roles (p.4)
 
-| ID  | Requirement                                                                          | View    | Status                                            | Phase |
-| --- | ------------------------------------------------------------------------------------ | ------- | ------------------------------------------------- | ----- |
-| R1  | Owner: units, approvals waiting, open requests, payment plan first                   | Owner   | BUILT (approvals waiting TODO with tenants)       | B     |
-| R2  | Tenant: their unit, one "Request a service" button, request status; invited by owner | Tenant  | TODO                                              | B     |
-| R3  | Supplier: job queue with SLA clocks and next action due; partner + its technicians   | Partner | TODO · repo: API job queue DONE; app screens TODO | A     |
-| R4  | JAD admin: every request, SLA risk list, provider scorecards                         | Admin   | PARTIAL (scorecard thresholds, risk list)         | A/C   |
-| R5  | One person owns one unit and rents another: switch views without logging out         | All     | TODO · repo: API switch view DONE; app TODO       | B     |
+| ID  | Requirement                                                                          | View    | Status                                       | Phase |
+| --- | ------------------------------------------------------------------------------------ | ------- | -------------------------------------------- | ----- |
+| R1  | Owner: units, approvals waiting, open requests, payment plan first                   | Owner   | BUILT (approvals waiting TODO with tenants)  | B     |
+| R2  | Tenant: their unit, one "Request a service" button, request status; invited by owner | Tenant  | TODO                                         | B     |
+| R3  | Supplier: job queue with SLA clocks and next action due; partner + its technicians   | Partner | TODO · repo: API + app queue DONE (ADR 0008) | A     |
+| R4  | JAD admin: every request, SLA risk list, provider scorecards                         | Admin   | PARTIAL (scorecard thresholds, risk list)    | A/C   |
+| R5  | One person owns one unit and rents another: switch views without logging out         | All     | TODO · repo: API switch view DONE; app TODO  | B     |
 
 ## 2. Owner journey (p.4)
 
@@ -72,7 +72,7 @@ Phase = build order (A first). Every view is published to the private preview (p
 | --- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----- |
 | E1  | Emergency raised (tenant or owner)                                      | Partner gets job at once with loud alert; owner informed at the same moment ("No action is needed from you now"); console flags it | PARTIAL · repo: DONE (API; alerts queued in outbox, delivery Phase E)   | A     |
 | E2  | Emergency types                                                         | Water leak/flood; no power to whole unit; AC failure May-Oct; lockout; main door/window won't lock                                 | TODO · repo: DONE                                                       | A     |
-| E3  | Fire, smoke, gas smell, injury                                          | App shows 997/998/999 only; building FM alerted; no technician until cleared                                                       | TODO · repo: DONE (API)                                                 | A     |
+| E3  | Fire, smoke, gas smell, injury                                          | App shows 997/998/999 only; building FM alerted; no technician until cleared                                                       | TODO · repo: DONE (API + app, ADR 0008)                                 | A     |
 | E4  | Partner must acknowledge in 15 min and name technician + arrival window | Tenant sees name + window                                                                                                          | TODO · repo: DONE (API)                                                 | A     |
 | E5  | No ack at 15 min                                                        | Reminder                                                                                                                           | TODO · repo: DONE (API; delivery Phase E)                               | A     |
 | E6  | No ack at 30 min                                                        | Job moves to backup automatically + on-call phone alerted                                                                          | TODO · repo: DONE (API; delivery Phase E)                               | A     |
@@ -135,12 +135,12 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 9. Technology and data (p.16)
 
-| ID  | If                     | Then                                                           | Status                                           | Phase |
-| --- | ---------------------- | -------------------------------------------------------------- | ------------------------------------------------ | ----- |
-| T1  | App down               | Admin portal + WhatsApp keep working; status message to owners | TODO (status banner)                             | E     |
-| T2  | Salesforce link breaks | JAD+ runs on own data; nightly check                           | PARTIAL · repo: owners on stored units DONE      | E     |
-| T3  | Lost phone             | New login ends old session; only a session token on the phone  | PARTIAL (sign out everywhere) · repo: DONE (API) | B     |
-| T4  | Data breach            | Incident process (document)                                    | Process                                          | -     |
+| ID  | If                     | Then                                                           | Status                                          | Phase |
+| --- | ---------------------- | -------------------------------------------------------------- | ----------------------------------------------- | ----- |
+| T1  | App down               | Admin portal + WhatsApp keep working; status message to owners | TODO (status banner)                            | E     |
+| T2  | Salesforce link breaks | JAD+ runs on own data; nightly check                           | PARTIAL · repo: owners on stored units DONE     | E     |
+| T3  | Lost phone             | New login ends old session; only a session token on the phone  | PARTIAL · repo: DONE (API + app secure storage) | B     |
+| T4  | Data breach            | Incident process (document)                                    | Process                                         | -     |
 
 ## 10. Reputation and volume (p.16-17)
 

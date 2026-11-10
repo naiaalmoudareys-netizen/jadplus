@@ -84,3 +84,36 @@ export function dispatchFor(source: FaultSource): { partner: boolean; buildingFm
       return { partner: false, buildingFm: true };
   }
 }
+
+const MINUTE_MS = 60_000;
+
+/** E4 arrival window rules (ADR 0004): up to 4 hours long, starting within the next 24 hours. */
+export const ARRIVAL_WINDOW_MAX_MINUTES = 240;
+export const ARRIVAL_START_MAX_AHEAD_MINUTES = 24 * 60;
+/** Allowance for a phone clock a little behind the server's. */
+export const ARRIVAL_CLOCK_SKEW_MINUTES = 5;
+
+/** E4: whether an arrival window a partner gives is acceptable at `now` (all UTC ms). */
+export function arrivalWindowAllowed(start: number, end: number, now: number): boolean {
+  return (
+    start >= now - ARRIVAL_CLOCK_SKEW_MINUTES * MINUTE_MS &&
+    end > start &&
+    end - start <= ARRIVAL_WINDOW_MAX_MINUTES * MINUTE_MS &&
+    start <= now + ARRIVAL_START_MAX_AHEAD_MINUTES * MINUTE_MS
+  );
+}
+
+/**
+ * E4: the arrival windows the app offers, so a technician picks one tap instead of typing times.
+ * Each starts at `now` rounded up to the next 5 minutes; all satisfy arrivalWindowAllowed.
+ */
+export function arrivalChoices(now: number): readonly { label: string; start: number; end: number }[] {
+  const step = 5 * MINUTE_MS;
+  const base = Math.ceil(now / step) * step;
+  const at = (minutes: number) => base + minutes * MINUTE_MS;
+  return [
+    { label: 'Within 1 hour', start: at(0), end: at(60) },
+    { label: 'In 1 to 2 hours', start: at(60), end: at(120) },
+    { label: 'In 2 to 4 hours', start: at(120), end: at(240) },
+  ];
+}

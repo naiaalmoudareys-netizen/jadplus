@@ -26,7 +26,8 @@ export type RecipientKind = (typeof RECIPIENT_KINDS)[number];
 export const CHANNELS = ['sms', 'email'] as const;
 export type Channel = (typeof CHANNELS)[number];
 
-const TYPE_LABEL: Readonly<Record<EmergencyType | LifeSafetyType, string>> = {
+/** Plain names of emergency kinds, for messages and the app. */
+export const EMERGENCY_TYPE_LABELS: Readonly<Record<EmergencyType | LifeSafetyType, string>> = {
   water_leak: 'Water leak',
   no_power: 'No power',
   ac_failure: 'AC failure',
@@ -60,7 +61,7 @@ export interface Message {
 
 /** The text of one alert. Short enough for two SMS segments. */
 export function renderMessage(template: NotificationTemplate, to: RecipientKind, f: MessageFacts): Message {
-  const what = f.type === null ? 'Emergency' : TYPE_LABEL[f.type];
+  const what = f.type === null ? 'Emergency' : EMERGENCY_TYPE_LABELS[f.type];
   switch (template) {
     case 'emergency_new_job':
       return {

@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "JAD+",
+    "slug": "jadplus",
+    "scheme": "jadplus",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "bundleIdentifier": "ae.jadglobal.jadplus", "supportsTablet": false },
+    "android": { "package": "ae.jadglobal.jadplus" },
+    "plugins": ["expo-router", "expo-secure-store", "expo-status-bar"]
+  }
+}
