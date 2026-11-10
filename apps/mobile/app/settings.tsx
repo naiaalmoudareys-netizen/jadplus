@@ -29,6 +29,8 @@ export default function Settings(): ReactNode {
     setError(null);
     try {
       await work();
+      // Close every screen of the old view, so nothing keeps loading with the old session.
+      if (router.canDismiss()) router.dismissAll();
       router.replace('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');

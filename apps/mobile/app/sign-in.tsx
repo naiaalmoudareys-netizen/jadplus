@@ -40,7 +40,7 @@ export default function SignIn(): ReactNode {
     run(async () => {
       setSentMessage((await controller.requestCode(identifier)).message);
     });
-  const verify = () => run(() => controller.verify(identifier, code));
+  const verify = (entered: string) => run(() => controller.verify(identifier, entered));
 
   return (
     <Page>
@@ -73,14 +73,22 @@ export default function SignIn(): ReactNode {
             label="6-digit code"
             value={code}
             onChangeText={(v) => {
-              setCode(v.replace(/\D/g, '').slice(0, 6));
+              const digits = v.replace(/\D/g, '').slice(0, 6);
+              setCode(digits);
+              // Sign in as soon as all 6 digits are there (typed, pasted or filled from the message).
+              if (digits.length === 6 && !busy) void verify(digits);
             }}
             inputMode="numeric"
             autoComplete="one-time-code"
             textContentType="oneTimeCode"
             maxLength={6}
           />
-          <Button title="Sign in" onPress={() => void verify()} busy={busy} disabled={code.length !== 6} />
+          <Button
+            title="Sign in"
+            onPress={() => void verify(code)}
+            busy={busy}
+            disabled={code.length !== 6}
+          />
           <Button
             title="Use a different email or number"
             kind="secondary"

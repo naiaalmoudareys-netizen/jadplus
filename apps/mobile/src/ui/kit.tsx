@@ -5,6 +5,8 @@
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,7 +21,16 @@ import { buttonRadius, cardShadow, colors, fonts, radius, space } from './theme.
 export function Page({ children, scroll = true }: { children: ReactNode; scroll?: boolean }): ReactNode {
   return (
     <SafeAreaView style={styles.page} edges={['bottom', 'left', 'right']}>
-      {scroll ? <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView> : children}
+      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {scroll ? (
+          // "handled": a tap on a button works first time even while the keyboard is open.
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {children}
+          </ScrollView>
+        ) : (
+          children
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -117,6 +128,7 @@ export function Loading(): ReactNode {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.background },
+  fill: { flex: 1 },
   content: { padding: space.lg, gap: space.md },
   eyebrow: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 2.4, color: colors.bronze },
   heading: { fontFamily: fonts.light, fontSize: 28, letterSpacing: -0.5, color: colors.navy },
