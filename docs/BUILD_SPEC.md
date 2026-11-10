@@ -59,12 +59,12 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 4. Legal (p.12)
 
-| ID  | Requirement                                                                                                                                                                                                                          | Status                                                                           | Phase |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ----- |
-| L1  | Terms accepted at sign-up by owner, tenant, partner; date + time recorded                                                                                                                                                            | PARTIAL (owner only, draft text) · repo: DONE, every role, draft text (ADR 0016) | B     |
-| L2  | Terms content: platform only, no advice, indicative valuations, targets not guarantees, not an emergency service (999/997/998), owner-provider contract, make-safe cap pre-authorised, liability limited, separate marketing consent | PARTIAL (draft)                                                                  | B     |
-| L3  | App gives no instructions. Emergency screen text exactly: "Your emergency has been sent to [provider]. If anyone is in danger, call 999."                                                                                            | TODO · repo: DONE (API + app)                                                    | A     |
-| L4  | JAD never approves chargeable work; owner approves every quote; only exception make-safe within cap                                                                                                                                  | PARTIAL · repo: database guard DONE; quote flow TODO                             | A     |
+| ID  | Requirement                                                                                                                                                                                                                          | Status                                                                                                 | Phase |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ----- |
+| L1  | Terms accepted at sign-up by owner, tenant, partner; date + time recorded                                                                                                                                                            | PARTIAL (owner only, draft text) · repo: DONE, every role, draft text (ADR 0016)                       | B     |
+| L2  | Terms content: platform only, no advice, indicative valuations, targets not guarantees, not an emergency service (999/997/998), owner-provider contract, make-safe cap pre-authorised, liability limited, separate marketing consent | PARTIAL (draft)                                                                                        | B     |
+| L3  | App gives no instructions. Emergency screen text exactly: "Your emergency has been sent to [provider]. If anyone is in danger, call 999."                                                                                            | TODO · repo: DONE (API + app)                                                                          | A     |
+| L4  | JAD never approves chargeable work; owner approves every quote; only exception make-safe within cap                                                                                                                                  | PARTIAL · repo: database guard DONE; quote flow TODO · repo: owner-only quote decision DONE (ADR 0018) | A     |
 
 ## 5. Emergencies and maintenance (p.13-14)
 
@@ -79,7 +79,7 @@ Phase = build order (A first). Every view is published to the private preview (p
 | E7  | Backup also fails                                                       | On-call calls both partners and building FM; owner kept informed                                                                   | TODO · repo: DONE (API; on-call rota screens TODO)                      | A/C   |
 | E8  | Make-safe                                                               | Within owner's pre-authorised cap; permanent repair needs owner quote approval                                                     | TODO · repo: cap rule + database guard DONE; make-safe flow TODO        | A     |
 | E9  | Unit in defect liability period                                         | Work marked "covered"                                                                                                              | TODO                                                                    | D     |
-| E10 | Close                                                                   | Resident confirms with photos; owner gets completion report; job closes                                                            | PARTIAL                                                                 | A     |
+| E10 | Close                                                                   | Resident confirms with photos; owner gets completion report; job closes                                                            | PARTIAL · repo: confirm / not done + photos DONE (ADR 0018)             | A     |
 | E11 | Next working day                                                        | Admin reviews every emergency; late response lowers scorecard                                                                      | TODO                                                                    | A     |
 | E12 | Water from roof / shared pipe / neighbour                               | Building's job: also sent to building FM; partner only makes unit safe. Sprinklers/fire → building FM only                         | TODO · repo: dispatch DONE; per-building FM contacts TODO               | C     |
 | E13 | Tenant marks routine as emergency                                       | Partner still responds; admin reclassifies next morning; repeated misuse reported to owner, call-out may be charged                | TODO                                                                    | C     |
@@ -93,16 +93,16 @@ Phase = build order (A first). Every view is published to the private preview (p
 
 ## 6. Approvals and the request clock (p.14)
 
-| ID  | If                                   | Then                                                                             | Status                    | Phase |
-| --- | ------------------------------------ | -------------------------------------------------------------------------------- | ------------------------- | ----- |
-| A1  | Owner never answers tenant's request | Reminder 24 h; admin calls owner at 48 h                                         | TODO                      | B     |
-| A2  | Owner never answers a quote          | Reminder day 10; quote expires day 14                                            | PARTIAL (4-day reminder)  | B     |
-| A3  | Owner declines quote                 | Tenant told; partner may offer ONE revised quote; else request closes            | PARTIAL                   | B     |
-| A4  | Resident never confirms work done    | Reminders 24 h and 48 h; auto-close 72 h with partner photos as evidence         | BUILT                     | -     |
-| A5  | Resident says not done               | Reopened; same partner returns; counts as repeat visit                           | PARTIAL (no repeat count) | A     |
-| A6  | Work stops for parts/access          | On hold with reason + new date; clock pauses                                     | BUILT                     | -     |
-| A7  | Technician cannot get in             | "No access" logged with photo; rebooked within 24 h; not counted against partner | TODO                      | A     |
-| A8  | Resident forgets appointment         | Reminders 1 day and 1 hour before + "technician on the way"                      | PARTIAL (day before)      | A     |
+| ID  | If                                   | Then                                                                             | Status                                                                            | Phase |
+| --- | ------------------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ----- |
+| A1  | Owner never answers tenant's request | Reminder 24 h; admin calls owner at 48 h                                         | TODO                                                                              | B     |
+| A2  | Owner never answers a quote          | Reminder day 10; quote expires day 14                                            | PARTIAL (4-day reminder) · repo: 14-day expiry DONE; reminder waits for providers | B     |
+| A3  | Owner declines quote                 | Tenant told; partner may offer ONE revised quote; else request closes            | PARTIAL · repo: one revised quote, then close DONE                                | B     |
+| A4  | Resident never confirms work done    | Reminders 24 h and 48 h; auto-close 72 h with partner photos as evidence         | BUILT · repo: 72 h auto-close DONE; reminders wait for providers                  | -     |
+| A5  | Resident says not done               | Reopened; same partner returns; counts as repeat visit                           | PARTIAL (no repeat count) · repo: reopen + repeat visit DONE                      | A     |
+| A6  | Work stops for parts/access          | On hold with reason + new date; clock pauses                                     | BUILT                                                                             | -     |
+| A7  | Technician cannot get in             | "No access" logged with photo; rebooked within 24 h; not counted against partner | TODO                                                                              | A     |
+| A8  | Resident forgets appointment         | Reminders 1 day and 1 hour before + "technician on the way"                      | PARTIAL (day before)                                                              | A     |
 
 ## 7. Owners, tenants, units (p.15)
 

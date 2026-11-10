@@ -33,6 +33,13 @@ export function statusLabel(status: Status, t: Translate): string {
   return t(STATUS_KEYS[status]);
 }
 
+/** A routine job waiting for its visit reads "Book a visit" (an emergency's "New: acknowledge", E4). */
+export function jobStatusLabel(job: Pick<PartnerJob, 'status' | 'emergency'>, t: Translate): string {
+  return !job.emergency && job.status === 'assigned'
+    ? t('journey.status.bookVisit')
+    : statusLabel(job.status, t);
+}
+
 const RESIDENT_STATUS_KEYS: Readonly<Record<RequestSummary['status'], MessageKey>> = {
   awaiting_owner: 'residentStatus.awaiting_owner',
   submitted: 'residentStatus.submitted',

@@ -1,118 +1,31 @@
 /**
- * One job (R3) and, for a new emergency, acknowledging it (E4): who is going and when they will arrive.
- * Only this partner's active technicians can be chosen (E17); the window choices always satisfy the rules
- * the API applies (packages/shared arrivalChoices / arrivalWindowAllowed).
+ * One job (R3): where and what, its clock, and the next step. A new emergency is acknowledged first (E4);
+ * then the journey (ADR 0018): book the visit, quote chargeable work, start, mark done with photos. Messages
+ * with the resident and JAD+ stay inside the app (ADR 0009).
  */
-import { arrivalChoices, type PartnerJob } from '@jadplus/shared';
-import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { errorText } from '../../../src/api/client.js';
-import { acknowledge, partnerJobs, partnerTeam, requestDetail } from '../../../src/api/endpoints.js';
+import { Redirect, useLocalSearchParams } from 'expo-router';
+import { useCallback, type ReactNode } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import { partnerJobs, requestDetail } from '../../../src/api/endpoints.js';
+import { Acknowledge } from '../../../src/jobs/Acknowledge.js';
 import {
   arrivalLabel,
   dueLabel,
   isOverdue,
+  jobStatusLabel,
   jobTitle,
   needsAcknowledgement,
   placeLabel,
   preferredVisitLabel,
-  statusLabel,
 } from '../../../src/jobs/format.js';
-import { useLang, useT } from '../../../src/i18n/I18nProvider.js';
-import { arrivalChoiceLabel } from '../../../src/i18n/sharedLabels.js';
+import { JobJourney } from '../../../src/jobs/JobJourney.js';
+import { useLang } from '../../../src/i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
 import { RequestPhotos } from '../../../src/requests/RequestPhotos.js';
 import { Conversation } from '../../../src/ui/Conversation.js';
 import { useLoad, useNow } from '../../../src/ui/hooks.js';
-import { Body, Button, Heading, Loading, Notice, Page } from '../../../src/ui/kit.js';
+import { Body, Heading, Loading, Notice, Page } from '../../../src/ui/kit.js';
 import { colors, fonts, radius, space } from '../../../src/ui/theme.js';
-
-function Choice(props: { label: string; selected: boolean; onPress: () => void }): ReactNode {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected: props.selected }}
-      onPress={props.onPress}
-      style={[styles.choice, props.selected && styles.chosen]}
-    >
-      <Text style={[styles.choiceText, props.selected && styles.chosenText]}>{props.label}</Text>
-    </Pressable>
-  );
-}
-
-function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
-  const { api } = useSessionController();
-  const router = useRouter();
-  const t = useT();
-  const loadTeam = useCallback(() => partnerTeam(api), [api]);
-  const team = useLoad(loadTeam);
-  const [chosenTech, setChosenTech] = useState<string | null>(null);
-  const [windowIndex, setWindowIndex] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const technicians = team.data?.technicians ?? [];
-  const technicianId = chosenTech ?? technicians.find((tech) => tech.self)?.id ?? technicians[0]?.id ?? null;
-
-  const submit = async () => {
-    if (technicianId === null) return;
-    // Windows are worked out at the moment of sending, so they are never in the past.
-    const window = arrivalChoices(Date.now())[windowIndex];
-    if (window === undefined) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await acknowledge(api, job.id, {
-        technicianId,
-        arrivalWindowStart: window.start,
-        arrivalWindowEnd: window.end,
-      });
-      router.back();
-    } catch (err) {
-      setError(errorText(err, t));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (team.loading && team.data === null) return <Loading />;
-  return (
-    <View style={styles.section}>
-      <Heading>{t('access.acknowledge')}</Heading>
-      <Body>{t('access.whoIsGoing')}</Body>
-      {technicians.map((tech) => (
-        <Choice
-          key={tech.id}
-          label={tech.self ? t('access.me', { name: tech.name }) : tech.name}
-          selected={tech.id === technicianId}
-          onPress={() => {
-            setChosenTech(tech.id);
-          }}
-        />
-      ))}
-      {technicians.length === 0 ? <Notice tone="error">{t('access.noTechnician')}</Notice> : null}
-      <Body>{t('access.whenArrive')}</Body>
-      {arrivalChoices(Date.now()).map((w, i) => (
-        <Choice
-          key={w.label}
-          label={arrivalChoiceLabel(i, w.label, t)}
-          selected={i === windowIndex}
-          onPress={() => {
-            setWindowIndex(i);
-          }}
-        />
-      ))}
-      <Button
-        title={t('access.acknowledge')}
-        busy={busy}
-        disabled={technicianId === null}
-        onPress={() => void submit()}
-      />
-      {error === null ? null : <Notice tone="error">{error}</Notice>}
-      {team.error === null ? null : <Notice tone="error">{team.error}</Notice>}
-    </View>
-  );
-}
 
 export default function Job(): ReactNode {
   const session = useSession();
@@ -123,9 +36,13 @@ export default function Job(): ReactNode {
   const { t } = lang;
   const load = useCallback(async () => (await partnerJobs(api)).find((j) => j.id === id) ?? null, [api, id]);
   const job = useLoad(load);
-  // Messages with the resident and JAD+ (ADR 0009); refreshed every 30 seconds until push alerts exist.
+  // The request with its journey and messages; refreshed every 30 seconds until push alerts exist.
   const loadDetail = useCallback(() => requestDetail(api, id), [api, id]);
   const detail = useLoad(loadDetail, 30_000);
+  const changed = () => {
+    void job.reload();
+    void detail.reload();
+  };
 
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if (job.loading && job.data === null) return <Loading />;
@@ -139,11 +56,12 @@ export default function Job(): ReactNode {
   const j = job.data;
   const due = dueLabel(j, now, t);
   const arrival = arrivalLabel(j, t);
+  const preferred = preferredVisitLabel(j, lang);
   return (
     <Page>
       <Heading>{jobTitle(j, t)}</Heading>
       <Body muted>
-        {j.ref} · {statusLabel(j.status, t)}
+        {j.ref} · {jobStatusLabel(j, t)}
       </Body>
       {due === null ? null : (
         <Text style={[styles.due, isOverdue(j, now) && styles.urgent]} accessibilityLiveRegion="polite">
@@ -151,7 +69,7 @@ export default function Job(): ReactNode {
         </Text>
       )}
       {arrival === null ? null : <Body>{arrival}</Body>}
-      {preferredVisitLabel(j, lang) === null ? null : <Body muted>{preferredVisitLabel(j, lang)}</Body>}
+      {preferred === null ? null : <Body muted>{preferred}</Body>}
       <View style={styles.card}>
         <Body>{placeLabel(j.location, t)}</Body>
         {j.location?.address ? <Body muted>{j.location.address}</Body> : null}
@@ -161,6 +79,7 @@ export default function Job(): ReactNode {
       </View>
       {needsAcknowledgement(j) ? <Acknowledge job={j} /> : null}
       {detail.data === null ? null : <RequestPhotos requestId={j.id} photos={detail.data.photos} />}
+      {detail.data === null ? null : <JobJourney detail={detail.data} onChanged={changed} />}
       {detail.data === null ? null : (
         <Conversation
           api={api}
@@ -175,18 +94,7 @@ export default function Job(): ReactNode {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: space.sm, marginTop: space.md },
   card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.xs },
   due: { fontSize: 20, fontFamily: fonts.semibold, color: colors.text },
   urgent: { color: colors.urgent },
-  choice: {
-    backgroundColor: colors.card,
-    borderRadius: radius,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: space.md,
-  },
-  chosen: { borderColor: colors.slate, borderWidth: 2 },
-  choiceText: { fontSize: 18, fontFamily: fonts.regular, color: colors.text },
-  chosenText: { fontFamily: fonts.semibold, color: colors.navy },
 });

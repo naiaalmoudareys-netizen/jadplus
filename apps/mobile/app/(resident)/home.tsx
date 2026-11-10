@@ -77,6 +77,7 @@ export default function Home(): ReactNode {
     requests: all,
     overdue: overdue ? { amount: aed(plan.overdueAmount, locale) } : null,
     now,
+    owner,
     t,
     label: (r) => jobTitle(r, t),
     arrival: (r) => arrivalLabel(r, t),

@@ -16,7 +16,7 @@ export function greeting(now: number, t: Translate): string {
 }
 
 export interface AttentionItem {
-  readonly kind: 'overdue' | 'emergency' | 'arriving';
+  readonly kind: 'overdue' | 'emergency' | 'quote' | 'confirm' | 'arriving';
   readonly title: string;
   readonly detail: string;
   /** Where tapping goes: the Payments tab, or one request. */
@@ -35,13 +35,16 @@ function arrivingToday(r: RequestSummary, now: number): boolean {
 }
 
 /**
- * Only what needs the owner now, most urgent first: an emergency in progress, a technician arriving today,
- * an overdue payment. Nothing here means all is well, and Home shows no section at all.
+ * Only what needs the person now, most urgent first: an emergency in progress, a quote waiting for the
+ * owner's decision (L4, owners only), work to confirm (E10), a technician arriving today, an overdue payment.
+ * Nothing here means all is well, and Home shows no section at all.
  */
 export function attentionItems(input: {
   readonly requests: readonly RequestSummary[];
   readonly overdue: { readonly amount: string } | null;
   readonly now: number;
+  /** Only an owner decides on a quote (L4); a tenant is not asked. */
+  readonly owner: boolean;
   readonly t: Translate;
   readonly label: (r: RequestSummary) => string;
   readonly arrival: (r: RequestSummary) => string | null;
@@ -59,6 +62,20 @@ export function attentionItems(input: {
           (r.partnerName === null
             ? t('attention.withJad')
             : t('attention.withPartner', { partner: r.partnerName })),
+        target: { requestId: r.id },
+      });
+    } else if (input.owner && r.status === 'quote_sent') {
+      items.push({
+        kind: 'quote',
+        title: t('journey.attention.quote'),
+        detail: input.label(r),
+        target: { requestId: r.id },
+      });
+    } else if (r.status === 'completed') {
+      items.push({
+        kind: 'confirm',
+        title: t('journey.attention.confirm'),
+        detail: input.label(r),
         target: { requestId: r.id },
       });
     } else if (arrivingToday(r, input.now)) {

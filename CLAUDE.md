@@ -154,7 +154,9 @@ pnpm --filter @jadplus/mobile start   # Expo
   via `direction`, non-English drafted by Claude for native review), notification switches + marketing consent
   (N4), terms screen until current draft terms accepted (L1), migration 0015 `user_preferences`,
   `/api/me/preferences`, `/api/me/consents`. Every screen translated. Emergencies: water leak + AC only
-  (ADR 0017, Naya; Dr. Mohanad to see). 357 tests. Next: request lifecycle (visit, quote, done, confirm, rate).
+  (ADR 0017, Naya; Dr. Mohanad to see). Request journey (ADR 0018): partner books visit, quotes, finishes with
+  photos; owner decides quotes; resident confirms or reopens and rates; clock job expires quotes (14 d) and
+  auto-closes (72 h); reminders wait for providers. API `dev:phone` for phone testing. 388 tests.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

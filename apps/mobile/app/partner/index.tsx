@@ -1,13 +1,14 @@
 /**
- * Partner job queue (R3): open jobs, emergencies first, each with its clock and next action due. Refreshes
- * every 30 seconds until push alerts are connected. Shows no owner or tenant contact details.
+ * Partner job queue (R3): open jobs, emergencies first, each with its clock and next action due; every job,
+ * emergency or routine, opens the job page (ADR 0018). Refreshes every 30 seconds until push alerts are
+ * connected. Shows no owner or tenant contact details.
  */
 import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import type { PartnerJob } from '@jadplus/shared';
 import { partnerJobs } from '../../src/api/endpoints.js';
-import { arrivalLabel, dueLabel, isOverdue, jobTitle, statusLabel } from '../../src/jobs/format.js';
+import { arrivalLabel, dueLabel, isOverdue, jobStatusLabel, jobTitle } from '../../src/jobs/format.js';
 import { useT } from '../../src/i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { useLoad, useNow } from '../../src/ui/hooks.js';
@@ -24,7 +25,7 @@ function JobRow({ job, now, onPress }: { job: PartnerJob; now: number; onPress: 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${jobTitle(job, t)}, ${job.ref}, ${statusLabel(job.status, t)}${due === null ? '' : `, ${due}`}`}
+      accessibilityLabel={`${jobTitle(job, t)}, ${job.ref}, ${jobStatusLabel(job, t)}${due === null ? '' : `, ${due}`}`}
       onPress={onPress}
       style={({ pressed }) => [styles.row, job.emergency && styles.emergency, pressed && styles.pressed]}
     >
@@ -32,7 +33,7 @@ function JobRow({ job, now, onPress }: { job: PartnerJob; now: number; onPress: 
         <Text style={[styles.title, job.emergency && styles.urgentText]}>{jobTitle(job, t)}</Text>
         <Text style={styles.ref}>{job.ref}</Text>
       </View>
-      <Text style={styles.status}>{statusLabel(job.status, t)}</Text>
+      <Text style={styles.status}>{jobStatusLabel(job, t)}</Text>
       {due === null ? null : <Text style={[styles.due, late && styles.urgentText]}>{due}</Text>}
       {arrival === null ? null : <Text style={styles.status}>{arrival}</Text>}
     </Pressable>

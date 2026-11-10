@@ -16,7 +16,6 @@ import {
 } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import {
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -28,11 +27,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel } from '../jobs/format.js';
-import { useLang, useT } from '../i18n/I18nProvider.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { serviceName, visitSlotLabel } from '../i18n/sharedLabels.js';
 import { Choice } from '../ui/Choice.js';
 import { Button, Eyebrow, Field, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
+import { PhotoAdder } from './PhotoAdder.js';
 import { pickPhoto, type PickedPhoto } from './photoPicker.js';
 
 export interface RequestDetails {
@@ -48,57 +48,6 @@ function Section({ title, children }: { title: string; children: ReactNode }): R
       <Eyebrow>{title}</Eyebrow>
       {children}
     </View>
-  );
-}
-
-function Photos(props: {
-  photos: readonly PickedPhoto[];
-  onAdd: (source: 'camera' | 'library') => void;
-  onRemove: (photo: PickedPhoto) => void;
-}): ReactNode {
-  const t = useT();
-  return (
-    <>
-      {props.photos.length === 0 ? null : (
-        <View style={styles.row}>
-          {props.photos.map((p, i) => (
-            <Pressable
-              key={p.uri}
-              accessibilityRole="button"
-              accessibilityLabel={t('req.sheet.removePhoto', { number: i + 1 })}
-              onPress={() => {
-                props.onRemove(p);
-              }}
-            >
-              <Image source={{ uri: p.uri }} style={styles.thumb} />
-              <Text style={styles.remove}>{t('req.sheet.remove')}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
-      {props.photos.length < MAX_REQUEST_PHOTOS ? (
-        <View style={styles.row}>
-          <View style={styles.half}>
-            <Button
-              title={t('req.sheet.takePhoto')}
-              kind="secondary"
-              onPress={() => {
-                props.onAdd('camera');
-              }}
-            />
-          </View>
-          <View style={styles.half}>
-            <Button
-              title={t('req.sheet.choosePhoto')}
-              kind="secondary"
-              onPress={() => {
-                props.onAdd('library');
-              }}
-            />
-          </View>
-        </View>
-      ) : null}
-    </>
   );
 }
 
@@ -194,8 +143,9 @@ export function RequestSheet(props: {
                 maxLength={2000}
               />
               <Section title={t('req.sheet.photos', { max: MAX_REQUEST_PHOTOS })}>
-                <Photos
+                <PhotoAdder
                   photos={photos}
+                  max={MAX_REQUEST_PHOTOS}
                   onAdd={(source) => void addPhoto(source)}
                   onRemove={(photo) => {
                     setPhotos((all) => all.filter((x) => x !== photo));
@@ -255,15 +205,6 @@ const styles = StyleSheet.create({
   content: { gap: space.lg, paddingHorizontal: space.lg, paddingBottom: space.lg },
   section: { gap: space.sm },
   row: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
-  half: { flex: 1, minWidth: 140 },
   third: { flex: 1, minWidth: 96 },
-  thumb: { width: 96, height: 96, borderRadius: radius, backgroundColor: colors.backgroundAlt },
-  remove: {
-    fontFamily: fonts.semibold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: colors.urgent,
-    marginTop: 4,
-  },
   hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, textAlign: 'center' },
 });

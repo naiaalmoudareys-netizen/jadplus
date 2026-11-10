@@ -1,6 +1,7 @@
 /**
- * One request as an owner or tenant sees it (R1, R2): status, the company handling it, when they arrive, and
- * the messages (ADR 0009: all contact inside JAD+). Refreshes every 30 seconds until push alerts exist.
+ * One request as an owner or tenant sees it (R1, R2): status, the company handling it, when they arrive,
+ * the journey (ADR 0018: visit, quote, "Is the work done?", rating) and the messages (ADR 0009: all contact
+ * inside JAD+). Refreshes every 30 seconds until push alerts exist.
  */
 import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
@@ -15,6 +16,7 @@ import {
 } from '../../src/jobs/format.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
 import { RequestPhotos } from '../../src/requests/RequestPhotos.js';
+import { ResidentJourney } from '../../src/requests/ResidentJourney.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Conversation } from '../../src/ui/Conversation.js';
 import { useLoad } from '../../src/ui/hooks.js';
@@ -62,6 +64,11 @@ export default function RequestPage(): ReactNode {
         <Body>{request.description}</Body>
       </View>
       <RequestPhotos requestId={request.id} photos={photos} />
+      <ResidentJourney
+        detail={detail.data}
+        owner={session.me.role === 'owner'}
+        onChanged={() => void detail.reload()}
+      />
       <Conversation
         api={api}
         requestId={request.id}

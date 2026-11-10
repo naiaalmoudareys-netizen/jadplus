@@ -1,6 +1,6 @@
 /**
  * The photos added to a request (ADR 0013), shown to everyone allowed to see the request. Each is fetched
- * through the API with the session; the files themselves are never public.
+ * through the API with the session; the files themselves are never public. Also the finished-work photos.
  */
 import type { ReactNode } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
@@ -12,16 +12,19 @@ import { colors, radius, space } from '../ui/theme.js';
 export function RequestPhotos({
   requestId,
   photos,
+  title,
 }: {
   requestId: string;
   photos: readonly { id: string }[];
+  /** Defaults to "Photos"; "Finished work" for the partner's photos (ADR 0018). */
+  title?: string;
 }): ReactNode {
   const { api } = useSessionController();
   const t = useT();
   if (photos.length === 0) return null;
   return (
     <View style={styles.box}>
-      <Eyebrow>{t('req.photos')}</Eyebrow>
+      <Eyebrow>{title ?? t('req.photos')}</Eyebrow>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {photos.map((p, i) => (
           <Image

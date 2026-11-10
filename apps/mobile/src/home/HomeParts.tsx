@@ -44,6 +44,8 @@ export function Shortcuts({ items }: { items: readonly Shortcut[] }): ReactNode 
 
 const ATTENTION_ICON: Readonly<Record<AttentionItem['kind'], IconName>> = {
   emergency: 'warning-outline',
+  quote: 'document-text-outline',
+  confirm: 'checkmark-circle-outline',
   arriving: 'time-outline',
   overdue: 'card-outline',
 };
@@ -73,7 +75,7 @@ export function Attention({
           <Ionicons
             name={ATTENTION_ICON[item.kind]}
             size={20}
-            color={item.kind === 'arriving' ? colors.slate : colors.urgent}
+            color={item.kind === 'emergency' || item.kind === 'overdue' ? colors.urgent : colors.slate}
           />
           <View style={styles.attentionText}>
             <Text style={styles.attentionTitle}>{item.title}</Text>

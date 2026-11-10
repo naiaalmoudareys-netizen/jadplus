@@ -27,11 +27,17 @@ const req = (over: Partial<RequestSummary>): RequestSummary => ({
   ...over,
 });
 
-const attention = (requests: RequestSummary[], overdue: string | null = null, lang: Lang = en) =>
+const attention = (
+  requests: RequestSummary[],
+  overdue: string | null = null,
+  lang: Lang = en,
+  owner = true,
+) =>
   attentionItems({
     requests,
     overdue: overdue === null ? null : { amount: overdue },
     now: NOW,
+    owner,
     t: lang.t,
     label: (r) => jobTitle(r, lang.t),
     arrival: (r) => arrivalLabel(r, lang.t),
@@ -77,6 +83,21 @@ describe('Home priorities', () => {
       ["Fuite d'eau · urgence", 'Pris en charge par JAD+'],
       ['Paiement en retard', 'AED 1'],
     ]);
+  });
+
+  it('L4, E10: a quote waiting for the owner, and work waiting to be confirmed', () => {
+    const list = [req({ id: 'q', status: 'quote_sent' }), req({ id: 'c', status: 'completed' })];
+    expect(attention(list).map((i) => [i.kind, i.title, i.detail])).toEqual([
+      ['quote', 'Quote waiting for your approval', 'Maintenance'],
+      ['confirm', 'Is the work done?', 'Maintenance'],
+    ]);
+    expect(attention(list)[0]?.target).toEqual({ requestId: 'q' });
+  });
+
+  it('L4: a tenant is not asked to approve a quote, but is asked to confirm the work', () => {
+    const list = [req({ id: 'q', status: 'quote_sent' }), req({ id: 'c', status: 'completed' })];
+    expect(attention(list, null, en, false).map((i) => i.kind)).toEqual(['confirm']);
+    expect(attention(list, null, fr, false)[0]?.title).toBe('Les travaux sont-ils terminés ?');
   });
 
   it('shows at most two open requests, emergencies first, and counts the open ones', () => {

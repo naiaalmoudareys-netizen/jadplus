@@ -18,6 +18,11 @@ import {
   partnerTeamResponse,
   sessionResponse,
   type AcknowledgeEmergencyBody,
+  type BookVisitBody,
+  type QuoteDecisionBody,
+  type RatingBody,
+  type SendQuoteBody,
+  type WorkDoneBody,
   type DeskRequestBody,
   type EmergencyRaised,
   type MyPlace,
@@ -146,6 +151,37 @@ export const addRequestPhoto = (
   jpeg: Uint8Array<ArrayBuffer>,
 ): Promise<unknown> =>
   api.upload(`/api/requests/${encodeURIComponent(requestId)}/photos`, jpeg, 'image/jpeg', z.unknown());
+
+const job = (id: string, step: string): string => `/api/partner/jobs/${encodeURIComponent(id)}/${step}`;
+const request = (id: string, step: string): string => `/api/requests/${encodeURIComponent(id)}/${step}`;
+
+/** ADR 0018, partner: book (or change) the visit with a technician and a window. */
+export const bookVisit = (api: ApiClient, jobId: string, body: BookVisitBody): Promise<unknown> =>
+  api.post(job(jobId, 'visit'), body, z.unknown());
+
+/** L4, A2, A3, partner: a quote for chargeable work (or the one revised quote after a decline). */
+export const sendQuote = (api: ApiClient, jobId: string, body: SendQuoteBody): Promise<unknown> =>
+  api.post(job(jobId, 'quote'), body, z.unknown());
+
+/** Partner: the technician has started the work. */
+export const startWork = (api: ApiClient, jobId: string): Promise<unknown> =>
+  api.post(job(jobId, 'start'), {}, z.unknown());
+
+/** E10, partner: the work is done (photos are uploaded before, with addRequestPhoto). */
+export const workDone = (api: ApiClient, jobId: string, body: WorkDoneBody): Promise<unknown> =>
+  api.post(job(jobId, 'done'), body, z.unknown());
+
+/** L4, A3, owner: approve or decline the quote. */
+export const decideQuote = (api: ApiClient, requestId: string, body: QuoteDecisionBody): Promise<unknown> =>
+  api.post(request(requestId, 'quote-decision'), body, z.unknown());
+
+/** E10, A5, owner or tenant: the work is done, or not yet (reopens with the same partner). */
+export const confirmWork = (api: ApiClient, requestId: string, done: boolean): Promise<unknown> =>
+  api.post(request(requestId, 'confirm'), { done }, z.unknown());
+
+/** S5, owner or tenant: rate the job once it is closed. */
+export const rateRequest = (api: ApiClient, requestId: string, body: RatingBody): Promise<unknown> =>
+  api.post(request(requestId, 'rating'), body, z.unknown());
 
 /** Profile settings and consents (ADR 0016). */
 export const preferences = (api: ApiClient): Promise<Preferences> =>
