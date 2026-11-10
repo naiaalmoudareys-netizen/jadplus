@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>JAD+ | JAD Global Owners</title>
+  <meta name="description" content="JAD+ by JAD Global: your home, your payments and your building's progress, in one calm place.">
+  <meta name="theme-color" content="#F4F0EB">
+  <meta name="robots" content="noindex">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="JAD+">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/img/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body class="booting">
+  <div id="staff-banner" class="staff-banner" hidden></div>
+
+  <!-- ============ Sign in ============ -->
+  <section id="login" class="login" hidden>
+    <video class="login-film" src="/media/signin-loop.mp4" poster="/media/signin-poster.jpg" autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+    <div class="login-veil" aria-hidden="true"></div>
+    <header class="login-top">
+      <img src="/img/jadplus-cream.png" alt="JAD+" class="login-mark" width="96" height="16">
+      <img src="/img/logo-cream.png" alt="JAD Global Real Estate Development" class="login-jad" width="120" height="17">
+    </header>
+    <div class="login-center">
+      <p class="eyebrow light">Reserved for JAD Global owners</p>
+      <h1 class="display light">Your home,<br>held with care</h1>
+      <div class="login-glass">
+        <form id="form-email" class="login-form" novalidate>
+          <label for="email">Email address</label>
+          <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="The email you purchased with" required>
+          <button class="btn btn-light-solid btn-block" type="submit">Continue</button>
+        </form>
+        <form id="form-code" class="login-form" novalidate hidden>
+          <p class="sent-to" id="sent-to"></p>
+          <label for="code">Six-digit code</label>
+          <input id="code" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="······" required>
+          <button class="btn btn-light-solid btn-block" type="submit">Sign in</button>
+          <button class="btn btn-text light" type="button" id="change-email">Use a different email</button>
+        </form>
+        <p class="form-msg" id="login-msg" role="status" aria-live="polite"></p>
+      </div>
+    </div>
+    <footer class="login-foot">
+      <span>JAD+ desk · <a href="tel:+971600523523">600 523 523</a></span>
+      <span><a href="/privacy" target="_blank" rel="noopener">Privacy</a> · <a href="/terms" target="_blank" rel="noopener">Terms</a></span>
+    </footer>
+  </section>
+
+  <!-- ============ First sign-in: privacy notice and terms ============ -->
+  <section id="consent" class="consent" hidden>
+    <div class="consent-inner">
+      <img src="/img/jadplus-ink.png" alt="JAD+" class="consent-mark" width="96" height="16">
+      <h1 class="title">Welcome to JAD+</h1>
+      <p class="consent-lead">Before you start, please review how we look after your information.</p>
+      <form id="consent-form" class="consent-form">
+        <label class="consent-row"><input type="checkbox" id="c-accept" required>
+          <span>I accept the <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a></span></label>
+        <label class="consent-row"><input type="checkbox" id="c-marketing">
+          <span>Send me news and exclusive offers <em>(optional)</em></span></label>
+        <button class="btn btn-primary btn-block" type="submit" id="c-go" disabled>Continue</button>
+      </form>
+      <button class="consent-out" type="button" id="c-out">Sign out</button>
+    </div>
+  </section>
+
+  <!-- ============ App ============ -->
+  <div id="app" class="app" hidden>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#home" aria-label="JAD+ home">
+          <img class="brand-mark" src="/img/jadplus-ink.png" alt="JAD+" width="96" height="16">
+          <span class="brand-by">by <img src="/img/logo-ink.png" alt="JAD Global" width="104" height="15"></span>
+        </a>
+        <nav class="tabs" aria-label="Sections">
+          <a href="#home" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3.5 11L12 4.5l8.5 6.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span>Home</span></a>
+          <a href="#unit" data-tab="unit"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10.5 21v-4h3v4"/></svg><span>Residence</span></a>
+          <a href="#payments" data-tab="payments"><svg viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19M6.5 15h3"/></svg><span>Payments</span></a>
+          <a href="#services" data-tab="services"><svg viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 00-5.2 5.2L4 17v3h3l5.3-5.3a4 4 0 005.2-5.2l-2.5 2.5-2.5-.5-.5-2.5z"/></svg><span>Services</span></a>
+          <a href="#news" data-tab="news"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.4 5 5.4.6-4 3.7 1.1 5.4L12 15.5l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6z"/></svg><span>News</span></a>
+          <a href="#progress" data-tab="progress"><svg viewBox="0 0 24 24"><path d="M3 20.5h18M6 20.5V9l6-4.5 6 4.5v11.5"/><path d="M10 20.5v-5h4v5"/></svg><span>Progress</span></a>
+        </nav>
+        <a class="avatar-btn" id="avatar-btn" href="#profile" aria-label="Your profile"><span class="avatar" id="avatar-top"></span></a>
+      </div>
+    </header>
+
+    <div class="unit-switch" id="unit-switch" hidden></div>
+
+    <main id="main" class="main" tabindex="-1">
+      <section data-view="home"></section>
+      <section data-view="unit" hidden></section>
+      <section data-view="payments" hidden></section>
+      <section data-view="services" hidden></section>
+      <section data-view="news" hidden></section>
+      <section data-view="progress" hidden></section>
+      <section data-view="profile" hidden></section>
+    </main>
+
+    <footer class="foot">
+      <span>JAD Global Real Estate Development</span>
+      <span id="updated-at"></span>
+    </footer>
+  </div>
+
+  <div id="loading" class="loading" aria-live="polite">
+    <img src="/img/jadplus-ink.png" alt="" width="160" height="27">
+    <div class="breath" aria-hidden="true"></div>
+  </div>
+
+  <dialog id="pay-sheet" class="sheet" aria-labelledby="pay-title">
+    <form method="dialog" class="sheet-close"><button aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <div id="pay-body"></div>
+  </dialog>
+
+  <dialog id="post-sheet" class="sheet sheet-wide" aria-label="News">
+    <form method="dialog" class="sheet-close"><button aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <div id="post-body"></div>
+  </dialog>
+
+  <dialog id="req-sheet" class="sheet" aria-label="Request">
+    <form method="dialog" class="sheet-close"><button aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <div id="req-body"></div>
+  </dialog>
+
+  <dialog id="svc-sheet" class="sheet sheet-wide" aria-label="Service request">
+    <form method="dialog" class="sheet-close"><button aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <div id="svc-body" class="sheet-content"></div>
+  </dialog>
+
+  <dialog id="viewer" class="viewer" aria-label="Image">
+    <form method="dialog" class="sheet-close"><button aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <img id="viewer-img" alt="">
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="print-area" class="print-area" aria-hidden="true"></div>
+</body>
+</html>

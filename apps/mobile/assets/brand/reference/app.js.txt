@@ -1,0 +1,1001 @@
+// JAD+ owner portal, v2 (front end). All data comes from /api/me, which only ever returns the signed-in owner's deals.
+// Runs the same in a browser and inside the iOS / Android app shell (Capacitor):
+//   - in the browser the session is an HttpOnly cookie;
+//   - in the app, window.JADPLUS_NATIVE = true and window.JADPLUS_API_BASE = 'https://portal.jadglobal.ae' are set by the shell,
+//     the sign-in returns a token kept on the device and sent as "Authorization: Bearer", and files are fetched with it.
+(() => {
+  'use strict';
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+  const NATIVE = !!window.JADPLUS_NATIVE;
+  const API = window.JADPLUS_API_BASE || '';
+  const TABS = ['home', 'unit', 'payments', 'services', 'news', 'progress', 'profile'];
+  const STAGES = ['Site preparation', 'Foundation', 'Structure', 'Facade', 'MEP and Fit-out', 'Handover', 'Completed'];
+  const PROJECT_IMAGES = { J188: '/img/projects/j188.jpg', J288: '/img/projects/jad288.jpg', JAD288: '/img/projects/jad288.jpg', '171GH': '/img/projects/171gh.jpg' };
+  const PROJECT_NAMES = { J188: 'J188', J288: 'JAD 288', JAD288: 'JAD 288', '171GH': '171 Garden Heights' };
+  const PROJECT_PLACES = { J188: 'Al Jaddaf, Dubai', J288: 'Jumeirah Garden City, Dubai', JAD288: 'Jumeirah Garden City, Dubai', '171GH': 'Jumeirah Garden City, Dubai' };
+  // chart: slate = paid, bronze = still to pay, terracotta = overdue (always with legend + labels)
+  const COLORS = { paid: '#394551', due: '#C9B278', overdue: '#A2412E' };
+  const PROJECT_FILMS = { J188: { src: '/media/j188-loop.mp4', poster: '/media/j188-poster.jpg' }, J288: { src: '/media/jad288-loop.mp4', poster: '/media/jad288-poster.jpg' },
+    JAD288: { src: '/media/jad288-loop.mp4', poster: '/media/jad288-poster.jpg' } };
+
+  let data = null;
+  let dealIdx = 0;
+  let email = '';
+
+  // ---------- helpers ----------
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const safeUrl = (u) => { try { const x = new URL(String(u || '')); return /^https?:$/.test(x.protocol) ? x.href : ''; } catch { return ''; } };
+  const n = (v) => (typeof v === 'number' && isFinite(v) ? v : Number(v) || 0);
+  function money(v, opts = {}) {
+    const x = n(v);
+    const dec = opts.dec ?? (Math.abs(x - Math.round(x)) > 0.004 ? 2 : 0);
+    return `AED ${x.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+  }
+  function short(v) {
+    const x = n(v);
+    if (Math.abs(x) >= 1e6) return `${(x / 1e6).toFixed(x >= 1e7 ? 1 : 2).replace(/\.?0+$/, '')}M`;
+    if (Math.abs(x) >= 1e3) return `${Math.round(x / 1e3)}K`;
+    return String(Math.round(x));
+  }
+  const dubaiToday = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Dubai' })).toISOString().slice(0, 10);
+  function parseDay(s) { if (!s) return null; const d = new Date(`${String(s).slice(0, 10)}T00:00:00Z`); return isNaN(d) ? null : d; }
+  function fmtDate(s, withYear = true) {
+    const d = parseDay(s); if (!d) return '';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' });
+  }
+  function daysFromToday(s) { const d = parseDay(s); const t = parseDay(dubaiToday()); return d && t ? Math.round((d - t) / 86400000) : null; }
+  const projectKey = (name) => String(name || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase();
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+    del(k) { try { localStorage.removeItem(k); } catch { /* private mode */ } },
+  };
+  const token = () => (NATIVE ? store.get('jadplus_token') : null);
+
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>',
+    alert: '<svg viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.01"/><circle cx="12" cy="12" r="9"/></svg>',
+    clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    dots: '<svg viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01"/></svg>',
+    half: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>',
+    flag: '<svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
+    card: '<svg viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="M2.5 10h19"/></svg>',
+    download: '<svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/></svg>',
+    print: '<svg viewBox="0 0 24 24"><path d="M7 9V3.5h10V9M7 17H4v-7h16v7h-3"/><rect x="7" y="14" width="10" height="6.5"/></svg>',
+    phone: '<svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2"/></svg>',
+    mail: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+    chat: '<svg viewBox="0 0 24 24"><path d="M4 20l1.5-4A8 8 0 1112 20a8 8 0 01-3.8-1z"/></svg>',
+    copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h8"/></svg>',
+    ext: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></svg>',
+    crane: '<svg viewBox="0 0 24 24"><path d="M4 21h16M7 21V5h10M7 5l4 4M17 5v4M15 9h4v3h-4zM10 21v-6h4v6"/></svg>',
+    play: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z"/></svg>',
+    leaf: '<svg viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/></svg>',
+    file: '<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+    id: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M5.8 16c.6-1.6 1.8-2.4 3.2-2.4s2.6.8 3.2 2.4M14.5 10h4M14.5 13h3"/></svg>',
+    camera: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+    out: '<svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 012 2v12a2 2 0 01-2 2h-3M10 16l-4-4 4-4M6 12h10"/></svg>',
+  };
+  const pill = (cls, icon, text) => `<span class="pill ${cls}">${ICON[icon] || ''}${esc(text)}</span>`;
+
+  function toast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  async function api(path, opts = {}) {
+    const headers = { 'content-type': 'application/json', ...(opts.headers || {}) };
+    if (token()) headers.authorization = `Bearer ${token()}`;
+    let res;
+    try {
+      res = await fetch(API + path, { credentials: NATIVE ? 'omit' : 'same-origin', ...opts, headers });
+    } catch {
+      return { status: 0, ok: false, body: { error: 'You appear to be offline. Please check your connection and try again.' } };
+    }
+    let body = {};
+    try { body = await res.json(); } catch { /* empty */ }
+    return { status: res.status, ok: res.ok, body };
+  }
+
+  // Files (floor plans, photos, receipts). In the browser the cookie does it; in the app the token is sent and a blob is shown.
+  const fileUrl = (id) => `${API}/api/file/${encodeURIComponent(id)}`;
+  async function hydrate(root) {
+    for (const img of $$('img[data-file]', root)) {
+      const id = img.dataset.file; img.removeAttribute('data-file');
+      if (!NATIVE) { img.src = fileUrl(id); continue; }
+      try {
+        const r = await fetch(fileUrl(id), { headers: { authorization: `Bearer ${token()}` } });
+        if (r.ok) img.src = URL.createObjectURL(await r.blob());
+      } catch { /* leave empty */ }
+    }
+  }
+  async function download(id, name) {
+    if (!NATIVE) { location.href = `${fileUrl(id)}?download=1`; return; }
+    try {
+      const r = await fetch(`${fileUrl(id)}?download=1`, { headers: { authorization: `Bearer ${token()}` } });
+      if (!r.ok) throw new Error();
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a'); a.href = url; a.download = name || 'document'; document.body.appendChild(a); a.click(); a.remove();
+    } catch { toast('This file could not be opened. Please try again.'); }
+  }
+
+  // The official Salesforce Receipt / Statement of Account (prepared by Salesforce itself, see JADPortalDocRenderer).
+  async function sfDoc(btn, kind, id) {
+    if (btn.disabled) return;
+    btn.disabled = true; const label = btn.innerHTML; btn.innerHTML = `${ICON.clock}Preparing`;
+    try {
+      const headers = token() ? { authorization: `Bearer ${token()}` } : {};
+      const r = await fetch(`${API}/api/doc/${kind}/${encodeURIComponent(id)}?download=1`, { headers, credentials: NATIVE ? 'omit' : 'same-origin' });
+      const type = r.headers.get('content-type') || '';
+      if (!r.ok || !type.includes('pdf')) {
+        let msg = 'This document could not be opened. Please try again.';
+        try { msg = (await r.json()).error || msg; } catch { /* keep */ }
+        toast(msg); return;
+      }
+      const name = (/filename="([^"]+)"/.exec(r.headers.get('content-disposition') || '') || [])[1] || `${kind}.pdf`;
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch { toast('You appear to be offline. Please try again.'); } finally { btn.disabled = false; btn.innerHTML = label; }
+  }
+
+  // ---------- instalment logic ----------
+  function instState(i) {
+    const bal = n(i.amount) - n(i.paid);
+    if (n(i.amount) > 0 && bal <= 1) return { k: 'paid', cls: 'good', icon: 'check', label: 'Paid', bal: 0 };
+    if (!i.due) return { k: 'later', cls: 'plain', icon: 'flag', label: /complet|handover/i.test(`${i.name} ${i.desc}`) ? 'On completion' : 'Scheduled', bal };
+    const d = daysFromToday(i.due);
+    if (d < 0) return { k: 'overdue', cls: 'bad', icon: 'alert', label: `Overdue ${-d} day${d === -1 ? '' : 's'}`, bal };
+    if (d <= 30) return { k: 'soon', cls: 'warn', icon: 'clock', label: d === 0 ? 'Due today' : `Due in ${d} day${d === 1 ? '' : 's'}`, bal };
+    if (n(i.paid) > 0) return { k: 'part', cls: 'info', icon: 'half', label: 'Part paid', bal };
+    return { k: 'upcoming', cls: 'plain', icon: 'dots', label: 'Upcoming', bal };
+  }
+
+  function dealSummary(deal) {
+    const inst = deal.instalments || [];
+    const total = inst.reduce((s, i) => s + n(i.amount), 0) || n(deal.price);
+    const paid = inst.reduce((s, i) => s + Math.min(n(i.paid), n(i.amount) || n(i.paid)), 0);
+    const states = inst.map((i) => ({ i, s: instState(i) }));
+    const overdue = states.filter((x) => x.s.k === 'overdue');
+    const overdueSum = overdue.reduce((s, x) => s + x.s.bal, 0);
+    const open = states.filter((x) => x.s.k !== 'paid' && x.s.bal > 1)
+      .sort((a, b) => (a.i.due ? 0 : 1) - (b.i.due ? 0 : 1) || String(a.i.due).localeCompare(String(b.i.due)) || n(a.i.seq) - n(b.i.seq));
+    const next = open.find((x) => x.s.k !== 'overdue') || null;
+    return { total, paid, pct: total > 0 ? Math.min(100, (paid / total) * 100) : 0, states, overdue, overdueSum, open, next };
+  }
+
+  // Salesforce short names -> owner-facing names; completion "31-03-2028" -> "31 Mar 2028"; unit "205-JAD288-B" -> "205".
+  function normalise(b) {
+    const fix = (u) => {
+      if (!u) return;
+      const key = projectKey(u.project);
+      u.place = PROJECT_PLACES[key] || '';
+      u.image = PROJECT_IMAGES[key] || '';
+      u.film = PROJECT_FILMS[key] || null;
+      if (u.project) u.project = PROJECT_NAMES[key] || u.project;
+      const m = String(u.completion || '').match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+      if (m) u.completion = fmtDate(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+      const raw = u.number || u.name || '';
+      u.number = String(raw).split('-')[0] || raw;
+      if (/^residential$/i.test(u.type || '')) u.type = !u.bedrooms ? null : /studio/i.test(u.bedrooms) ? 'Studio' : `${u.bedrooms} bedroom`;
+      if (u.building) u.building = u.building.replace(/^JAD ?288[- ]?/i, '').replace(/^([A-C])$/, 'Block $1') || u.building;
+    };
+    (b.deals || []).forEach((d) => fix(d.unit));
+    (b.updates || []).forEach((u) => { if (u.project) u.project = PROJECT_NAMES[projectKey(u.project)] || u.project; });
+    (b.posts || []).forEach((p) => {
+      if (p.project) p.project = PROJECT_NAMES[projectKey(p.project)] || p.project;
+      if (p.unit) fix(p.unit);
+    });
+    b.posts = b.posts || [];
+  }
+
+  // ---------- boot & sign in ----------
+  async function boot() {
+    const r = await api('/api/me');
+    document.body.classList.remove('booting');
+    if (r.status === 401) { store.del('jadplus_token'); return showLogin(); }
+    if (r.status === 404) return showLogin('We could not find a JAD Global residence for this email. The JAD+ desk will be glad to help.', true);
+    if (!r.ok) return showLogin(r.body.error || 'Something went wrong. Please try again.', true);
+    data = r.body;
+    normalise(data);
+    const saved = store.get('jadplus_deal');
+    const idx = data.deals.findIndex((d) => d.id === saved);
+    dealIdx = idx >= 0 ? idx : 0;
+    if (data.consent?.needed) return showConsent();
+    showApp();
+  }
+
+  // First sign-in (and whenever the notice changes): the owner reads and accepts the privacy notice and terms.
+  function showConsent() {
+    $('#login').hidden = true; $('#app').hidden = true; $('#consent').hidden = false;
+    const accept = $('#c-accept'); const go = $('#c-go');
+    accept.checked = false; $('#c-marketing').checked = false; go.disabled = true;
+    accept.onchange = () => { go.disabled = !accept.checked; };
+    $('#c-out').onclick = () => signOut(false);
+    $('#consent-form').onsubmit = async (e) => {
+      e.preventDefault(); if (!accept.checked) return;
+      go.disabled = true;
+      const r = await api('/api/consent', { method: 'POST', body: JSON.stringify({ accept: true, marketing: $('#c-marketing').checked, version: data.consent.version }) });
+      go.disabled = false;
+      if (!r.ok) { toast(r.body.error || 'Please try again.'); return; }
+      $('#consent').hidden = true; document.body.classList.add('booting'); boot();
+    };
+  }
+
+  function showLogin(msg, isErr) {
+    $('#app').hidden = true; $('#login').hidden = false;
+    setMsg(msg || '', isErr);
+    if (window.matchMedia('(min-width: 861px)').matches) setTimeout(() => $('#email').focus(), 50);
+  }
+  function setMsg(text, isErr) { const m = $('#login-msg'); m.textContent = text; m.className = `form-msg ${text ? (isErr ? 'err' : 'ok') : ''}`; }
+
+  $('#form-email').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    email = $('#email').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return setMsg('Please enter a valid email address.', true);
+    const btn = e.submitter || $('#form-email button'); btn.disabled = true;
+    const r = await api('/api/login/start', { method: 'POST', body: JSON.stringify({ email }) });
+    btn.disabled = false;
+    if (!r.ok) return setMsg(r.body.error || 'Please try again.', true);
+    $('#form-email').hidden = true; $('#form-code').hidden = false;
+    $('#sent-to').innerHTML = `If <b>${esc(email)}</b> is registered with JAD Global, a code is on its way. It is valid for 10 minutes.`;
+    setMsg(''); $('#code').value = ''; $('#code').focus();
+  });
+  $('#form-code').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = $('#code').value.replace(/\D/g, '');
+    if (code.length !== 6) return setMsg('The code has six digits.', true);
+    const btn = e.submitter || $('#form-code button'); btn.disabled = true;
+    const r = await api('/api/login/verify', { method: 'POST', body: JSON.stringify({ email, code, app: NATIVE }) });
+    btn.disabled = false;
+    if (!r.ok) return setMsg(r.body.error || 'That code did not work.', true);
+    if (NATIVE && r.body.token) store.set('jadplus_token', r.body.token);
+    setMsg(''); document.body.classList.add('booting'); boot();
+  });
+  $('#code').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6); if (e.target.value.length === 6) $('#form-code').requestSubmit(); });
+  $('#change-email').addEventListener('click', () => { $('#form-code').hidden = true; $('#form-email').hidden = false; setMsg(''); $('#email').focus(); });
+  async function signOut(all) {
+    await api(all ? '/api/logout-all' : '/api/logout', { method: 'POST' }); store.del('jadplus_token'); location.hash = ''; location.reload();
+  }
+
+  // ---------- shell ----------
+  function showApp() {
+    $('#login').hidden = true; $('#app').hidden = false;
+    $('.login-film')?.pause();
+    const s = data.session || {};
+    if (s.preview) {
+      $('#staff-banner').hidden = false; document.body.classList.add('staff-on');
+      $('#staff-banner').textContent = 'Local preview · a real owner\u2019s Salesforce data and documents · read-only, on this computer only';
+    } else if (s.demo) {
+      $('#staff-banner').hidden = false; document.body.classList.add('staff-on');
+      $('#staff-banner').classList.add('demo-banner');
+      $('#staff-banner').textContent = 'Demo account · sample data for testing, not a real owner';
+    } else if (s.staff_by) {
+      $('#staff-banner').hidden = false; document.body.classList.add('staff-on');
+      $('#staff-banner').textContent = `Staff preview · seeing JAD+ exactly as ${s.email} sees it · read-only · opened by ${s.staff_by}`;
+    }
+    $('#updated-at').textContent = data.generated_at ? `Updated ${new Date(data.generated_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}` : '';
+    renderSwitch();
+    renderAll();
+    renderAvatar();
+    route();
+  }
+
+  function renderSwitch() {
+    const el = $('#unit-switch');
+    el.innerHTML = data.deals.length < 2 ? '' : data.deals.map((d, i) => `<button type="button" data-i="${i}" class="${i === dealIdx ? 'active' : ''}">${esc(d.unit?.project || '')} · ${esc(d.unit?.number || d.ref)}</button>`).join('');
+    $$('button', el).forEach((b) => b.addEventListener('click', () => selectDeal(Number(b.dataset.i))));
+  }
+  function renderAll() { renderHome(); renderUnit(); renderPayments(); renderNews(); renderProgress(); renderProfile(); }
+  function route() {
+    if (location.hash === '#desk') { history.replaceState(null, '', '#profile'); setTimeout(() => $('#concierge')?.scrollIntoView({ behavior: 'smooth' }), 50); }
+    const tab = TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'home';
+    $$('[data-view]').forEach((s) => { s.hidden = s.dataset.view !== tab; });
+    $$('.tabs a').forEach((a) => { a.classList.toggle('active', a.dataset.tab === tab); a.toggleAttribute('aria-current', a.dataset.tab === tab); });
+    $('#unit-switch').hidden = data.deals.length < 2 || ['home', 'news', 'profile', 'services'].includes(tab);
+    if (tab === 'services') loadServices();
+    $('#avatar-btn').classList.toggle('active', tab === 'profile');
+    const v = $('.welcome video'); if (v) { if (tab === 'home') v.play().catch(() => {}); else v.pause(); }
+    window.scrollTo({ top: 0 });
+  }
+  window.addEventListener('hashchange', () => data && route());
+
+  const deal = () => data.deals[dealIdx];
+  function selectDeal(i) {
+    if (i === dealIdx) return;
+    dealIdx = i; store.set('jadplus_deal', data.deals[i].id); renderSwitch(); renderUnit(); renderPayments(); renderProgress();
+  }
+  const greeting = () => { const h = Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Dubai', hour: 'numeric', hour12: false })); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+  const unitTitle = (d) => `${d.unit?.project || ''} · Residence ${d.unit?.number || ''}`;
+  const stageLabel = (d) => (d.stage === 'Booked' ? 'Reserved' : 'Owner');
+  const photo = (d, cls = '') => (d.unit?.image ? `<img src="${d.unit.image}" alt="" class="${cls}" loading="lazy">` : '');
+  const updatesFor = (d) => (data.updates || []).filter((u) => u.project_id === d.unit?.project_id);
+  function ring(pct) {
+    const r = 46; const c = 2 * Math.PI * r;
+    return `<div class="ring" role="img" aria-label="${Math.floor(pct)}% paid"><svg viewBox="0 0 104 104"><circle class="track" cx="52" cy="52" r="${r}"/>
+      <circle class="val" cx="52" cy="52" r="${r}" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(1)}"/></svg>
+      <div class="ring-label"><div><b>${Math.floor(pct)}%</b><span>paid</span></div></div></div>`;
+  }
+
+  function bind(el) {
+    $$('[data-pay]', el).forEach((b) => b.addEventListener('click', () => openPay(Number(b.dataset.pay))));
+    $$('[data-goto]', el).forEach((a) => a.addEventListener('click', () => selectDeal(Number(a.dataset.goto))));
+    $$('[data-open]', el).forEach((b) => b.addEventListener('click', () => { selectDeal(Number(b.dataset.open)); location.hash = 'unit'; }));
+    $$('[data-view-img]', el).forEach((b) => b.addEventListener('click', () => {
+      const img = b.tagName === 'IMG' ? b : $('img', b); if (!img?.src) return;
+      $('#viewer-img').src = img.src; $('#viewer').showModal();
+    }));
+    $$('[data-copy]', el).forEach((b) => b.addEventListener('click', () => copy(b.dataset.copy)));
+    $$('[data-download]', el).forEach((b) => b.addEventListener('click', () => download(b.dataset.download, b.dataset.name)));
+    $$('[data-post]', el).forEach((b) => b.addEventListener('click', () => openPost(b.dataset.post)));
+    $$('[data-sfdoc]', el).forEach((b) => b.addEventListener('click', () => sfDoc(b, b.dataset.sfdoc, b.dataset.id)));
+    $$('[data-request]', el).forEach((b) => b.addEventListener('click', () => openRequest(b.dataset.request, b.dataset.deal)));
+    hydrate(el);
+  }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); toast('Copied'); } catch { toast(text); }
+  }
+
+  // ---------- home ----------
+  function renderHome() {
+    const el = $('[data-view="home"]');
+    const p = data.person || {};
+    const first = data.deals[0];
+    const film = first?.unit?.film;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
+    const media = film && !calm
+      ? `<video class="welcome-film" src="${film.src}" poster="${film.poster}" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>`
+      : (first ? photo(first) : '');
+    const parts = [`<div class="welcome">${media}<div class="welcome-body">
+      <p class="eyebrow light">JAD+ · ${data.deals.length > 1 ? `${data.deals.length} residences` : esc(first?.unit?.project || 'Owner')}</p>
+      <h1 class="display">${greeting()},<br>${esc(p.first_name || p.name || '')}</h1>
+      <p class="mantra">Mind at ease. Body at rest. Spirit at peace.</p>
+      ${p.owner_id ? `<span class="owner-chip">Owner ID <b>${esc(p.owner_id)}</b></span>` : ''}</div></div>`];
+
+    const overdueAll = data.deals.map((d, i) => ({ d, i, s: dealSummary(d) })).filter((x) => x.s.overdueSum > 1);
+    if (overdueAll.length) {
+      parts.push(`<div class="notice"><div>${pill('bad', 'alert', 'Payment overdue')}<h3>${money(overdueAll.reduce((s, x) => s + x.s.overdueSum, 0))} is now overdue</h3>
+        <p>${overdueAll.map((x) => esc(unitTitle(x.d))).join(' and ')}. Settle it whenever you are ready, or let the JAD+ desk help.</p></div>
+        <button class="btn btn-primary" data-pay="${overdueAll[0].i}">${ICON.card}Pay now</button></div>`);
+    }
+
+    parts.push(`<div class="section"><h2 class="section-title">${data.deals.length > 1 ? 'Your residences' : 'Your residence'}</h2>`);
+    data.deals.forEach((d, i) => {
+      const s = dealSummary(d);
+      const last = updatesFor(d)[0];
+      parts.push(`<article class="residence">
+        <button class="residence-photo" type="button" data-open="${i}" aria-label="Open residence ${esc(d.unit?.number || '')}">${photo(d)}
+          <div class="residence-tag"><p class="eyebrow light">${esc(stageLabel(d))}${d.role === 'Joint buyer' ? ' · Joint owner' : ''}</p>
+          <div class="title">Residence ${esc(d.unit?.number || '')}</div>
+          <div class="loc">${esc([d.unit?.project, d.unit?.building, d.unit?.place].filter(Boolean).join(' · '))}</div></div></button>
+        <div class="residence-body">
+          <div class="residence-stats">${ring(s.pct)}<div><div class="label">Paid to date</div><div class="big num" style="font-size:26px;margin-top:6px">${money(s.paid)}</div>
+            <div class="muted small" style="margin-top:4px">of ${money(s.total)}</div></div></div>
+          ${nextBlock(d, s, i)}
+          ${last ? `<div class="progress-line">${last.photos?.[0] ? `<img data-file="${esc(last.photos[0])}" alt="">` : ''}<div style="flex:1;min-width:0">
+            <div class="label">Construction · ${last.percent != null ? `${n(last.percent)}%` : esc(last.stage || '')}</div><b>${esc(last.title)}</b>
+            <a class="link-arrow" href="#progress" data-goto="${i}">All updates</a></div></div>`
+            : `<div class="progress-line"><div><div class="label">Construction</div><div class="muted small" style="margin-top:4px">Updates from site will appear here${d.unit?.completion ? `. Expected completion ${esc(d.unit.completion)}` : ''}.</div></div></div>`}
+        </div></article>`);
+    });
+    parts.push('</div>');
+
+    parts.push(`<figure class="philosophy" aria-label="Our philosophy">
+        <span class="philosophy-rule" aria-hidden="true"></span>
+        <p class="eyebrow">Our philosophy</p>
+        <blockquote>
+          <p class="ph-lead">We don\u2019t just design for comfort.</p>
+          <p class="ph-main">We design for <em>wholeness</em></p>
+        </blockquote>
+        <ul class="ph-pillars"><li>Physical</li><li>Emotional</li><li>Financial</li></ul>
+      </figure>`);
+    // Latest news, always last on Home: shown whenever JAD Global publishes something
+    const latest = data.posts.filter((p) => !isOffer(p)).slice(0, 3);
+    const offers = data.posts.filter(isOffer).length;
+    if (latest.length) {
+      parts.push(`<section class="section home-latest" aria-label="Latest news"><div class="latest-head"><div><p class="eyebrow">Latest from JAD Global</p>
+          <h2 class="title">News</h2></div><a class="link-arrow" href="#news">All news${offers ? ` &amp; ${offers} offer${offers > 1 ? 's' : ''}` : ''}</a></div>
+        <div class="posts posts-3">${latest.map((p) => postCard(p)).join('')}</div></section>`);
+    }
+    el.innerHTML = parts.join('');
+    bind(el);
+  }
+
+  function nextBlock(d, s, i) {
+    if (!s.open.length) {
+      return `<div class="peace">${ICON.leaf}<div><b>Everything is in order</b><span class="small">Every instalment on this residence is paid.</span></div></div>`;
+    }
+    const x = s.overdue.length ? s.overdue[0] : (s.next || s.open[0]);
+    const amount = s.overdue.length ? s.overdueSum : x.s.bal;
+    const when = s.overdue.length ? `Overdue since ${fmtDate(s.overdue[0].i.due)}` : (x.i.due ? `Due ${fmtDate(x.i.due)}` : x.s.label);
+    return `<div class="next"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+        <div class="label">${s.overdue.length ? 'Overdue' : 'Next instalment'}</div>${pill(x.s.cls, x.s.icon, x.s.label)}</div>
+      <div class="amount num">${money(amount)}</div><div class="when">${esc(when)} · ${esc(x.i.name || '')}</div>
+      <div class="actions"><button class="btn btn-primary" data-pay="${i}">${ICON.card}Pay now</button><a class="btn btn-outline" href="#payments" data-goto="${i}">Schedule</a></div></div>`;
+  }
+
+  // ---------- residence ----------
+  function renderUnit() {
+    const el = $('[data-view="unit"]');
+    const d = deal(); const u = d.unit || {};
+    const area = (v) => (v ? `${n(v).toLocaleString('en-US', { maximumFractionDigits: 2 })} sq ft` : null);
+    const facts = [
+      ['Project', u.project], ['Building', u.building], ['Residence', u.number], ['Floor', u.floor], ['Type', u.type || u.model],
+      ['Bathrooms', u.bathrooms], ['Internal area', area(u.internal_area)], ['Balcony', area(u.balcony_area)], ['Total area', area(u.total_area)],
+      ['View', u.view], ['Parking', u.parking ? `${u.parking} space${u.parking > 1 ? 's' : ''}` : null], ['Furnishing', u.furnishing], ['Expected completion', u.completion],
+    ].filter(([, v]) => v !== null && v !== undefined && v !== '');
+    el.innerHTML = `
+      <div class="banner-photo">${photo(d)}<div class="banner-copy"><p class="eyebrow light">${esc(stageLabel(d))}${d.role === 'Joint buyer' ? ' · Joint owner' : ''}</p>
+        <h1 class="title">${esc(unitTitle(d))}</h1><p class="sub">${esc([u.building, u.place].filter(Boolean).join(' · '))}</p></div></div>
+      <div class="grid grid-2">
+        <div class="card"><div class="card-head"><h2>The residence</h2></div>
+          <div class="facts">${facts.map(([k, v]) => `<div class="fact"><div class="label">${esc(k)}</div><div class="value">${esc(v)}</div></div>`).join('')}</div>
+          ${u.address ? `<p class="muted small" style="margin:14px 0 0">${esc(u.address)}</p>` : ''}</div>
+        <div class="card"><div class="card-head"><h2>Floor plan</h2>${u.plan ? `<button class="btn btn-outline btn-sm" type="button" data-download="${esc(u.plan)}" data-name="Floor plan ${esc(u.number)}">${ICON.download}Download</button>` : ''}</div>
+          ${u.plan ? `<div class="plan-box"><img data-file="${esc(u.plan)}" alt="Floor plan of residence ${esc(u.number)}" data-view-img></div>` : '<div class="empty">The floor plan for this residence will be added soon.</div>'}</div>
+      </div>
+      <div class="section"><h2 class="section-title">Documents for this residence</h2>
+        <div class="actions"><button class="btn btn-outline" type="button" data-sfdoc="soa" data-id="${esc(d.id)}">${ICON.download}Statement of account</button>
+        <button class="btn btn-outline" type="button" data-request="Reservation Form" data-deal="${esc(d.id)}">${ICON.file}Request Reservation Form</button>
+        <button class="btn btn-outline" type="button" data-request="SPA" data-deal="${esc(d.id)}">${ICON.file}Request SPA</button></div></div>
+      <div class="section"><h2 class="section-title">Purchase</h2>
+        <div class="kpis">
+          <div class="kpi"><div class="label">Purchase price</div><div class="value num">${money(d.price)}</div>${n(d.discount) ? `<div class="sub">after ${money(d.discount)} discount</div>` : ''}</div>
+          <div class="kpi"><div class="label">${d.plan_name ? 'Payment plan' : 'Instalments'}</div><div class="value">${esc(d.plan_name || (d.instalments || []).length)}</div></div>
+          <div class="kpi"><div class="label">Reserved on</div><div class="value">${esc(fmtDate(d.reserved) || '—')}</div></div>
+          <div class="kpi"><div class="label">In the name of</div><div class="value" style="font-size:16px">${esc(d.buyer || '')}</div>${d.owner_id ? `<div class="sub">Owner ID ${esc(d.owner_id)}</div>` : ''}</div>
+        </div></div>`;
+    bind(el);
+  }
+
+  // ---------- payments ----------
+  function renderPayments() {
+    const el = $('[data-view="payments"]');
+    const d = deal(); const s = dealSummary(d);
+    const receipts = d.receipts || [];
+    const charges = d.charges || [];
+    const pens = (d.penalties || []).filter((p) => n(p.outstanding) > 0);
+    el.innerHTML = `
+      <div class="page-head"><div><p class="eyebrow">Payments</p><h1 class="title">${esc(unitTitle(d))}</h1>
+        <p class="sub">${esc(d.plan_name || `${(d.instalments || []).length} instalments`)}</p></div>
+        <div class="actions">${s.open.length ? `<button class="btn btn-primary" data-pay="${dealIdx}">${ICON.card}Pay now</button>` : ''}
+          <button class="btn btn-outline" type="button" data-sfdoc="soa" data-id="${esc(d.id)}">${ICON.download}Statement of account</button></div></div>
+      <div class="kpis">
+        <div class="kpi"><div class="label">Residence price</div><div class="value num">${money(s.total)}</div></div>
+        <div class="kpi"><div class="label">Paid</div><div class="value num">${money(s.paid)}</div><div class="sub">${Math.floor(s.pct)}% of the price</div></div>
+        <div class="kpi"><div class="label">Remaining</div><div class="value num">${money(Math.max(0, s.total - s.paid))}</div><div class="sub">${s.open.length} instalment${s.open.length === 1 ? '' : 's'} open</div></div>
+        <div class="kpi"><div class="label">${s.overdueSum > 1 ? 'Overdue' : 'Next due'}</div>
+          <div class="value num ${s.overdueSum > 1 ? 'bad' : ''}">${s.overdueSum > 1 ? money(s.overdueSum) : (s.next ? money(s.next.s.bal) : '—')}</div>
+          <div class="sub">${s.overdueSum > 1 ? `${s.overdue.length} instalment${s.overdue.length === 1 ? '' : 's'}` : (s.next?.i.due ? fmtDate(s.next.i.due) : (s.next ? s.next.s.label : 'Nothing due'))}</div></div>
+      </div>
+
+      <div class="card section"><div class="card-head"><div><h2>Cash flow</h2><p>Each instalment by due date: what is paid, and what remains.</p></div></div>
+        <div class="chart" id="cashflow"></div>
+        <div class="legend"><span><i style="background:${COLORS.paid}"></i>Paid</span><span><i style="background:${COLORS.due}"></i>To pay</span><span><i style="background:${COLORS.overdue}"></i>Overdue</span></div>
+      </div>
+
+      <div class="card section"><div class="card-head"><div><h2>Payment schedule</h2><p>${(d.instalments || []).length} instalments</p></div></div>
+        ${(d.instalments || []).length ? `<ol class="schedule">${s.states.map(({ i, s: st }, k) => `<li>
+          <div class="step ${['good', 'bad', 'warn'].includes(st.cls) ? st.cls : ''}">${st.k === 'paid' ? ICON.check : st.k === 'overdue' ? ICON.alert : esc(i.seq ?? k + 1)}</div>
+          <div><div class="what">${esc(i.name || `Instalment ${k + 1}`)}${i.pct ? ` <span class="muted small">· ${esc(n(i.pct))}%</span>` : ''}</div>
+            <div class="meta">${i.due ? `Due ${esc(fmtDate(i.due))}` : esc(i.desc || 'On completion')}${st.k === 'paid' && i.cleared ? ` · paid ${esc(fmtDate(i.cleared))}` : ''}</div></div>
+          <div class="right"><div class="amt num">${money(i.amount)}</div>${pill(st.cls, st.icon, st.label)}${st.k !== 'paid' && n(i.paid) > 0 ? `<div class="bal num">${money(st.bal)} remaining</div>` : ''}</div>
+        </li>`).join('')}</ol>` : '<div class="empty">Your payment schedule will appear here once it is set up.</div>'}
+      </div>
+
+      ${pens.length ? `<div class="card section" style="border-left:3px solid var(--bad)"><div class="card-head"><div><h2>Late payment charges</h2><p>Applied under your purchase agreement when an instalment is settled late.</p></div></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>For</th><th>Since</th><th class="r">Outstanding</th></tr></thead><tbody>
+        ${pens.map((p) => `<tr><td>${esc(p.for || p.name)}</td><td>${esc(fmtDate(p.start))}</td><td class="r num">${money(p.outstanding)}</td></tr>`).join('')}</tbody></table></div></div>` : ''}
+
+      ${charges.length ? `<div class="card section"><div class="card-head"><div><h2>Fees and charges</h2><p>Registration and other fees for this residence.</p></div></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>Charge</th><th class="r">Amount</th><th class="r">Paid</th><th>Status</th></tr></thead><tbody>
+        ${charges.map((c) => { const done = c.is_paid || n(c.amount) - n(c.paid) <= 1; return `<tr><td>${esc(c.name)}</td><td class="r num">${money(c.amount)}</td><td class="r num">${money(c.paid)}</td>
+          <td>${done ? pill('good', 'check', 'Paid') : pill('plain', 'dots', `${money(n(c.amount) - n(c.paid))} remaining`)}</td></tr>`; }).join('')}</tbody></table></div></div>` : ''}
+
+      <div class="card section"><div class="card-head"><div><h2>Receipts</h2><p>${receipts.length} payment${receipts.length === 1 ? '' : 's'} received</p></div></div>
+        ${receipts.length ? `<div class="table-wrap"><table class="data"><thead><tr><th>Receipt</th><th>Date</th><th>For</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead><tbody>
+        ${receipts.map((r) => `<tr><td>${esc(r.name)}</td><td>${esc(fmtDate(r.paid_on))}</td><td>${esc(r.for || r.type || '')}</td><td class="r num">${money(r.amount)}</td>
+          <td>${receiptPill(r)}</td><td>${r.id ? `<button class="btn btn-outline btn-sm" type="button" data-sfdoc="receipt" data-id="${esc(r.id)}" aria-label="Download receipt ${esc(r.name)}">${ICON.download}Receipt</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+          : '<div class="empty">No payments recorded yet.</div>'}
+      </div>`;
+    bind(el);
+    drawCashflow($('#cashflow'), d);
+  }
+
+  function receiptPill(r) {
+    if (r.status === 'Paid to DLD') return pill('info', 'check', 'Paid to DLD');
+    if (r.stage === 'Acknowledge') return pill('warn', 'clock', 'Received, clearing');
+    if (r.stage === 'Confirmed') return pill('good', 'check', 'Confirmed');
+    return pill('plain', 'dots', r.stage || r.status || 'Recorded');
+  }
+
+  // Cash flow: one stacked bar per instalment (paid at the base, still-to-pay above, 2px gap). One axis; tap/hover for details.
+  function drawCashflow(box, d) {
+    const rows = (d.instalments || []).map((i) => ({ i, s: instState(i) }))
+      .sort((a, b) => (a.i.due ? 0 : 1) - (b.i.due ? 0 : 1) || String(a.i.due).localeCompare(String(b.i.due)) || n(a.i.seq) - n(b.i.seq));
+    if (!rows.length) { box.innerHTML = '<div class="empty">No instalments yet.</div>'; return; }
+    const W = 760, H = 240, padL = 48, padR = 8, padT = 14, padB = 34;
+    const max = Math.max(...rows.map((r) => n(r.i.amount)), 1);
+    const step = niceStep(max / 4); const top = Math.ceil(max / step) * step;
+    const iw = (W - padL - padR) / rows.length; const bw = Math.max(4, Math.min(26, iw - 10));
+    const y = (v) => padT + (H - padT - padB) * (1 - v / top);
+    const todayIdx = rows.findIndex((r) => r.i.due && r.i.due >= dubaiToday());
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cash flow by instalment">`;
+    for (let v = 0; v <= top + 1; v += step) {
+      svg += `<line class="grid-line" x1="${padL}" x2="${W - padR}" y1="${y(v)}" y2="${y(v)}"/><text class="axis-label" x="${padL - 10}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`;
+    }
+    const labelEvery = Math.ceil(rows.length / 12);
+    rows.forEach((r, k) => {
+      const x = padL + k * iw + (iw - bw) / 2;
+      const amt = n(r.i.amount); const paid = Math.min(n(r.i.paid), amt); const rest = Math.max(0, amt - paid);
+      const restColor = r.s.k === 'overdue' ? COLORS.overdue : COLORS.due;
+      const rad = Math.min(4, bw / 2);
+      if (rest > 0) svg += roundTop(x, y(amt), bw, Math.max(0, y(paid) - y(amt) - (paid > 0 ? 2 : 0)), rad, restColor);
+      if (paid > 0) svg += rest > 0 ? `<rect x="${x}" y="${y(paid)}" width="${bw}" height="${Math.max(0, y(0) - y(paid))}" fill="${COLORS.paid}"/>` : roundTop(x, y(paid), bw, y(0) - y(paid), rad, COLORS.paid);
+      svg += `<rect class="bar-hit" data-k="${k}" x="${padL + k * iw}" y="${padT}" width="${iw}" height="${H - padT - padB}"/>`;
+      if (k % labelEvery === 0) {
+        const lab = r.i.due ? fmtDate(r.i.due).replace(/^\d+ /, '').replace(/ \d{2}(\d{2})$/, " '$1") : 'Completion';
+        svg += `<text class="axis-label" x="${x + bw / 2}" y="${H - padB + 18}" text-anchor="middle">${esc(lab)}</text>`;
+      }
+    });
+    if (todayIdx > 0) {
+      const tx = padL + todayIdx * iw;
+      svg += `<line x1="${tx}" x2="${tx}" y1="${padT}" y2="${H - padB}" stroke="${COLORS.due}" stroke-dasharray="2 4" stroke-width="1.2"/><text class="axis-label" x="${tx + 6}" y="${padT + 10}" style="fill:var(--bronze);font-weight:600;letter-spacing:.12em">TODAY</text>`;
+    }
+    svg += `<line x1="${padL}" x2="${W - padR}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(57,69,81,.3)"/></svg><div class="tip" id="cf-tip"></div>`;
+    box.innerHTML = svg;
+    const tip = $('#cf-tip', box);
+    $$('.bar-hit', box).forEach((h) => {
+      const show = (ev) => {
+        const r = rows[Number(h.dataset.k)]; const amt = n(r.i.amount); const paid = Math.min(n(r.i.paid), amt);
+        tip.innerHTML = `<b>${esc(r.i.name || '')}</b><br>${r.i.due ? `Due ${esc(fmtDate(r.i.due))}` : esc(r.s.label)}<br>Amount ${money(amt)}<br>Paid ${money(paid)}${amt - paid > 1 ? `<br>${r.s.k === 'overdue' ? 'Overdue' : 'To pay'} ${money(amt - paid)}` : ''}`;
+        const rect = box.getBoundingClientRect(); const hr = h.getBoundingClientRect();
+        const left = Math.max(0, Math.min(rect.width - tip.offsetWidth, hr.left - rect.left + hr.width / 2 - tip.offsetWidth / 2));
+        tip.style.left = `${left}px`; tip.style.top = `${Math.max(0, hr.top - rect.top - tip.offsetHeight + 30)}px`; tip.classList.add('show');
+        if (ev && ev.type === 'click') ev.stopPropagation();
+      };
+      h.addEventListener('mouseenter', show); h.addEventListener('click', show);
+      h.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    });
+    document.addEventListener('click', () => tip.classList.remove('show'));
+  }
+  function roundTop(x, y0, w, h, r, fill) {
+    if (h <= 0) return '';
+    r = Math.min(r, h);
+    return `<path d="M${x},${y0 + h} L${x},${y0 + r} Q${x},${y0} ${x + r},${y0} L${x + w - r},${y0} Q${x + w},${y0} ${x + w},${y0 + r} L${x + w},${y0 + h} Z" fill="${fill}"/>`;
+  }
+  function niceStep(raw) { const p = 10 ** Math.floor(Math.log10(raw || 1)); const f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+
+  // ---------- pay ----------
+  function openPay(i) {
+    const d = data.deals[i]; const s = dealSummary(d);
+    const amount = s.overdueSum > 1 ? s.overdueSum : (s.next ? s.next.s.bal : (s.open[0]?.s.bal || 0));
+    const why = s.overdueSum > 1 ? `Overdue: ${s.overdue.map((x) => x.i.name).join(', ')}` : (s.next ? `${s.next.i.name}${s.next.i.due ? `, due ${fmtDate(s.next.i.due)}` : ''}` : '');
+    const pct = n(data.pay?.card_limit_pct) || 5;
+    const cardMax = n(d.price) * pct / 100;
+    $('#pay-body').innerHTML = `<p class="eyebrow">Secure payment</p><h2 class="title" id="pay-title">${esc(unitTitle(d))}</h2><p class="muted" style="margin:8px 0 0">${esc(why)}</p>
+      <div class="copy-rows">
+        ${copyRow('Amount', money(amount, { dec: 2 }), n(amount).toFixed(2))}
+        ${copyRow('Project', d.unit?.project || '', d.unit?.project || '')}
+        ${copyRow('Unit number', d.unit?.number || '', d.unit?.number || '')}
+        ${copyRow('Payment for', 'Instalment', 'Instalment')}
+      </div>
+      <div class="note">The JAD Global payment page opens next. Enter the details above exactly as shown so your payment is matched to your residence.<br><br>
+        <b>Card payments</b> can cover up to ${esc(pct)}% of your residence value (about ${money(cardMax)}). For larger amounts, a bank transfer is best, and the JAD+ desk will confirm it with you.</div>
+      <a class="btn btn-primary btn-block" href="${esc(safeUrl(data.pay?.url) || 'https://pay.jadglobal.ae/')}" target="_blank" rel="noopener noreferrer">${ICON.ext}Continue to secure payment</a>
+      <p class="muted small" style="text-align:center;margin:14px 0 0">Your payment appears here once JAD Global confirms it, usually within two working days.</p>`;
+    bind($('#pay-body'));
+    $('#pay-sheet').showModal();
+  }
+  function copyRow(k, v, raw) {
+    return `<div class="copy-row"><div><div class="label">${esc(k)}</div><div class="v num">${esc(v)}</div></div><button class="btn btn-outline btn-sm" type="button" data-copy="${esc(raw)}">${ICON.copy}Copy</button></div>`;
+  }
+
+  // ---------- news & exclusive offers ----------
+  let newsFilter = 'all';
+  const isOffer = (p) => p.type === 'Exclusive offer';
+  function badge(p) { return `<span class="badge ${isOffer(p) ? 'offer' : ''}">${esc(isOffer(p) ? 'Owners only' : p.type)}</span>`; }
+  function postCard(p, featured = false) {
+    const u = p.unit;
+    const cover = p.photos?.[0];
+    const photoHtml = cover ? `<div class="post-photo"><img data-file="${esc(cover)}" alt="" loading="lazy">${badge(p)}</div>`
+      : (u?.image ? `<div class="post-photo"><img src="${esc(u.image)}" alt="" loading="lazy">${badge(p)}</div>`
+        : `<div class="post-photo blank"><img class="mark" src="/img/jadplus-cream.png" alt="">${badge(p)}</div>`);
+    return `<button class="post ${featured ? 'post-featured' : ''}" type="button" data-post="${esc(p.id)}">${photoHtml}
+      <div class="post-body"><div class="date">${esc(fmtDate(p.date))}${p.project ? ` · ${esc(p.project)}` : ''}</div>
+        <h3>${esc(p.title)}</h3>${p.summary ? `<p>${esc(p.summary)}</p>` : ''}
+        ${u ? offerLine(p) : ''}</div></button>`;
+  }
+  function offerLine(p) {
+    const u = p.unit; const price = n(u.offer_price) || n(u.price); const was = n(u.offer_price) && n(u.price) > n(u.offer_price) ? n(u.price) : 0;
+    const facts = [u.project && `${u.project} · ${u.number}`, u.type, u.total_area && `${n(u.total_area).toLocaleString('en-US', { maximumFractionDigits: 0 })} sq ft`, u.view].filter(Boolean);
+    return `<div class="offer-facts">${facts.map((t) => pill('plain', '', t)).join('')}</div>
+      ${price ? `<div class="price-line"><span class="now num">${money(price)}</span>${was ? `<s class="num">${money(was)}</s>` : ''}</div>` : ''}`;
+  }
+  function renderNews() {
+    const el = $('[data-view="news"]');
+    const posts = data.posts;
+    const offers = posts.filter(isOffer);
+    const news = posts.filter((p) => !isOffer(p));
+    const shown = newsFilter === 'offers' ? offers : newsFilter === 'news' ? news : posts;
+    const tabs = [['all', 'All'], ['news', 'News'], ['offers', `Offers${offers.length ? ` · ${offers.length}` : ''}`]];
+    el.innerHTML = `
+      <div class="page-head"><div><p class="eyebrow">News &amp; privileges</p><h1 class="display">From JAD Global</h1>
+        <p class="sub">New launches, company news and residences offered to JAD+ owners first.</p></div>
+        <div class="seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-filter="${k}" class="${newsFilter === k ? 'active' : ''}" aria-selected="${newsFilter === k}">${l}</button>`).join('')}</div></div>
+      ${shown.length ? `<div class="posts">${shown.map((p, k) => postCard(p, k === 0 && (p.pinned || isOffer(p)))).join('')}</div>`
+        : `<div class="card empty">${ICON.leaf}<p>${newsFilter === 'offers' ? 'Exclusive offers for JAD+ owners will appear here.' : 'News from JAD Global will appear here.'}</p></div>`}`;
+    $$('[data-filter]', el).forEach((b) => b.addEventListener('click', () => { newsFilter = b.dataset.filter; renderNews(); }));
+    bind(el);
+  }
+  function openPost(id) {
+    const p = data.posts.find((x) => x.id === id); if (!p) return;
+    const u = p.unit; const person = data.person || {}; const k = data.desk || {};
+    const hero = p.photos?.[0] ? `<img data-file="${esc(p.photos[0])}" alt="">` : (u?.image ? `<img src="${esc(u.image)}" alt="">` : '');
+    const msg = u ? `Hello JAD+, this is ${person.name || ''}${person.owner_id ? ` (Owner ID ${person.owner_id})` : ''}. I am interested in the owners-only offer: ${u.project} residence ${u.number}.` : '';
+    const facts = u ? [['Project', u.project], ['Building', u.building], ['Residence', u.number], ['Floor', u.floor], ['Type', u.type],
+      ['Internal area', u.internal_area && `${n(u.internal_area).toLocaleString('en-US')} sq ft`], ['Balcony', u.balcony_area && `${n(u.balcony_area).toLocaleString('en-US')} sq ft`],
+      ['View', u.view], ['Offer ends', p.expires && fmtDate(p.expires)]].filter(([, v]) => v) : [];
+    $('#post-body').innerHTML = `${hero ? `<div class="sheet-hero">${hero}</div>` : ''}<div class="sheet-content">
+      <p class="eyebrow">${esc(isOffer(p) ? 'Exclusive to JAD+ owners' : p.type)} · ${esc(fmtDate(p.date))}</p><h2 class="title">${esc(p.title)}</h2>
+      ${u ? `<div style="margin-top:16px">${offerLine(p)}</div>
+        <div class="facts" style="margin-top:18px">${facts.map(([a, b]) => `<div class="fact"><div class="label">${esc(a)}</div><div class="value">${esc(b)}</div></div>`).join('')}</div>` : ''}
+      ${p.body ? `<div class="body">${esc(p.body)}</div>` : (p.summary ? `<div class="body">${esc(p.summary)}</div>` : '')}
+      ${p.photos?.length > 1 ? `<div class="photos">${p.photos.slice(1).map((ph) => `<button type="button" data-view-img><img data-file="${esc(ph)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+      ${u?.plan ? `<div class="plan-box" style="margin-top:18px"><img data-file="${esc(u.plan)}" alt="Floor plan" data-view-img></div>` : ''}
+      <div class="actions" style="margin-top:22px">
+        ${u ? `<a class="btn btn-primary" href="https://wa.me/${encodeURIComponent(k.whatsapp || '')}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">${ICON.chat}I am interested</a>
+               <a class="btn btn-outline" href="tel:${esc(k.phone_link || '')}">${ICON.phone}Call the desk</a>` : ''}
+        ${safeUrl(p.link) ? `<a class="btn btn-outline" href="${esc(safeUrl(p.link))}" target="_blank" rel="noopener noreferrer">${ICON.ext}Read more</a>` : ''}
+      </div></div>`;
+    bind($('#post-body'));
+    $('#post-sheet').showModal();
+  }
+
+  // ---------- services: request any of the 12 JAD+ services, then follow it ----------
+  let svcData = { services: [], requests: [] };
+  const SVC_ICON = { 'Property care': ICON.crane, 'Investment services': ICON.flag, Lifestyle: ICON.leaf };
+  async function loadServices() {
+    const r = await api('/api/services');
+    if (!r.ok) { if (r.status === 401) location.reload(); return; }
+    svcData = r.body; renderServices();
+  }
+  function ownerSla(r) {
+    const s = r.sla || {};
+    if (s.state === 'done' || !s.due) return s.state === 'waiting' ? 'Waiting for your decision on the quote' : '';
+    const when = new Date(s.due).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
+    if (s.state === 'paused') return 'On hold';
+    return { 'First response': `We will respond by ${when}`, Attendance: `Visit due by ${when}`, 'Emergency attendance': `Emergency team due by ${when}` }[s.label] || '';
+  }
+  const SVC_STATUS = { Submitted: ['plain', 'dots', 'Received'], Assigned: ['info', 'clock', 'With the team'], 'Quote sent': ['warn', 'alert', 'Quote to approve'],
+    Scheduled: ['info', 'clock', 'Visit booked'], 'In progress': ['info', 'clock', 'In progress'], 'On hold': ['plain', 'dots', 'On hold'],
+    Completed: ['warn', 'alert', 'Please confirm'], Reopened: ['info', 'clock', 'Reopened'], Closed: ['good', 'check', 'Closed'],
+    Cancelled: ['plain', 'dots', 'Cancelled'], 'Quote declined': ['plain', 'dots', 'Quote declined'] };
+  function renderServices() {
+    const el = $('[data-view="services"]');
+    const readOnly = !!data.session?.staff_by || !!data.session?.preview;
+    const reqs = svcData.requests || [];
+    const active = reqs.filter((r) => !['Closed', 'Cancelled', 'Quote declined'].includes(r.status));
+    const past = reqs.filter((r) => ['Closed', 'Cancelled', 'Quote declined'].includes(r.status));
+    const groups = {}; svcData.services.forEach((s) => { (groups[s.group] ||= []).push(s); });
+    const chev = '<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+    const reqRow = (r) => { const st = SVC_STATUS[r.status] || SVC_STATUS.Submitted; const needsYou = ['Quote sent', 'Completed'].includes(r.status);
+      return `<button class="sv-req ${needsYou ? 'needs' : ''}" type="button" data-sreq="${esc(r.ref)}">
+        <span class="sv-req-main"><b>${esc(r.service)}</b><small>${esc(ownerSla(r) || `${r.ref} · ${fmtDate(new Date(r.created).toISOString())}`)}</small></span>
+        <span class="sv-req-state ${st[0]}">${esc(st[2])}</span>${chev}</button>`; };
+    el.innerHTML = `<div class="sv">
+      <header class="sv-head"><p class="eyebrow">JAD+ services</p><h1 class="title">How can we help?</h1>
+        <p class="sv-sub">Choose a service. We take it from there, and you can follow every step here.</p></header>
+      ${active.length ? `<section class="sv-block"><h2 class="pf-label">In progress</h2><div class="sv-reqs">${active.map(reqRow).join('')}</div></section>` : ''}
+      ${Object.entries(groups).map(([g, list]) => `<section class="sv-block"><h2 class="pf-label">${esc(g)}</h2><div class="pf-list">
+        ${list.map((s) => `<button class="pf-row sv-svc" type="button" data-svc="${esc(s.key)}" ${readOnly ? 'disabled' : ''}><span class="k">${esc(s.name)}<small>${esc(s.blurb || '')}</small></span>${chev}</button>`).join('')}
+      </div></section>`).join('')}
+      ${past.length ? `<section class="sv-block"><h2 class="pf-label">Past requests</h2><div class="sv-reqs">${past.map(reqRow).join('')}</div></section>` : ''}
+    </div>`;
+    $$('[data-svc]', el).forEach((b) => b.addEventListener('click', () => newServiceRequest(b.dataset.svc)));
+    $$('[data-sreq]', el).forEach((b) => b.addEventListener('click', () => openServiceRequest(b.dataset.sreq)));
+  }
+
+  // photos are shrunk on the phone (max 1600px JPEG) before upload
+  function shrink(file) {
+    return new Promise((ok, fail) => {
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 1600 / Math.max(img.width, img.height)); const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url); c.toBlob((b) => (b ? ok(b) : fail()), 'image/jpeg', 0.82); };
+      img.onerror = () => fail(); img.src = url;
+    });
+  }
+  async function uploadPhotos(ref, files) {
+    for (const f of [...files].slice(0, 6)) {
+      try {
+        const blob = await shrink(f);
+        const headers = { 'content-type': 'image/jpeg' }; if (token()) headers.authorization = `Bearer ${token()}`;
+        await fetch(`${API}/api/service-requests/${ref}/photo`, { method: 'POST', headers, body: blob, credentials: NATIVE ? 'omit' : 'same-origin' });
+      } catch { /* skip this photo */ }
+    }
+  }
+
+  function newServiceRequest(key) {
+    const s = svcData.services.find((x) => x.key === key); if (!s) return;
+    const deals = data.deals;
+    const times = ['Any time', 'Morning', 'Afternoon', 'Evening'];
+    $('#svc-body').innerHTML = `<div class="rq">
+      <p class="eyebrow">${esc(s.group)}</p><h2 class="rq-title">${esc(s.name)}</h2><p class="rq-sub">${esc(s.blurb || '')}</p>
+      <form id="svc-form" class="rq-form">
+        ${deals.length > 1 ? `<div class="rq-field"><span class="rq-label">Residence</span><div class="rq-chips" id="svc-deal">${deals.map((d) => `<button type="button" class="rq-chip ${d.id === deal().id ? 'on' : ''}" data-v="${esc(d.id)}">${esc(d.unit?.project || '')} · ${esc(d.unit?.number || '')}</button>`).join('')}</div></div>` : ''}
+        <div class="rq-field"><label class="rq-label" for="svc-desc">What do you need?</label>
+          <textarea id="svc-desc" rows="3" maxlength="3000" required placeholder="${key === 'maintenance' ? 'For example, the bedroom AC is not cooling' : 'A few words are enough'}"></textarea></div>
+        <div class="rq-field"><span class="rq-label">Best time for us to come or call</span><div class="rq-chips" id="svc-when">${times.map((t, i) => `<button type="button" class="rq-chip ${i === 0 ? 'on' : ''}" data-v="${t}">${t}</button>`).join('')}</div></div>
+        <div class="rq-field"><label class="rq-photo" for="svc-photos">${ICON.camera}<span id="svc-photo-label">Add photos (optional)</span></label><input id="svc-photos" type="file" accept="image/*" multiple hidden></div>
+        ${s.emergency ? `<label class="rq-emergency"><span><b>This is an emergency</b><small>Water leak, no power, no AC in summer, lock-out</small></span><input type="checkbox" class="switch" id="svc-em"></label>` : ''}
+        <button class="btn btn-primary btn-block" type="submit">Send request</button>
+        <p class="rq-note">${esc(s.pricing)}${/quoted/i.test(s.pricing) ? '. Nothing chargeable starts before you approve a quote.' : '.'}</p>
+      </form></div>`;
+    const chips = (id) => $$(`#${id} .rq-chip`).forEach((c) => c.addEventListener('click', () => { $$(`#${id} .rq-chip`).forEach((o) => o.classList.toggle('on', o === c)); }));
+    chips('svc-when'); if (deals.length > 1) chips('svc-deal');
+    $('#svc-photos').addEventListener('change', (e) => { const n = e.target.files.length; $('#svc-photo-label').textContent = n ? `${Math.min(n, 6)} photo${n > 1 ? 's' : ''} added` : 'Add photos (optional)'; });
+    $('#svc-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = $('#svc-form button[type="submit"]'); btn.disabled = true; btn.textContent = 'Sending…';
+      const pick = (id) => $(`#${id} .rq-chip.on`)?.dataset.v;
+      const r = await api('/api/service-requests', { method: 'POST', body: JSON.stringify({ service: key, deal: pick('svc-deal') || deal().id,
+        description: $('#svc-desc').value, preferred: pick('svc-when') || '', emergency: !!$('#svc-em')?.checked }) });
+      if (!r.ok) { btn.disabled = false; btn.textContent = 'Send request'; toast(r.body.error || 'Could not send. Please try again.'); return; }
+      const files = $('#svc-photos').files; if (files?.length) await uploadPhotos(r.body.ref, files);
+      $('#svc-sheet').close(); toast('Request sent. We will be in touch shortly.'); loadServices();
+    });
+    $('#svc-sheet').showModal();
+  }
+
+  function openServiceRequest(ref) {
+    const r = (svcData.requests || []).find((x) => x.ref === ref); if (!r) return;
+    const st = SVC_STATUS[r.status] || SVC_STATUS.Submitted;
+    const q = (r.quotes || []).find((x) => x.status === 'sent');
+    const canCancel = ['Submitted', 'Assigned', 'Quote sent', 'Scheduled', 'Reopened'].includes(r.status);
+    const fmtT = (t) => new Date(t).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
+    $('#svc-body').innerHTML = `<p class="eyebrow">${esc(r.ref)}${r.emergency ? ' · Emergency' : ''}</p><h2 class="title">${esc(r.service)}</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0">${pill(st[0], st[1], st[2])}${ownerSla(r) ? `<span class="muted small" style="align-self:center">${esc(ownerSla(r))}</span>` : ''}</div>
+      <p style="margin:16px 0 0;white-space:pre-line;color:var(--ink-2)">${esc(r.description)}</p>
+      ${r.provider ? `<p class="small muted" style="margin:10px 0 0">Handled by <b>${esc(r.provider)}</b></p>` : ''}
+      ${r.visit_start ? `<p class="small" style="margin:6px 0 0">Visit: <b>${esc(fmtT(r.visit_start))}</b></p>` : ''}
+      ${q ? `<div class="svc-quote"><div class="label">Quote</div><div class="big num" style="font-size:28px;margin:6px 0">${money(q.amount, { dec: 2 })}</div>
+        ${(q.items || []).map((i) => `<div class="small muted">${esc(i.text)}</div>`).join('')}<div class="small muted">Valid until ${esc(fmtT(q.valid_until))}</div>
+        <div class="actions" style="margin-top:14px"><button class="btn btn-primary" id="q-yes">Approve</button><button class="btn btn-outline" id="q-no">Decline</button></div></div>` : ''}
+      ${r.status === 'Completed' ? `<div class="svc-quote"><div class="label">Is everything done?</div><p class="small muted" style="margin:6px 0 12px">Please confirm, or tell us what is still not right.</p>
+        <div class="actions"><button class="btn btn-primary" id="c-yes">Yes, all done</button><button class="btn btn-outline" id="c-no">Not resolved</button></div></div>` : ''}
+      ${r.status === 'Closed' && !r.rating ? `<div class="svc-quote"><div class="label">How did we do?</div><div class="stars" id="stars">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-star="${n}" aria-label="${n} stars">★</button>`).join('')}</div>
+        <textarea id="rate-txt" rows="2" placeholder="Anything to add? (optional)"></textarea><button class="btn btn-primary" id="rate-go" style="margin-top:10px" disabled>Send rating</button></div>` : ''}
+      ${r.rating ? `<p class="small" style="margin:14px 0 0">You rated this <b>${'★'.repeat(r.rating)}</b></p>` : ''}
+      ${(r.photos || []).length ? `<div class="photos">${r.photos.map((ph) => `<button type="button" data-view-img><img data-svcphoto="${esc(r.ref)}/${ph.id}" alt=""></button>`).join('')}</div>` : ''}
+      <h3 style="margin:24px 0 10px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--slate)">Timeline</h3>
+      <ol class="timeline">${(r.events || []).slice().reverse().map((e) => `<li><div class="date">${esc(fmtT(e.at))} · ${esc(e.by)}</div><div class="body">${e.status ? `<b>${esc(SVC_STATUS[e.status]?.[2] || e.status)}</b> ` : ''}${esc(e.text || '')}</div></li>`).join('')}</ol>
+      ${canCancel ? '<button class="pf-danger" type="button" id="s-cancel">Cancel this request</button>' : ''}`;
+    const act = async (action, body, msg) => {
+      const x = await api(`/api/service-requests/${ref}/${action}`, { method: 'POST', body: JSON.stringify(body) });
+      if (!x.ok) { toast(x.body.error || 'Please try again.'); return; }
+      toast(msg); await loadServices(); openServiceRequest(ref);
+    };
+    $('#q-yes')?.addEventListener('click', () => act('quote', { decision: 'approve' }, 'Quote approved'));
+    $('#q-no')?.addEventListener('click', () => act('quote', { decision: 'decline' }, 'Quote declined'));
+    $('#c-yes')?.addEventListener('click', () => act('confirm', { ok: true }, 'Thank you. Request closed.'));
+    $('#c-no')?.addEventListener('click', () => {
+      const box = $('#c-no').closest('.svc-quote');
+      box.insertAdjacentHTML('beforeend', '<textarea id="c-why" rows="2" placeholder="What is still not right?" style="margin-top:12px"></textarea><button class="btn btn-primary" id="c-send" style="margin-top:10px">Reopen the request</button>');
+      $('#c-no').disabled = true; $('#c-why').focus();
+      $('#c-send').addEventListener('click', () => act('confirm', { ok: false, reason: $('#c-why').value.trim() || 'Not resolved' }, 'We have reopened it'));
+    });
+    $('#s-cancel')?.addEventListener('click', () => act('cancel', {}, 'Request cancelled'));
+    let stars = 0;
+    $$('[data-star]').forEach((b) => b.addEventListener('click', () => { stars = Number(b.dataset.star); $$('[data-star]').forEach((x) => x.classList.toggle('on', Number(x.dataset.star) <= stars)); $('#rate-go').disabled = false; }));
+    $('#rate-go')?.addEventListener('click', () => act('rate', { rating: stars, comment: $('#rate-txt').value }, 'Thank you for your rating'));
+    // photos of the request (owner session)
+    $$('img[data-svcphoto]').forEach(async (img) => {
+      const path = `${API}/api/service-requests/${img.dataset.svcphoto.replace('/', '/photo/')}`;
+      if (!NATIVE) { img.src = path; return; }
+      try { const x = await fetch(path, { headers: { authorization: `Bearer ${token()}` } }); if (x.ok) img.src = URL.createObjectURL(await x.blob()); } catch { /* skip */ }
+    });
+    bind($('#svc-body'));
+    if (!$('#svc-sheet').open) $('#svc-sheet').showModal();
+  }
+
+  // ---------- progress ----------
+  function renderProgress() {
+    const el = $('[data-view="progress"]');
+    const d = deal(); const ups = updatesFor(d); const last = ups[0];
+    const stageIdx = last?.stage ? STAGES.indexOf(last.stage) : -1;
+    const handover = ups.find((u) => u.handover)?.handover;
+    el.innerHTML = `
+      <div class="banner-photo">${photo(d)}<div class="banner-copy"><p class="eyebrow light">Construction progress</p>
+        <h1 class="title">${esc(d.unit?.project || '')}${d.unit?.building ? ` · ${esc(d.unit.building)}` : ''}</h1><p class="sub">${esc(d.unit?.place || '')}</p></div></div>
+      <div class="kpis kpis-3">
+        <div class="kpi"><div class="label">Complete</div><div class="value" style="font-size:30px">${last?.percent != null ? `${n(last.percent)}%` : '—'}</div>
+          <div class="meter bronze" style="margin-top:12px" role="img" aria-label="${n(last?.percent)}% complete"><span style="width:${Math.min(100, n(last?.percent))}%"></span></div></div>
+        <div class="kpi"><div class="label">Current stage</div><div class="value">${esc(last?.stage || '—')}</div><div class="sub">${last ? `Updated ${esc(fmtDate(last.date))}` : 'No update yet'}</div></div>
+        <div class="kpi"><div class="label">Expected handover</div><div class="value">${esc(handover ? fmtDate(handover) : (d.unit?.completion || '—'))}</div><div class="sub">${handover ? 'As of the latest update' : 'From your purchase agreement'}</div></div>
+      </div>
+      <div class="card section"><div class="card-head"><h2>Stages</h2>${safeUrl(d.unit?.video) ? `<a class="btn btn-outline btn-sm" href="${esc(safeUrl(d.unit.video))}" target="_blank" rel="noopener noreferrer">${ICON.play}Project film</a>` : ''}</div>
+        <div class="stages">${STAGES.map((s, k) => `<div class="${k < stageIdx ? 'done' : k === stageIdx ? 'now' : ''}">${esc(s)}</div>`).join('')}</div></div>
+      <div class="section"><h2 class="section-title">From site</h2>
+        ${ups.length ? `<ol class="timeline">${ups.map((u) => `<li><div class="date">${esc(fmtDate(u.date) || '')}${u.building ? ` · ${esc(u.building)}` : ''}</div>
+          <h3>${esc(u.title)}</h3>
+          <div class="tags">${u.stage ? pill('info', 'crane', u.stage) : ''}${u.percent != null ? pill('plain', 'flag', `${n(u.percent)}% complete`) : ''}</div>
+          ${u.details ? `<div class="body">${esc(u.details)}</div>` : ''}
+          ${safeUrl(u.video) ? `<a class="link-arrow" href="${esc(safeUrl(u.video))}" target="_blank" rel="noopener noreferrer">Watch the film</a>` : ''}
+          ${u.photos?.length ? `<div class="photos">${u.photos.map((p) => `<button type="button" data-view-img><img data-file="${esc(p)}" alt="Site photograph, ${esc(u.title)}" loading="lazy"></button>`).join('')}</div>` : ''}
+        </li>`).join('')}</ol>`
+          : `<div class="card empty">${ICON.crane}<p>The first update from site for ${esc(d.unit?.project || 'your project')} will appear here, with photographs.</p></div>`}
+      </div>`;
+    bind(el);
+  }
+
+  // ---------- profile, documents, requests & settings ----------
+  const initials = (name) => String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || 'J+';
+  function avatarHtml(size = '') {
+    const ph = data.profile?.photo; const p = data.person || {};
+    return ph && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(ph) ? `<img src="${ph}" alt="">` : `<span class="initials ${size}">${esc(initials(p.name))}</span>`;
+  }
+  function renderAvatar() { $('#avatar-top').innerHTML = avatarHtml(); }
+  const DOC_REQUESTS = ['Reservation Form', 'SPA', 'Stamped Statement of Account', 'NOC', 'Oqood or Title Deed copy', 'Other'];
+  const STATUS_PILL = { New: ['plain', 'dots', 'Received'], 'In progress': ['warn', 'clock', 'In progress'], Completed: ['good', 'check', 'Ready'], Cancelled: ['plain', 'dots', 'Closed'] };
+
+  function renderProfile() {
+    const el = $('[data-view="profile"]');
+    const p = data.person || {}; const prefs = data.profile?.prefs || {};
+    const since = data.deals.map((d) => d.reserved).filter(Boolean).sort()[0];
+    const docs = data.documents || []; const reqs = data.requests || [];
+    const readOnly = !!data.session?.staff_by || !!data.session?.preview;
+    const k = data.desk || {};
+    const wa = `https://wa.me/${encodeURIComponent(k.whatsapp || '')}?text=${encodeURIComponent(`Hello JAD+, this is ${p.name || ''}${p.owner_id ? ` (Owner ID ${p.owner_id})` : ''}.`)}`;
+    const row = (label, value) => `<div class="pf-row"><span class="k">${esc(label)}</span><span class="v">${esc(value || '—')}</span></div>`;
+    const toggle = (key, label) => `<label class="pf-row"><span class="k">${label}</span><input type="checkbox" class="switch" data-pref="${key}" ${prefs[key] !== false ? 'checked' : ''} ${readOnly ? 'disabled' : ''}></label>`;
+    const chev = '<svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+    el.innerHTML = `<div class="pf">
+      <header class="pf-head">
+        <div class="pf-avatar">${avatarHtml('xl')}${readOnly ? '' : `<label class="pf-cam" for="photo-input" aria-label="${data.profile?.photo ? 'Change photo' : 'Add a photo'}">${ICON.camera}</label><input id="photo-input" type="file" accept="image/*" hidden>`}</div>
+        <h1 class="title">${esc(p.name || '')}</h1>
+        <p class="pf-sub">${p.owner_id ? `Owner ID ${esc(p.owner_id)}` : ''}${since ? ` · Owner since ${esc(fmtDate(since))}` : ''}</p>
+        ${data.profile?.photo && !readOnly ? '<button class="btn btn-text btn-sm" type="button" id="photo-remove">Remove photo</button>' : ''}
+      </header>
+
+      <section class="pf-group"><h2 class="pf-label">Documents</h2><div class="pf-list">
+        ${data.deals.map((d) => `<button class="pf-row" type="button" data-sfdoc="soa" data-id="${esc(d.id)}"><span class="k">Statement of account<small>${esc(unitTitle(d))}</small></span>${ICON.download}</button>`).join('')}
+        ${docs.map((d) => `<button class="pf-row" type="button" data-download="${esc(d.file)}" data-name="${esc(d.name)}"><span class="k">${esc(d.name)}<small>On file with JAD Global</small></span>${ICON.download}</button>`).join('')}
+        ${readOnly ? '' : `<button class="pf-row" type="button" data-request=""><span class="k">Request a document<small>Reservation Form, SPA, NOC and more</small></span>${chev}</button>`}
+      </div><p class="pf-note">Receipts for every payment are under Payments.</p></section>
+
+      ${reqs.length ? `<section class="pf-group"><h2 class="pf-label">Your requests</h2><div class="pf-list">
+        ${reqs.map((r) => { const st = STATUS_PILL[r.status] || STATUS_PILL.New; const files = r.files || [];
+          return files.length
+            ? `<button class="pf-row" type="button" data-download="${esc(files[0])}" data-name="${esc(r.type)}"><span class="k">${esc(r.type)}<small>${esc(r.name)} · ${esc(fmtDate(r.created))}${r.reply ? ` · ${esc(r.reply)}` : ''}</small></span><span class="v ready">${ICON.download}Ready</span></button>`
+            : `<div class="pf-row"><span class="k">${esc(r.type)}<small>${esc(r.name)} · ${esc(fmtDate(r.created))}${r.reply ? ` · ${esc(r.reply)}` : ''}</small></span><span class="v">${esc(st[2])}</span></div>`; }).join('')}
+      </div></section>` : ''}
+
+      <section class="pf-group"><h2 class="pf-label">Personal details</h2><div class="pf-list">
+        ${row('Email', p.email || data.session?.email)}${row('Mobile', p.mobile)}${row('Nationality', p.nationality)}${row('Country of residence', p.residence)}
+        ${readOnly ? '' : `<button class="pf-row" type="button" data-request="Update my contact details"><span class="k link">Request a change</span>${chev}</button>`}
+      </div></section>
+
+      <section class="pf-group"><h2 class="pf-label">Notifications</h2><div class="pf-list">
+        ${toggle('pay_reminders', 'Payment reminders')}${toggle('construction', 'Construction updates')}${toggle('news', 'News from JAD Global')}${toggle('offers', 'Exclusive offers')}
+      </div></section>
+
+      <section class="pf-group" id="concierge"><h2 class="pf-label">JAD+ concierge</h2><div class="pf-list">
+        <a class="pf-row" href="tel:${esc(k.phone_link || '')}"><span class="k">Call<small>${esc(k.phone || '')}</small></span>${chev}</a>
+        <a class="pf-row" href="${wa}" target="_blank" rel="noopener noreferrer"><span class="k">WhatsApp<small>Message us at any time</small></span>${chev}</a>
+        <a class="pf-row" href="mailto:${esc(k.email || '')}?subject=${encodeURIComponent(`JAD+ ${p.owner_id || ''}`)}"><span class="k">Email<small>${esc(k.email || '')}</small></span>${chev}</a>
+      </div><p class="pf-note">${esc(k.hours || '')}</p></section>
+
+      ${NATIVE ? `<section class="pf-group"><h2 class="pf-label">Security</h2><div class="pf-list"><label class="pf-row"><span class="k">Unlock with Face ID</span><input type="checkbox" class="switch" data-local="biometric" ${store.get('jadplus_bio') === '1' ? 'checked' : ''}></label></div></section>` : ''}
+
+      <section class="pf-group"><div class="pf-list">
+        <button class="pf-row" type="button" id="so-1"><span class="k">Sign out</span>${ICON.out}</button>
+        <button class="pf-row" type="button" id="so-all"><span class="k">Sign out on all devices</span>${ICON.out}</button>
+      </div>
+      ${readOnly ? '' : '<button class="pf-danger" type="button" id="close-acc">Close my JAD+ account</button>'}
+      <p class="pf-legal"><a href="/privacy" target="_blank" rel="noopener">Privacy notice</a> · <a href="/terms" target="_blank" rel="noopener">Terms of use</a></p></section>
+    </div>`;
+    bind(el);
+    $$('[data-pref]', el).forEach((c) => c.addEventListener('change', () => savePrefs({ [c.dataset.pref]: c.checked })));
+    $$('[data-local]', el).forEach((c) => c.addEventListener('change', () => store.set('jadplus_bio', c.checked ? '1' : '0')));
+    $('#so-1', el).addEventListener('click', () => signOut(false));
+    $('#so-all', el).addEventListener('click', () => signOut(true));
+    $('#close-acc', el)?.addEventListener('click', openClose);
+    $('#photo-input', el)?.addEventListener('change', (ev) => setPhoto(ev.target.files?.[0]));
+    $('#photo-remove', el)?.addEventListener('click', () => saveProfile({ photo: null }));
+  }
+  const REQ_HINT = { 'Reservation Form': 'A copy of your signed form', SPA: 'Your Sale and Purchase Agreement', 'Stamped Statement of Account': 'Signed and stamped by JAD',
+    NOC: 'For resale, mortgage or works', 'Oqood or Title Deed copy': 'Your registration papers', Other: 'Anything else you need' };
+
+  async function saveProfile(patch) {
+    const r = await api('/api/profile', { method: 'POST', body: JSON.stringify(patch) });
+    if (!r.ok) { toast(r.body.error || 'Could not save. Please try again.'); return false; }
+    data.profile = r.body.profile; renderAvatar(); renderProfile(); return true;
+  }
+  async function savePrefs(change) {
+    const ok = await saveProfile({ prefs: { ...(data.profile?.prefs || {}), ...change } });
+    if (ok) toast('Saved');
+  }
+  // Photo: cropped to a square and resized to 320px on the device before it is sent.
+  function setPhoto(file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      const s = Math.min(img.width, img.height); const c = document.createElement('canvas'); c.width = c.height = 320;
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 320, 320);
+      URL.revokeObjectURL(url);
+      if (await saveProfile({ photo: c.toDataURL('image/jpeg', 0.82) })) toast('Photo updated');
+    };
+    img.onerror = () => toast('That photo could not be read. Please try another.');
+    img.src = url;
+  }
+
+  function openRequest(type, dealId) {
+    if (!type) {
+      $('#req-body').innerHTML = `<div class="rq"><p class="eyebrow">JAD+ desk</p><h2 class="rq-title">Which document?</h2>
+        <div class="pf-list" style="margin-top:22px">${DOC_REQUESTS.map((t) => `<button class="pf-row" type="button" data-pick="${esc(t)}"><span class="k">${esc(t)}<small>${esc(REQ_HINT[t] || '')}</small></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`).join('')}</div></div>`;
+      $$('[data-pick]', $('#req-body')).forEach((b) => b.addEventListener('click', () => openRequest(b.dataset.pick, dealId)));
+      if (!$('#req-sheet').open) $('#req-sheet').showModal();
+      return;
+    }
+    const deals = data.deals;
+    const contact = type === 'Update my contact details';
+    const needsDeal = !contact && type !== 'Close my JAD+ account';
+    const what = ['Mobile number', 'Email address', 'Address', 'Something else'];
+    $('#req-body').innerHTML = `<div class="rq"><p class="eyebrow">JAD+ desk</p>
+      <h2 class="rq-title">${contact ? 'Update your details' : esc(type)}</h2>
+      <p class="rq-sub">${contact ? 'Tell us what has changed. We confirm with you before we update your records.' : esc(REQ_HINT[type] || 'We will prepare it for you.')}</p>
+      <form id="req-form" class="rq-form">
+        ${contact ? `<div class="rq-field"><span class="rq-label">What would you like to change?</span><div class="rq-chips" id="rq-what">${what.map((w, i) => `<button type="button" class="rq-chip ${i === 0 ? 'on' : ''}" data-v="${w}">${w}</button>`).join('')}</div></div>
+          <div class="rq-field"><label class="rq-label" for="req-new">New details</label><input id="req-new" class="rq-input" autocomplete="off" placeholder="For example +971 50 123 4567"></div>` : ''}
+        ${needsDeal && deals.length > 1 ? `<div class="rq-field"><span class="rq-label">Residence</span><div class="rq-chips" id="rq-deal">${deals.map((d) => `<button type="button" class="rq-chip ${d.id === (dealId || deal().id) ? 'on' : ''}" data-v="${esc(d.id)}">${esc(d.unit?.project || '')} · ${esc(d.unit?.number || '')}</button>`).join('')}</div></div>` : ''}
+        <div class="rq-field"><label class="rq-label" for="req-msg">${contact ? 'Anything else? (optional)' : 'Message (optional)'}</label>
+          <textarea id="req-msg" rows="2" maxlength="2000" placeholder="${contact ? '' : 'Anything the desk should know'}"></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Send to the JAD+ desk</button>
+        <p class="rq-note">You will see the answer under Your requests in your profile.</p>
+      </form></div>`;
+    const chips = (id) => $$(`#${id} .rq-chip`).forEach((c) => c.addEventListener('click', () => { $$(`#${id} .rq-chip`).forEach((o) => o.classList.toggle('on', o === c));
+      if (id === 'rq-what') $('#req-new').placeholder = { 'Mobile number': 'For example +971 50 123 4567', 'Email address': 'name@example.com', Address: 'Your new address', 'Something else': 'What should we change?' }[c.dataset.v]; }));
+    if (contact) chips('rq-what'); if ($('#rq-deal')) chips('rq-deal');
+    $('#req-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pick = (id) => $(`#${id} .rq-chip.on`)?.dataset.v;
+      let details = $('#req-msg').value.trim();
+      if (contact) {
+        const nv = $('#req-new').value.trim();
+        if (!nv) { toast('Please enter the new details.'); $('#req-new').focus(); return; }
+        details = `${pick('rq-what')}: ${nv}${details ? `\n${details}` : ''}`;
+      }
+      const btn = $('#req-form button[type="submit"]'); btn.disabled = true;
+      const deal_ = needsDeal ? (pick('rq-deal') || dealId || deals[0]?.id) : null;
+      const r = await api('/api/request', { method: 'POST', body: JSON.stringify({ type, deal: deal_, details, app: NATIVE }) });
+      btn.disabled = false;
+      if (!r.ok) { toast(r.body.error || 'Could not send. Please try again.'); return; }
+      $('#req-sheet').close();
+      toast(r.body.existing ? 'This request is already with the desk.' : 'Sent to the JAD+ desk');
+      refresh();
+    });
+    if (!$('#req-sheet').open) $('#req-sheet').showModal();
+  }
+  function openClose() {
+    $('#req-body').innerHTML = `<p class="eyebrow">Close account</p><h2 class="title">Close my JAD+ account</h2>
+      <p class="muted" style="margin:10px 0 0">We will close your JAD+ access, remove your photo and settings, and sign you out on every device. Your purchase, payments and documents stay safely with JAD Global, as the law requires.</p>
+      <div class="actions" style="margin-top:22px"><button class="btn btn-primary" type="button" id="close-yes">Close my account</button>
+      <button class="btn btn-outline" type="button" id="close-no">Keep it</button></div>`;
+    $('#close-no').addEventListener('click', () => $('#req-sheet').close());
+    $('#close-yes').addEventListener('click', async () => {
+      await api('/api/request', { method: 'POST', body: JSON.stringify({ type: 'Close my JAD+ account', details: 'Requested in JAD+', app: NATIVE }) });
+      await api('/api/profile', { method: 'POST', body: JSON.stringify({ photo: null }) });
+      signOut(true);
+    });
+    $('#req-sheet').showModal();
+  }
+  async function refresh() {
+    const r = await api('/api/me?fresh=1');
+    if (r.ok) { data = r.body; normalise(data); renderAll(); renderAvatar(); route(); }
+  }
+
+  boot();
+})();
