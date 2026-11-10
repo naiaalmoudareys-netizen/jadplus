@@ -6,18 +6,20 @@
 import { dubaiClock, type RequestMessage } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { ApiError, type ApiClient } from '../api/client.js';
+import { errorText, type ApiClient } from '../api/client.js';
 import { postMessage } from '../api/endpoints.js';
+import { useT } from '../i18n/I18nProvider.js';
 import { Body, Button, Field, Heading, Notice } from './kit.js';
 import { colors, fonts, radius, space } from './theme.js';
 
 const MAX_LENGTH = 1000;
 
 function Bubble({ m }: { m: RequestMessage }): ReactNode {
+  const t = useT();
   return (
     <View style={[styles.bubble, m.mine ? styles.mine : styles.theirs]}>
       <Text style={[styles.author, m.mine && styles.onNavy]}>
-        {m.mine ? 'You' : m.author} · {dubaiClock(m.at)}
+        {m.mine ? t('req.msg.you') : m.author} · {dubaiClock(m.at)}
       </Text>
       <Text style={[styles.body, m.mine && styles.onNavy]}>{m.body}</Text>
     </View>
@@ -31,6 +33,7 @@ export function Conversation(props: {
   canMessage: boolean;
   onSent: () => void;
 }): ReactNode {
+  const t = useT();
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ text: string; tone: 'info' | 'error' } | null>(null);
@@ -42,15 +45,12 @@ export function Conversation(props: {
       const sent = await postMessage(props.api, props.requestId, draft);
       setDraft('');
       if (sent.masked) {
-        setNotice({
-          text: 'Phone numbers and emails were removed. Please keep all contact in JAD+.',
-          tone: 'info',
-        });
+        setNotice({ text: t('req.msg.masked'), tone: 'info' });
       }
       props.onSent();
     } catch (err) {
       setNotice({
-        text: err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+        text: errorText(err, t),
         tone: 'error',
       });
     } finally {
@@ -60,21 +60,26 @@ export function Conversation(props: {
 
   return (
     <View style={styles.section}>
-      <Heading>Messages</Heading>
-      {props.messages.length === 0 ? <Body muted>No messages yet.</Body> : null}
+      <Heading>{t('req.msg.title')}</Heading>
+      {props.messages.length === 0 ? <Body muted>{t('req.msg.none')}</Body> : null}
       {props.messages.map((m) => (
         <Bubble key={m.id} m={m} />
       ))}
       {props.canMessage ? (
         <>
           <Field
-            label="Write a message"
+            label={t('req.msg.write')}
             value={draft}
             onChangeText={setDraft}
             multiline
             maxLength={MAX_LENGTH}
           />
-          <Button title="Send" busy={busy} disabled={draft.trim() === ''} onPress={() => void send()} />
+          <Button
+            title={t('req.msg.send')}
+            busy={busy}
+            disabled={draft.trim() === ''}
+            onPress={() => void send()}
+          />
         </>
       ) : null}
       {notice === null ? null : <Notice tone={notice.tone}>{notice.text}</Notice>}

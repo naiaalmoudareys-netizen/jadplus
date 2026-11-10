@@ -5,8 +5,16 @@
  */
 import { errorResponse } from '@jadplus/shared';
 import type { z } from 'zod';
+import type { MessageKey } from '../i18n/dictionary.js';
+import type { Translate } from '../i18n/lang.js';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+
+/**
+ * Why a call failed: `api` when the message is the API's own (shown as received), otherwise the app's own
+ * reason, which screens word in the person's language with `errorText` (ADR 0016).
+ */
+export type ApiErrorKind = 'api' | 'offline' | 'unexpected';
 
 /** A failed call, with a message that is safe to show to the person. */
 export class ApiError extends Error {
@@ -14,6 +22,7 @@ export class ApiError extends Error {
     readonly status: number,
     message: string,
     readonly code: string | null = null,
+    readonly kind: ApiErrorKind = 'api',
   ) {
     super(message);
     this.name = 'ApiError';
@@ -22,6 +31,12 @@ export class ApiError extends Error {
 
 export const OFFLINE_MESSAGE = 'Cannot reach JAD+. Check your connection and try again.';
 const UNEXPECTED_MESSAGE = 'Something went wrong. Please try again.';
+
+/** A failed call's message in the person's language: the API's own words as received, the app's translated. */
+export function errorText(err: unknown, t: Translate, fallback: MessageKey = 'common.error'): string {
+  if (!(err instanceof ApiError) || err.kind === 'unexpected') return t(fallback);
+  return err.kind === 'offline' ? t('access.offline') : err.message;
+}
 
 /** The only file types the app accepts from the API. */
 export const DOWNLOAD_TYPES: ReadonlySet<string> = new Set([
@@ -85,21 +100,18 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
         signal: AbortSignal.timeout(o.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
     } catch {
-      throw new ApiError(0, OFFLINE_MESSAGE);
+      throw new ApiError(0, OFFLINE_MESSAGE, null, 'offline');
     }
     if (res.ok) return res;
     if (res.status === 401 && credential !== null) o.onUnauthorized();
     const parsed = errorResponse.safeParse(await res.json().catch(() => null));
-    throw new ApiError(
-      res.status,
-      parsed.success ? parsed.data.error : UNEXPECTED_MESSAGE,
-      parsed.success ? (parsed.data.code ?? null) : null,
-    );
+    if (!parsed.success) throw new ApiError(res.status, UNEXPECTED_MESSAGE, null, 'unexpected');
+    throw new ApiError(res.status, parsed.data.error, parsed.data.code ?? null);
   }
 
   async function read<S extends z.ZodType>(res: Response, schema: S): Promise<z.output<S>> {
     const parsed = schema.safeParse(await res.json().catch(() => null));
-    if (!parsed.success) throw new ApiError(res.status, UNEXPECTED_MESSAGE);
+    if (!parsed.success) throw new ApiError(res.status, UNEXPECTED_MESSAGE, null, 'unexpected');
     return parsed.data;
   }
 
@@ -114,7 +126,7 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
     download: async (path) => {
       const res = await send('GET', path, undefined);
       const type = (res.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
-      if (!DOWNLOAD_TYPES.has(type)) throw new ApiError(res.status, UNEXPECTED_MESSAGE);
+      if (!DOWNLOAD_TYPES.has(type)) throw new ApiError(res.status, UNEXPECTED_MESSAGE, null, 'unexpected');
       return { bytes: new Uint8Array(await res.arrayBuffer()), type };
     },
     authorizedImage: (path) => {

@@ -11,10 +11,11 @@ import { useT } from '../i18n/I18nProvider.js';
 /** Shown while the data is the demo owner, never real Salesforce data (ADR 0010). */
 export function DemoBadge(): ReactNode {
   const { data } = usePortal();
+  const t = useT();
   if (data?.source !== 'demo') return null;
   return (
     <View style={styles.demo} accessibilityRole="text">
-      <Text style={styles.demoText}>DEMO DATA · NOT A REAL ACCOUNT</Text>
+      <Text style={styles.demoText}>{t('owner.demoBadge')}</Text>
     </View>
   );
 }
@@ -90,6 +91,7 @@ export function LineItem(props: {
   onPress?: () => void;
   action?: string;
 }): ReactNode {
+  const t = useT();
   const tone = props.tone ?? 'normal';
   const row = (
     <View
@@ -107,7 +109,7 @@ export function LineItem(props: {
           <Text style={[styles.lineDetail, tone === 'good' && styles.good]}>{props.note}</Text>
         ) : null}
         {props.onPress === undefined ? null : (
-          <Text style={styles.open}>{(props.action ?? 'Open').toUpperCase()}</Text>
+          <Text style={styles.open}>{(props.action ?? t('owner.open')).toUpperCase()}</Text>
         )}
       </View>
     </View>
@@ -127,10 +129,11 @@ export function LineItem(props: {
 /** Shown on an owner tab when the data could not be loaded, with a way to try again. */
 export function PortalError(): ReactNode {
   const { error, loading, reload } = usePortal();
+  const t = useT();
   return (
     <View style={styles.errorBox}>
-      <Notice tone="error">{error ?? 'We could not load your details right now.'}</Notice>
-      <Button title="Try again" busy={loading} onPress={() => void reload()} />
+      <Notice tone="error">{error ?? t('owner.loadError')}</Notice>
+      <Button title={t('common.retry')} busy={loading} onPress={() => void reload()} />
     </View>
   );
 }

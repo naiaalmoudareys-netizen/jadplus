@@ -8,6 +8,7 @@ import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
 import { screensOwner } from './strings/screens-owner.js';
+import { screensOwner2 } from './strings/screens-owner-2.js';
 import { screensRequests } from './strings/screens-requests.js';
 import { merge } from './translate.js';
 
@@ -19,6 +20,7 @@ export const PARTS = [
   requestLabels,
   ownerLabels,
   screensOwner,
+  screensOwner2,
   screensRequests,
   screensAccess,
 ] as const;

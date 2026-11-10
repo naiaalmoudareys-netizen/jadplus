@@ -9,18 +9,22 @@ import { SERVICE_GROUPS, type MyPlace, type RequestRaised, type ServiceView } fr
 import { Redirect, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { ApiError } from '../src/api/client.js';
+import { errorText } from '../src/api/client.js';
 import { addRequestPhoto, myPlaces, raiseRequest, services } from '../src/api/endpoints.js';
 import { placeLabel } from '../src/jobs/format.js';
 import { useT } from '../src/i18n/I18nProvider.js';
+import { serviceBlurb, serviceName } from '../src/i18n/sharedLabels.js';
 import { preparePhoto } from '../src/requests/photoPicker.js';
-import { groupByProject, placeDetail, placeKey } from '../src/requests/places.js';
+import { OTHER_PROJECT, groupByProject, placeDetail, placeKey } from '../src/requests/places.js';
 import { RequestSheet, type RequestDetails } from '../src/requests/RequestSheet.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { Choice } from '../src/ui/Choice.js';
 import { useLoad } from '../src/ui/hooks.js';
 import { Body, Button, Eyebrow, Heading, Loading, Notice, Page } from '../src/ui/kit.js';
 import { colors, fonts, space } from '../src/ui/theme.js';
+
+/** `sentTo` is the partner company, or this English text when JAD+ handles it (api requests/routine.ts). */
+const JAD_TEAM = 'the JAD+ team';
 
 function Section({ title, children }: { title: string; children: ReactNode }): ReactNode {
   return (
@@ -78,7 +82,7 @@ export default function NewRequest(): ReactNode {
       }
       setSent({ raised, photoProblem });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The request could not be sent. Please try again.');
+      setError(errorText(err, t, 'req.sendFailed'));
     } finally {
       setBusy(false);
     }
@@ -87,17 +91,19 @@ export default function NewRequest(): ReactNode {
   if (sent !== null) {
     return (
       <Page>
-        <Eyebrow>Request sent</Eyebrow>
-        <Heading>{service?.name ?? 'Your request'}</Heading>
-        <Text style={styles.confirmation}>{`Your request has been sent to ${sent.raised.sentTo}.`}</Text>
-        <Body muted>{`Reference ${sent.raised.ref}. You will see every update in Requests.`}</Body>
-        {sent.photoProblem ? (
-          <Notice tone="error">
-            A photo could not be added. You can describe it in a message on the request.
-          </Notice>
-        ) : null}
+        <Eyebrow>{t('req.sent.eyebrow')}</Eyebrow>
+        <Heading>
+          {service === null ? t('req.sent.yourRequest') : serviceName(service.code, service.name, t)}
+        </Heading>
+        <Text style={styles.confirmation}>
+          {sent.raised.sentTo === JAD_TEAM
+            ? t('req.sent.toTeam')
+            : t('req.sent.to', { name: sent.raised.sentTo })}
+        </Text>
+        <Body muted>{t('req.sent.reference', { ref: sent.raised.ref })}</Body>
+        {sent.photoProblem ? <Notice tone="error">{t('req.sent.photoProblem')}</Notice> : null}
         <Button
-          title="Follow this request"
+          title={t('req.follow')}
           onPress={() => {
             router.replace({ pathname: '/request/[id]', params: { id: sent.raised.requestId } });
           }}
@@ -108,22 +114,22 @@ export default function NewRequest(): ReactNode {
 
   return (
     <Page>
-      <Heading>New request</Heading>
+      <Heading>{t('title.newRequest')}</Heading>
 
       {projects.length === 0 ? (
-        <Notice tone="error">
-          No residence is linked to your account yet. Please contact the JAD+ desk.
-        </Notice>
+        <Notice tone="error">{t('req.noResidence')}</Notice>
       ) : (
         <>
-          <Section title="Project">
+          <Section title={t('req.project')}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
               {projects.map((g) => (
                 <Choice
                   key={g.project}
                   compact
-                  title={g.project}
-                  detail={g.places.length === 1 ? '1 unit' : `${String(g.places.length)} units`}
+                  title={g.project === OTHER_PROJECT ? t('req.project.other') : g.project}
+                  detail={t(g.places.length === 1 ? 'req.units.one' : 'req.units.other', {
+                    count: g.places.length,
+                  })}
                   selected={g === group}
                   onPress={() => {
                     setChosenProject(g.project);
@@ -134,7 +140,7 @@ export default function NewRequest(): ReactNode {
             </ScrollView>
           </Section>
 
-          <Section title="Unit">
+          <Section title={t('req.unit')}>
             {units.map((p) => {
               const detail = placeDetail(p);
               return (
@@ -153,24 +159,27 @@ export default function NewRequest(): ReactNode {
         </>
       )}
 
-      <Section title="What do you need?">
+      <Section title={t('req.whatDoYouNeed')}>
         {catalogue.error === null ? null : <Notice tone="error">{catalogue.error}</Notice>}
         {SERVICE_GROUPS.map((g) =>
           (catalogue.data ?? [])
             .filter((s) => s.group === g)
-            .map((s) => (
-              <Choice
-                key={s.code}
-                title={s.routing === 'coming_soon' ? `${s.name} · coming soon` : s.name}
-                detail={s.blurb}
-                selected={false}
-                disabled={s.routing === 'coming_soon' || place === null}
-                onPress={() => {
-                  setError(null);
-                  setService(s);
-                }}
-              />
-            )),
+            .map((s) => {
+              const name = serviceName(s.code, s.name, t);
+              return (
+                <Choice
+                  key={s.code}
+                  title={s.routing === 'coming_soon' ? t('req.comingSoon', { name }) : name}
+                  detail={serviceBlurb(s.code, s.blurb, t)}
+                  selected={false}
+                  disabled={s.routing === 'coming_soon' || place === null}
+                  onPress={() => {
+                    setError(null);
+                    setService(s);
+                  }}
+                />
+              );
+            }),
         )}
       </Section>
 

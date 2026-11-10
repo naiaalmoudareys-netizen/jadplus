@@ -6,7 +6,7 @@ import type { ConstructionUpdate } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { longDate } from './format.js';
-import { useLang } from '../i18n/I18nProvider.js';
+import { useLang, useT } from '../i18n/I18nProvider.js';
 import { Photo } from './Photo.js';
 import { usePortal } from './PortalProvider.js';
 import { projectKey } from '../brand/projects.js';
@@ -16,6 +16,7 @@ import { colors, fonts, space } from '../ui/theme.js';
 
 function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
   const { width } = useWindowDimensions();
+  const t = useT();
   if (update.photos.length <= 1) {
     return <Photo id={update.photos[0] ?? null} project={update.project} label={update.title} />;
   }
@@ -25,7 +26,11 @@ function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
       {update.photos.map((id, i) => (
         <View key={id} style={{ width: photoWidth }}>
-          <Photo id={id} project={update.project} label={`${update.title}, photo ${String(i + 1)}`} />
+          <Photo
+            id={id}
+            project={update.project}
+            label={t('owner.construction.photo', { title: update.title, number: i + 1 })}
+          />
         </View>
       ))}
     </ScrollView>
@@ -41,13 +46,13 @@ function forProject(updates: readonly ConstructionUpdate[], project: string | nu
 /** Construction progress for the unit's project, at the end of My unit (Naya, 10-Nov-2026). */
 export function ConstructionSection({ project }: { project: string | null }): ReactNode {
   const { data } = usePortal();
-  const { locale } = useLang();
+  const { t, locale } = useLang();
   if (data === null) return null;
   const updates = forProject(data.updates, project);
   return (
     <>
-      <Heading>Construction</Heading>
-      {updates.length === 0 ? <Body muted>No construction updates yet.</Body> : null}
+      <Heading>{t('owner.construction.title')}</Heading>
+      {updates.length === 0 ? <Body muted>{t('owner.construction.none')}</Body> : null}
       {updates.map((u) => (
         <Card key={u.id}>
           <Photos update={u} />
@@ -62,13 +67,13 @@ export function ConstructionSection({ project }: { project: string | null }): Re
             <View style={styles.progress}>
               <ProgressBar percent={u.percent} />
               <Text style={styles.percent}>
-                {`${String(Math.round(u.percent))}% complete${u.stage === null ? '' : ` · ${u.stage}`}`}
+                {`${t('owner.construction.complete', { percent: Math.round(u.percent) })}${u.stage === null ? '' : ` · ${u.stage}`}`}
               </Text>
             </View>
           )}
           {u.details === null ? null : <Body>{u.details}</Body>}
           {u.handover === null ? null : (
-            <Body muted>{`Expected handover ${longDate(u.handover, locale)}`}</Body>
+            <Body muted>{t('owner.construction.handover', { date: longDate(u.handover, locale) })}</Body>
           )}
         </Card>
       ))}

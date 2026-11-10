@@ -6,6 +6,7 @@
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { myRequests } from '../../src/api/endpoints.js';
+import { useT } from '../../src/i18n/I18nProvider.js';
 import { RequestRow } from '../../src/requests/RequestRow.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { useLoad } from '../../src/ui/hooks.js';
@@ -17,6 +18,7 @@ export default function Requests(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const t = useT();
   const load = useCallback(() => myRequests(api), [api]);
   const requests = useLoad(load, REFRESH_MS);
   const { reload } = requests;
@@ -30,7 +32,7 @@ export default function Requests(): ReactNode {
   return (
     <Page>
       <Button
-        title="Report an emergency"
+        title={t('req.reportEmergency')}
         kind="danger"
         onPress={() => {
           router.push('/emergency');
@@ -38,15 +40,15 @@ export default function Requests(): ReactNode {
       />
       {owner ? (
         <Button
-          title="New request"
+          title={t('title.newRequest')}
           onPress={() => {
             router.push('/new-request');
           }}
         />
       ) : null}
-      <Heading>My requests</Heading>
+      <Heading>{t('req.myRequests')}</Heading>
       {requests.error === null ? null : <Notice tone="error">{requests.error}</Notice>}
-      {requests.data !== null && requests.data.length === 0 ? <Body muted>No requests yet.</Body> : null}
+      {requests.data !== null && requests.data.length === 0 ? <Body muted>{t('req.noRequests')}</Body> : null}
       {(requests.data ?? []).map((r) => (
         <RequestRow
           key={r.id}

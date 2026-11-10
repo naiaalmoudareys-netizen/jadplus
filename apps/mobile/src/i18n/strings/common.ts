@@ -25,7 +25,6 @@ export const common = words({
     'common.loading': 'Loading…',
     'common.demo': 'DEMO DATA',
     'common.error': 'Something went wrong. Please try again.',
-    'common.offline': 'JAD+ could not be reached. Check your connection and try again.',
   },
   ar: {
     'tab.home': 'الرئيسية',
@@ -50,7 +49,6 @@ export const common = words({
     'common.loading': 'جارٍ التحميل…',
     'common.demo': 'بيانات تجريبية',
     'common.error': 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
-    'common.offline': 'تعذّر الوصول إلى JAD+. تحقّق من اتصالك وحاول مرة أخرى.',
   },
   fr: {
     'tab.home': 'Accueil',
@@ -75,7 +73,6 @@ export const common = words({
     'common.loading': 'Chargement…',
     'common.demo': 'DONNÉES DE DÉMONSTRATION',
     'common.error': "Une erreur s'est produite. Veuillez réessayer.",
-    'common.offline': 'JAD+ est injoignable. Vérifiez votre connexion et réessayez.',
   },
   ru: {
     'tab.home': 'Главная',
@@ -100,7 +97,6 @@ export const common = words({
     'common.loading': 'Загрузка…',
     'common.demo': 'ДЕМО-ДАННЫЕ',
     'common.error': 'Что-то пошло не так. Попробуйте ещё раз.',
-    'common.offline': 'Не удалось связаться с JAD+. Проверьте подключение и попробуйте ещё раз.',
   },
   zh: {
     'tab.home': '首页',
@@ -125,6 +121,5 @@ export const common = words({
     'common.loading': '加载中…',
     'common.demo': '演示数据',
     'common.error': '出现问题，请重试。',
-    'common.offline': '无法连接 JAD+。请检查网络连接后重试。',
   },
 });

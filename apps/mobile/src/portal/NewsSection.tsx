@@ -7,10 +7,10 @@
 import { dubaiDate, isOffer, newsFeed, offerCount, type NewsFilter, type OwnerPost } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ApiError } from '../api/client.js';
+import { errorText } from '../api/client.js';
 import { interestedInOffer } from '../api/endpoints.js';
 import { aed, area, longDate } from './format.js';
-import { useLang } from '../i18n/I18nProvider.js';
+import { useLang, useT, type Translate } from '../i18n/I18nProvider.js';
 import { Photo } from './Photo.js';
 import { usePortal } from './PortalProvider.js';
 import { Fact } from './ui.js';
@@ -18,14 +18,25 @@ import { useSessionController } from '../session/SessionProvider.js';
 import { Body, Button, Card, Heading, Notice } from '../ui/kit.js';
 import { buttonRadius, colors, fonts, space } from '../ui/theme.js';
 
+/**
+ * The post's kind for its small eyebrow line: Salesforce's default "News" in the person's language, any other
+ * kind JAD Global wrote shown as received.
+ */
+export function newsKind(type: string, t: Translate): string {
+  return type === 'News' ? t('owner.news.news') : type;
+}
+
 function Prices({ price, offerPrice }: { price: number | null; offerPrice: number | null }): ReactNode {
-  const { locale } = useLang();
+  const { t, locale } = useLang();
   if (offerPrice === null) return null;
   return (
     <View style={styles.prices}>
       <Text style={styles.offerPrice}>{aed(offerPrice, locale)}</Text>
       {price === null || price <= offerPrice ? null : (
-        <Text style={styles.listPrice} accessibilityLabel={`List price ${aed(price, locale)}`}>
+        <Text
+          style={styles.listPrice}
+          accessibilityLabel={t('owner.news.listPrice', { price: aed(price, locale) })}
+        >
           {aed(price, locale)}
         </Text>
       )}
@@ -45,8 +56,8 @@ function Interest({
   const { api } = useSessionController();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (interested)
-    return <Notice>Thank you. The JAD+ desk will contact you in the app about this residence.</Notice>;
+  const t = useT();
+  if (interested) return <Notice>{t('owner.news.thanks')}</Notice>;
   const say = async () => {
     setBusy(true);
     setError(null);
@@ -54,14 +65,14 @@ function Interest({
       await interestedInOffer(api, post.id);
       onDone();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }
   };
   return (
     <>
-      <Button title="I'm interested" busy={busy} onPress={() => void say()} />
+      <Button title={t('owner.news.interested')} busy={busy} onPress={() => void say()} />
       {error === null ? null : <Notice tone="error">{error}</Notice>}
     </>
   );
@@ -69,18 +80,18 @@ function Interest({
 
 function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: () => void }): ReactNode {
   const lang = useLang();
-  const { locale } = lang;
+  const { t, locale } = lang;
   const { post } = props;
   const [open, setOpen] = useState(false);
   const offer = isOffer(post);
   const o = post.offer;
-  const kind = offer ? 'Owners only' : post.type;
+  const kind = offer ? t('owner.news.ownersOnly') : newsKind(post.type, t);
   return (
     <Card>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityHint={open ? 'Shows less' : 'Shows the full text'}
+        accessibilityHint={t(open ? 'owner.news.showsLess' : 'owner.news.showsFull')}
         onPress={() => {
           setOpen(!open);
         }}
@@ -93,27 +104,27 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
         <Text style={styles.title}>{post.title}</Text>
         {post.summary === null ? null : <Text style={styles.summary}>{post.summary}</Text>}
         {offer && o !== null ? <Prices price={o.price} offerPrice={o.offerPrice} /> : null}
-        <Text style={styles.more}>{open ? 'Show less' : 'Read more'}</Text>
+        <Text style={styles.more}>{t(open ? 'owner.news.showLess' : 'owner.news.readMore')}</Text>
       </Pressable>
       {open ? (
         <View style={styles.cardBody}>
           {post.body === null ? null : <Body>{post.body}</Body>}
           {offer && o !== null ? (
             <View>
-              <Fact label="Residence" value={o.unitName} />
-              <Fact label="Type" value={o.type} />
-              <Fact label="Floor" value={o.floor} />
-              <Fact label="Size" value={area(o.totalArea, lang)} />
-              <Fact label="View" value={o.view} />
+              <Fact label={t('owner.fact.residence')} value={o.unitName} />
+              <Fact label={t('owner.fact.type')} value={o.type} />
+              <Fact label={t('owner.fact.floor')} value={o.floor} />
+              <Fact label={t('owner.fact.size')} value={area(o.totalArea, lang)} />
+              <Fact label={t('owner.fact.view')} value={o.view} />
             </View>
           ) : null}
           {offer && post.expires !== null ? (
-            <Body muted>{`Offer ends ${longDate(post.expires, locale)}`}</Body>
+            <Body muted>{t('owner.news.offerEnds', { date: longDate(post.expires, locale) })}</Body>
           ) : null}
           {offer ? <Interest post={post} interested={props.interested} onDone={props.onInterested} /> : null}
           {post.link === null ? null : (
             <Button
-              title="Open on jadglobal.ae"
+              title={t('owner.news.openSite')}
               kind="secondary"
               onPress={() => void Linking.openURL(post.link ?? '')}
             />
@@ -128,18 +139,19 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
 export function NewsSection(): ReactNode {
   const { data, reload } = usePortal();
   const [filter, setFilter] = useState<NewsFilter>('all');
+  const t = useT();
   if (data === null) return null;
   const today = dubaiDate(Date.now());
   const feed = newsFeed(data.posts, filter, today);
   const offers = offerCount(data.posts, today);
   const filters: { key: NewsFilter; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'news', label: 'News' },
-    { key: 'offers', label: `Offers ${String(offers)}` },
+    { key: 'all', label: t('owner.news.all') },
+    { key: 'news', label: t('owner.news.news') },
+    { key: 'offers', label: t('owner.news.offers', { count: offers }) },
   ];
   return (
     <>
-      <Heading>News & offers</Heading>
+      <Heading>{t('tab.news')}</Heading>
       <View style={styles.filters} accessibilityRole="tablist">
         {filters.map((f) => (
           <Pressable
@@ -157,7 +169,7 @@ export function NewsSection(): ReactNode {
           </Pressable>
         ))}
       </View>
-      {feed.length === 0 ? <Body muted>Nothing here yet.</Body> : null}
+      {feed.length === 0 ? <Body muted>{t('owner.news.empty')}</Body> : null}
       {feed.map((post) => (
         <PostCard
           key={post.id}

@@ -4,6 +4,7 @@
  */
 import type { ReactNode } from 'react';
 import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { useT } from '../i18n/I18nProvider.js';
 import { useSessionController } from '../session/SessionProvider.js';
 import { Eyebrow } from '../ui/kit.js';
 import { colors, radius, space } from '../ui/theme.js';
@@ -16,10 +17,11 @@ export function RequestPhotos({
   photos: readonly { id: string }[];
 }): ReactNode {
   const { api } = useSessionController();
+  const t = useT();
   if (photos.length === 0) return null;
   return (
     <View style={styles.box}>
-      <Eyebrow>Photos</Eyebrow>
+      <Eyebrow>{t('req.photos')}</Eyebrow>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
         {photos.map((p, i) => (
           <Image
@@ -29,7 +31,7 @@ export function RequestPhotos({
             )}
             style={styles.photo}
             resizeMode="cover"
-            accessibilityLabel={`Photo ${String(i + 1)} of the request`}
+            accessibilityLabel={t('req.photoOf', { number: i + 1 })}
           />
         ))}
       </ScrollView>

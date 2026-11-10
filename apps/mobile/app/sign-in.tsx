@@ -4,18 +4,17 @@
  */
 import { Redirect } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ApiError } from '../src/api/client.js';
+import { errorText } from '../src/api/client.js';
+import { useT } from '../src/i18n/I18nProvider.js';
+import { LanguageRow } from '../src/profile/LanguagePicker.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { Hero } from '../src/ui/brand.js';
 import { Body, Button, Field, Heading, Notice, Page } from '../src/ui/kit.js';
 
-function message(err: unknown): string {
-  return err instanceof ApiError ? err.message : 'Something went wrong. Please try again.';
-}
-
 export default function SignIn(): ReactNode {
   const session = useSession();
   const controller = useSessionController();
+  const t = useT();
   const [identifier, setIdentifier] = useState('');
   const [code, setCode] = useState('');
   const [sentMessage, setSentMessage] = useState<string | null>(null);
@@ -30,7 +29,7 @@ export default function SignIn(): ReactNode {
     try {
       await work();
     } catch (err) {
-      setError(message(err));
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }
@@ -44,13 +43,13 @@ export default function SignIn(): ReactNode {
 
   return (
     <Page>
-      <Hero eyebrow="JAD Global" title="Welcome to JAD+" />
-      <Heading>Sign in</Heading>
+      <Hero eyebrow="JAD Global" title={t('access.welcome')} />
+      <Heading>{t('access.signIn')}</Heading>
       {sentMessage === null ? (
         <>
-          <Body muted>Use the email or mobile number registered with JAD Global.</Body>
+          <Body muted>{t('access.signInHint')}</Body>
           <Field
-            label="Email or mobile number"
+            label={t('access.identifier')}
             value={identifier}
             onChangeText={setIdentifier}
             autoCapitalize="none"
@@ -60,7 +59,7 @@ export default function SignIn(): ReactNode {
             textContentType="username"
           />
           <Button
-            title="Send me a code"
+            title={t('access.sendCode')}
             onPress={() => void ask()}
             busy={busy}
             disabled={identifier.trim() === ''}
@@ -70,7 +69,7 @@ export default function SignIn(): ReactNode {
         <>
           <Notice>{sentMessage}</Notice>
           <Field
-            label="6-digit code"
+            label={t('access.code')}
             value={code}
             onChangeText={(v) => {
               const digits = v.replace(/\D/g, '').slice(0, 6);
@@ -84,13 +83,13 @@ export default function SignIn(): ReactNode {
             maxLength={6}
           />
           <Button
-            title="Sign in"
+            title={t('access.signIn')}
             onPress={() => void verify(code)}
             busy={busy}
             disabled={code.length !== 6}
           />
           <Button
-            title="Use a different email or number"
+            title={t('access.useDifferent')}
             kind="secondary"
             onPress={() => {
               setSentMessage(null);
@@ -101,6 +100,8 @@ export default function SignIn(): ReactNode {
         </>
       )}
       {error === null ? null : <Notice tone="error">{error}</Notice>}
+      {/* Before signing in the choice is kept on the phone only (ADR 0016). */}
+      <LanguageRow />
     </Page>
   );
 }

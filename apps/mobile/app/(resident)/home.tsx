@@ -92,7 +92,7 @@ export default function Home(): ReactNode {
 
   const shortcuts: Shortcut[] = [
     {
-      label: 'Emergency',
+      label: t('owner.home.emergency'),
       icon: 'warning-outline',
       urgent: true,
       onPress: () => {
@@ -102,21 +102,21 @@ export default function Home(): ReactNode {
     ...(owner
       ? [
           {
-            label: 'Request',
+            label: t('owner.home.request'),
             icon: 'add-circle-outline' as const,
             onPress: () => {
               router.push('/new-request');
             },
           },
           {
-            label: 'Pay',
+            label: t('owner.home.pay'),
             icon: 'card-outline' as const,
             onPress: () => {
               openPayments();
             },
           },
           {
-            label: 'Documents',
+            label: t('owner.documents'),
             icon: 'document-text-outline' as const,
             onPress: () => {
               router.push({ pathname: '/unit', params: scrollParams('documents', Date.now()) });
@@ -125,7 +125,7 @@ export default function Home(): ReactNode {
         ]
       : [
           {
-            label: 'Requests',
+            label: t('tab.requests'),
             icon: 'list-outline' as const,
             onPress: () => {
               router.push('/requests');
@@ -143,7 +143,11 @@ export default function Home(): ReactNode {
       <Hero
         project={project}
         eyebrow={deal === undefined ? (home?.project ?? 'JAD Global') : unitTitle(deal, t)}
-        title={name === null ? greeting(now, t) : `${greeting(now, t)}, ${name}`}
+        title={
+          name === null
+            ? greeting(now, t)
+            : t('owner.home.greetingName', { greeting: greeting(now, t), name })
+        }
       />
       <Attention items={attention} onPress={openItem} />
       <Shortcuts items={shortcuts} />
@@ -156,27 +160,33 @@ export default function Home(): ReactNode {
           }}
         >
           <Card>
-            <Text style={styles.label}>{overdue ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
+            <Text style={styles.label}>
+              {t(overdue ? 'owner.home.overdue' : 'owner.nextPayment').toUpperCase()}
+            </Text>
             <Text style={[styles.amount, overdue && styles.urgent]}>
               {overdue
                 ? aed(plan.overdueAmount, locale)
                 : plan.next === null
-                  ? 'Nothing due'
+                  ? t('owner.home.nothingDue')
                   : aed(plan.next.state.balance, locale)}
             </Text>
-            {nextDue === null ? null : <Body muted>{`Due ${longDate(nextDue, locale)}`}</Body>}
+            {nextDue === null ? null : (
+              <Body muted>{t('owner.due', { date: longDate(nextDue, locale) })}</Body>
+            )}
             <ProgressBar percent={plan.percentPaid} />
-            <Text style={styles.small}>{`${String(Math.round(plan.percentPaid))}% of your plan paid`}</Text>
+            <Text style={styles.small}>
+              {t('owner.home.planPaid', { percent: Math.round(plan.percentPaid) })}
+            </Text>
           </Card>
         </Pressable>
       )}
 
       <SectionTitle
-        title="Active requests"
+        title={t('owner.home.activeRequests')}
         {...(open > 0
           ? {
               action: {
-                label: `See all (${String(open)})`,
+                label: t('owner.home.seeAllCount', { count: open }),
                 onPress: () => {
                   router.push('/requests');
                 },
@@ -184,7 +194,7 @@ export default function Home(): ReactNode {
             }
           : {})}
       />
-      {top.length === 0 ? <Body muted>Nothing in progress. Everything is in order.</Body> : null}
+      {top.length === 0 ? <Body muted>{t('owner.home.allInOrder')}</Body> : null}
       {top.map((r) => (
         <RequestRow
           key={r.id}
@@ -205,9 +215,9 @@ export default function Home(): ReactNode {
       {data === null || data.posts.length === 0 ? null : (
         <>
           <SectionTitle
-            title="News & offers"
+            title={t('tab.news')}
             action={{
-              label: 'See all',
+              label: t('owner.home.seeAll'),
               onPress: () => {
                 router.push('/news');
               },

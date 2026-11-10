@@ -2,7 +2,7 @@
 import type { RoleContextView } from '@jadplus/shared';
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ApiError } from '../api/client.js';
+import { errorText } from '../api/client.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../session/SessionProvider.js';
 import { Body, Button, Notice } from './kit.js';
@@ -36,7 +36,7 @@ export function useAccountActions(): AccountActions {
       if (router.canDismiss()) router.dismissAll();
       router.replace('/');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : t('common.error'));
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }

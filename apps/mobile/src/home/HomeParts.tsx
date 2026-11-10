@@ -4,7 +4,8 @@ import { dubaiDate, isOffer, newsFeed, type ConstructionUpdate, type OwnerPost }
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { longDate } from '../portal/format.js';
-import { useLang } from '../i18n/I18nProvider.js';
+import { useLang, useT } from '../i18n/I18nProvider.js';
+import { newsKind } from '../portal/NewsSection.js';
 import { Photo } from '../portal/Photo.js';
 import { ProgressBar } from '../portal/ui.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
@@ -55,10 +56,11 @@ export function Attention({
   items: readonly AttentionItem[];
   onPress: (i: AttentionItem) => void;
 }): ReactNode {
+  const t = useT();
   if (items.length === 0) return null;
   return (
     <View style={styles.attention}>
-      <Text style={styles.eyebrow}>NEEDS YOUR ATTENTION</Text>
+      <Text style={styles.eyebrow}>{t('owner.home.needsAttention').toUpperCase()}</Text>
       {items.map((item) => (
         <Pressable
           key={`${item.kind}:${'requestId' in item.target ? item.target.requestId : 'payments'}`}
@@ -112,6 +114,7 @@ export function ConstructionLine({
   update: ConstructionUpdate | null;
   onPress: () => void;
 }): ReactNode {
+  const t = useT();
   if (update === null) return null;
   const { percent } = update;
   if (percent === null) return null;
@@ -121,7 +124,9 @@ export function ConstructionLine({
       onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <Text style={styles.eyebrow}>{`CONSTRUCTION · ${(update.project ?? '').toUpperCase()}`}</Text>
+      <Text style={styles.eyebrow}>
+        {`${t('owner.construction.title')} · ${update.project ?? ''}`.toUpperCase()}
+      </Text>
       <View style={styles.progressRow}>
         <View style={styles.progressBar}>
           <ProgressBar percent={percent} />
@@ -142,7 +147,7 @@ export function NewsCarousel({
   onOpen: () => void;
 }): ReactNode {
   const today = dubaiDate(Date.now());
-  const { locale } = useLang();
+  const { t, locale } = useLang();
   const feed = newsFeed(posts, 'all', today).sort((a, b) => Number(isOffer(b)) - Number(isOffer(a)));
   if (feed.length === 0) return null;
   return (
@@ -156,7 +161,7 @@ export function NewsCarousel({
         >
           <Photo id={post.photos[0] ?? null} project={post.project} label={post.title} />
           <Text style={[styles.eyebrow, isOffer(post) && styles.bronze]}>
-            {`${isOffer(post) ? 'OWNERS ONLY' : post.type.toUpperCase()} · ${longDate(post.date, locale).toUpperCase()}`}
+            {`${isOffer(post) ? t('owner.news.ownersOnly') : newsKind(post.type, t)} · ${longDate(post.date, locale)}`.toUpperCase()}
           </Text>
           <Text style={styles.newsTitle} numberOfLines={2}>
             {post.title}

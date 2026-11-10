@@ -1,6 +1,7 @@
 /** Screen helpers: a clock that ticks, and loading data with refresh. */
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../api/client.js';
+import { errorText } from '../api/client.js';
+import { useT } from '../i18n/I18nProvider.js';
 
 /** The current time, updated every `everyMs` so countdowns stay right. */
 export function useNow(everyMs = 15_000): number {
@@ -26,15 +27,17 @@ export interface Loaded<T> {
 /** Loads data on open, again every `refreshMs` (no push notifications yet), and on demand. */
 export function useLoad<T>(load: () => Promise<T>, refreshMs: number | null = null): Loaded<T> {
   const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  // The failure itself is kept (not its words), so the message follows a change of language.
+  const [failure, setFailure] = useState<{ readonly err: unknown } | null>(null);
   const [loading, setLoading] = useState(true);
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       setData(await load());
-      setError(null);
+      setFailure(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setFailure({ err });
     } finally {
       setLoading(false);
     }
@@ -47,5 +50,6 @@ export function useLoad<T>(load: () => Promise<T>, refreshMs: number | null = nu
       clearInterval(id);
     };
   }, [reload, refreshMs]);
+  const error = failure === null ? null : errorText(failure.err, t);
   return { data, error, loading, reload };
 }

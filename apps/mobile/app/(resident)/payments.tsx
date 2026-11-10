@@ -6,6 +6,7 @@ import { dubaiDate, instalmentState, planSummary } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useLang } from '../../src/i18n/I18nProvider.js';
+import { instalmentLabel } from '../../src/i18n/sharedLabels.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
@@ -31,7 +32,7 @@ export default function Payments(): ReactNode {
   if (deal === undefined) {
     return (
       <Page>
-        <Notice>No payment plan found on your account.</Notice>
+        <Notice>{t('owner.payments.none')}</Notice>
       </Page>
     );
   }
@@ -44,23 +45,23 @@ export default function Payments(): ReactNode {
       <DemoBadge />
       <UnitSwitcher />
       <Eyebrow>{unitTitle(deal, t)}</Eyebrow>
-      <Heading>Payments</Heading>
+      <Heading>{t('tab.payments')}</Heading>
       {overdue ? (
         <Notice tone="error">
-          {aed(s.overdueAmount, locale)} is overdue. Settle it whenever you are ready, or ask the JAD+ desk
-          for help.
+          {t('owner.payments.overdueNotice', { amount: aed(s.overdueAmount, locale) })}
         </Notice>
       ) : null}
       <Card>
-        <Text style={styles.kpiLabel}>PAID SO FAR</Text>
+        <Text style={styles.kpiLabel}>{t('owner.payments.paidSoFar').toUpperCase()}</Text>
         <Text style={styles.kpi}>
-          {aed(s.paid, locale)} <Text style={styles.kpiOf}>of {aed(s.total, locale)}</Text>
+          {aed(s.paid, locale)}{' '}
+          <Text style={styles.kpiOf}>{t('owner.payments.of', { total: aed(s.total, locale) })}</Text>
         </Text>
         <ProgressBar percent={s.percentPaid} />
-        <Body muted>{`${String(Math.round(s.percentPaid))}% paid`}</Body>
+        <Body muted>{t('owner.payments.percentPaid', { percent: Math.round(s.percentPaid) })}</Body>
         {s.next === null ? null : (
           <View style={styles.next}>
-            <Text style={styles.kpiLabel}>NEXT PAYMENT</Text>
+            <Text style={styles.kpiLabel}>{t('owner.nextPayment').toUpperCase()}</Text>
             <Text style={styles.nextAmount}>{aed(s.next.state.balance, locale)}</Text>
             <Body muted>
               {s.next.instalment.name}
@@ -69,22 +70,24 @@ export default function Payments(): ReactNode {
           </View>
         )}
       </Card>
-      <Button title="Pay now" onPress={() => void Linking.openURL(data.payUrl)} />
-      <Body muted>Opens JAD Global&apos;s secure payment page. JAD+ never sees your card.</Body>
+      <Button title={t('owner.payments.payNow')} onPress={() => void Linking.openURL(data.payUrl)} />
+      <Body muted>{t('owner.payments.payNote')}</Body>
 
-      <Heading>Payment plan</Heading>
+      <Heading>{t('owner.payments.plan')}</Heading>
       {deal.instalments.map((i) => {
         const st = instalmentState(i, today);
         return (
           <Card key={`${i.name}:${String(i.seq)}`}>
             <View style={styles.rowTop}>
               <Text style={styles.rowTitle}>{i.name}</Text>
-              <Pill kind={st.kind} label={st.label} />
+              <Pill kind={st.kind} label={instalmentLabel(i, st, today, t)} />
             </View>
             <Body>{aed(i.amount, locale)}</Body>
             <Body muted>
-              {i.due === null ? '' : `Due ${longDate(i.due, locale)}`}
-              {i.paid > 0 && st.kind !== 'paid' ? ` · Paid ${aed(i.paid, locale)}` : ''}
+              {i.due === null ? '' : t('owner.due', { date: longDate(i.due, locale) })}
+              {i.paid > 0 && st.kind !== 'paid'
+                ? ` · ${t('owner.payments.paidAmount', { amount: aed(i.paid, locale) })}`
+                : ''}
             </Body>
           </Card>
         );
@@ -92,13 +95,15 @@ export default function Payments(): ReactNode {
 
       {penalties.length === 0 ? null : (
         <>
-          <Heading>Late payment fees</Heading>
+          <Heading>{t('owner.payments.lateFees')}</Heading>
           <Card>
             {penalties.map((p) => (
               <LineItem
                 key={p.name}
                 title={p.for ?? p.name}
-                detail={p.start === null ? null : `Since ${longDate(p.start, locale)}`}
+                detail={
+                  p.start === null ? null : t('owner.payments.since', { date: longDate(p.start, locale) })
+                }
                 amount={aed(p.outstanding, locale)}
                 tone="bad"
               />
@@ -109,7 +114,7 @@ export default function Payments(): ReactNode {
 
       {deal.charges.length === 0 ? null : (
         <>
-          <Heading>Fees</Heading>
+          <Heading>{t('owner.payments.fees')}</Heading>
           <Card>
             {deal.charges.map((c) => {
               const paid = c.amount - c.paid <= 1;
@@ -119,7 +124,7 @@ export default function Payments(): ReactNode {
                   title={c.name}
                   detail={c.due === null ? null : longDate(c.due, locale)}
                   amount={aed(paid ? c.amount : c.amount - c.paid, locale)}
-                  note={paid ? 'Paid' : 'To pay'}
+                  note={paid ? t('instalment.paid') : t('owner.payments.toPay')}
                   tone={paid ? 'good' : 'normal'}
                 />
               );
@@ -130,17 +135,17 @@ export default function Payments(): ReactNode {
 
       {deal.receipts.length === 0 ? null : (
         <>
-          <Heading>Receipts</Heading>
+          <Heading>{t('owner.payments.receipts')}</Heading>
           <Card>
             {deal.receipts.map((r) => (
               <LineItem
                 key={r.id}
-                title={r.for ?? 'Payment'}
+                title={r.for ?? t('owner.payments.payment')}
                 detail={[r.name, r.method].filter((x) => x !== null).join(' · ')}
                 amount={aed(r.amount, locale)}
                 note={
                   doc.opening === r.fileId
-                    ? 'Opening…'
+                    ? t('owner.opening')
                     : r.paidOn === null
                       ? null
                       : longDate(r.paidOn, locale)
@@ -149,7 +154,8 @@ export default function Payments(): ReactNode {
                   ? {}
                   : {
                       onPress: () => {
-                        if (r.fileId !== null) doc.open(r.fileId, `Receipt ${r.name}`);
+                        if (r.fileId !== null)
+                          doc.open(r.fileId, t('owner.payments.receiptTitle', { name: r.name }));
                       },
                     })}
               />

@@ -41,6 +41,7 @@ function JobRow({ job, now, onPress }: { job: PartnerJob; now: number; onPress: 
 
 export default function PartnerJobs(): ReactNode {
   const session = useSession();
+  const t = useT();
   const { api } = useSessionController();
   const router = useRouter();
   const now = useNow();
@@ -66,11 +67,11 @@ export default function PartnerJobs(): ReactNode {
           <View style={styles.header}>
             {jobs.error === null ? null : <Notice tone="error">{jobs.error}</Notice>}
             <Link href="/settings" style={styles.link}>
-              Account
+              {t('title.account')}
             </Link>
           </View>
         }
-        ListEmptyComponent={jobs.loading ? undefined : <Body muted>No open jobs. New jobs appear here.</Body>}
+        ListEmptyComponent={jobs.loading ? undefined : <Body muted>{t('access.noJobs')}</Body>}
         renderItem={({ item }) => (
           <JobRow
             job={item}

@@ -8,7 +8,7 @@ import { EMERGENCY_NUMBERS } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
-import { ApiError } from '../src/api/client.js';
+import { errorText } from '../src/api/client.js';
 import { myPlaces, raiseEmergency } from '../src/api/endpoints.js';
 import {
   asksWhereFrom,
@@ -18,7 +18,9 @@ import {
   lifeSafetyOptions,
   lifeSafetyReport,
 } from '../src/emergency/options.js';
+import { confirmationText } from '../src/emergency/confirmation.js';
 import { useT } from '../src/i18n/I18nProvider.js';
+import { emergencyNumberLabel } from '../src/i18n/sharedLabels.js';
 import { placeLabel } from '../src/jobs/format.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { useLoad } from '../src/ui/hooks.js';
@@ -48,20 +50,22 @@ function Choice(props: {
 }
 
 function Numbers({ alertFailed }: { alertFailed: boolean }): ReactNode {
+  const t = useT();
   return (
     <Page>
-      <Heading>Call emergency services</Heading>
+      <Heading>{t('req.emergency.callServices')}</Heading>
       {EMERGENCY_NUMBERS.map((n) => (
         <Button
           key={n.number}
           kind="danger"
-          title={`Call ${n.number} · ${n.label}`}
+          title={t('req.emergency.call', {
+            number: n.number,
+            label: emergencyNumberLabel(n.number, t),
+          })}
           onPress={() => void Linking.openURL(callLink(n.number))}
         />
       ))}
-      {alertFailed ? (
-        <Notice tone="error">JAD+ could not be alerted. Please call the numbers above.</Notice>
-      ) : null}
+      {alertFailed ? <Notice tone="error">{t('req.emergency.alertFailed')}</Notice> : null}
     </Page>
   );
 }
@@ -120,7 +124,7 @@ export default function Emergency(): ReactNode {
       if ('confirmation' in result) setSent(result);
       else setLifeSafety({ alertFailed: false });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }
@@ -129,13 +133,13 @@ export default function Emergency(): ReactNode {
   if (sent !== null) {
     return (
       <Page>
-        <Heading>Emergency sent</Heading>
+        <Heading>{t('req.emergency.sent')}</Heading>
         <Text style={styles.confirmation} accessibilityLiveRegion="assertive">
-          {sent.confirmation}
+          {confirmationText(sent.confirmation, t)}
         </Text>
-        <Body muted>Reference {sent.ref}</Body>
+        <Body muted>{t('req.emergency.reference', { ref: sent.ref })}</Body>
         <Button
-          title="Follow this request"
+          title={t('req.follow')}
           onPress={() => {
             router.replace({ pathname: '/request/[id]', params: { id: sent.requestId } });
           }}
@@ -146,7 +150,7 @@ export default function Emergency(): ReactNode {
 
   return (
     <Page>
-      <Heading>What is happening?</Heading>
+      <Heading>{t('req.emergency.what')}</Heading>
       {lifeSafetyOptions(t).map((o) => (
         <Choice
           key={o.value}
@@ -167,12 +171,10 @@ export default function Emergency(): ReactNode {
           }}
         />
       ))}
-      {list.length === 0 ? (
-        <Notice tone="error">No home is linked to your account yet. Please contact JAD+.</Notice>
-      ) : null}
+      {list.length === 0 ? <Notice tone="error">{t('req.emergency.noHome')}</Notice> : null}
       {list.length > 1 ? (
         <>
-          <Body>Where?</Body>
+          <Body>{t('req.emergency.where')}</Body>
           {list.map((p) => (
             <Choice
               key={p.sfUnitId ?? p.tenancyId ?? ''}
@@ -187,7 +189,7 @@ export default function Emergency(): ReactNode {
       ) : null}
       {type !== null && asksWhereFrom(type) ? (
         <>
-          <Body>Where is the water coming from?</Body>
+          <Body>{t('req.emergency.waterFrom')}</Body>
           {faultSourceOptions(t).map((o) => (
             <Choice
               key={o.value}
@@ -203,14 +205,14 @@ export default function Emergency(): ReactNode {
       {type === null ? null : (
         <>
           <Field
-            label="What do you see? (short)"
+            label={t('req.emergency.describe')}
             value={description}
             onChangeText={setDescription}
             multiline
             maxLength={2000}
           />
           <Button
-            title="Send emergency"
+            title={t('req.emergency.send')}
             kind="danger"
             busy={busy}
             disabled={place === null || description.trim() === ''}

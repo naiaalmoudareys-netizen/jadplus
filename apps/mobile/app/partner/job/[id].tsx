@@ -7,7 +7,7 @@ import { arrivalChoices, type PartnerJob } from '@jadplus/shared';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ApiError } from '../../../src/api/client.js';
+import { errorText } from '../../../src/api/client.js';
 import { acknowledge, partnerJobs, partnerTeam, requestDetail } from '../../../src/api/endpoints.js';
 import {
   arrivalLabel,
@@ -19,7 +19,8 @@ import {
   preferredVisitLabel,
   statusLabel,
 } from '../../../src/jobs/format.js';
-import { useLang } from '../../../src/i18n/I18nProvider.js';
+import { useLang, useT } from '../../../src/i18n/I18nProvider.js';
+import { arrivalChoiceLabel } from '../../../src/i18n/sharedLabels.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
 import { RequestPhotos } from '../../../src/requests/RequestPhotos.js';
 import { Conversation } from '../../../src/ui/Conversation.js';
@@ -43,6 +44,7 @@ function Choice(props: { label: string; selected: boolean; onPress: () => void }
 function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
   const { api } = useSessionController();
   const router = useRouter();
+  const t = useT();
   const loadTeam = useCallback(() => partnerTeam(api), [api]);
   const team = useLoad(loadTeam);
   const [chosenTech, setChosenTech] = useState<string | null>(null);
@@ -50,7 +52,7 @@ function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const technicians = team.data?.technicians ?? [];
-  const technicianId = chosenTech ?? technicians.find((t) => t.self)?.id ?? technicians[0]?.id ?? null;
+  const technicianId = chosenTech ?? technicians.find((tech) => tech.self)?.id ?? technicians[0]?.id ?? null;
 
   const submit = async () => {
     if (technicianId === null) return;
@@ -67,7 +69,7 @@ function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
       });
       router.back();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(errorText(err, t));
     } finally {
       setBusy(false);
     }
@@ -76,24 +78,24 @@ function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
   if (team.loading && team.data === null) return <Loading />;
   return (
     <View style={styles.section}>
-      <Heading>Acknowledge</Heading>
-      <Body>Who is going?</Body>
-      {technicians.map((t) => (
+      <Heading>{t('access.acknowledge')}</Heading>
+      <Body>{t('access.whoIsGoing')}</Body>
+      {technicians.map((tech) => (
         <Choice
-          key={t.id}
-          label={t.self ? `${t.name} (me)` : t.name}
-          selected={t.id === technicianId}
+          key={tech.id}
+          label={tech.self ? t('access.me', { name: tech.name }) : tech.name}
+          selected={tech.id === technicianId}
           onPress={() => {
-            setChosenTech(t.id);
+            setChosenTech(tech.id);
           }}
         />
       ))}
-      {technicians.length === 0 ? <Notice tone="error">No active technician on your team.</Notice> : null}
-      <Body>When will they arrive?</Body>
+      {technicians.length === 0 ? <Notice tone="error">{t('access.noTechnician')}</Notice> : null}
+      <Body>{t('access.whenArrive')}</Body>
       {arrivalChoices(Date.now()).map((w, i) => (
         <Choice
           key={w.label}
-          label={w.label}
+          label={arrivalChoiceLabel(i, w.label, t)}
           selected={i === windowIndex}
           onPress={() => {
             setWindowIndex(i);
@@ -101,7 +103,7 @@ function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
         />
       ))}
       <Button
-        title="Acknowledge"
+        title={t('access.acknowledge')}
         busy={busy}
         disabled={technicianId === null}
         onPress={() => void submit()}
@@ -130,7 +132,7 @@ export default function Job(): ReactNode {
   if (job.data === null) {
     return (
       <Page>
-        <Notice tone="error">{job.error ?? 'This job is no longer in your queue.'}</Notice>
+        <Notice tone="error">{job.error ?? t('access.jobGone')}</Notice>
       </Page>
     );
   }

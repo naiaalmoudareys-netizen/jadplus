@@ -28,7 +28,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel } from '../jobs/format.js';
-import { useLang } from '../i18n/I18nProvider.js';
+import { useLang, useT } from '../i18n/I18nProvider.js';
+import { serviceName, visitSlotLabel } from '../i18n/sharedLabels.js';
 import { Choice } from '../ui/Choice.js';
 import { Button, Eyebrow, Field, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
@@ -55,6 +56,7 @@ function Photos(props: {
   onAdd: (source: 'camera' | 'library') => void;
   onRemove: (photo: PickedPhoto) => void;
 }): ReactNode {
+  const t = useT();
   return (
     <>
       {props.photos.length === 0 ? null : (
@@ -63,13 +65,13 @@ function Photos(props: {
             <Pressable
               key={p.uri}
               accessibilityRole="button"
-              accessibilityLabel={`Remove photo ${String(i + 1)}`}
+              accessibilityLabel={t('req.sheet.removePhoto', { number: i + 1 })}
               onPress={() => {
                 props.onRemove(p);
               }}
             >
               <Image source={{ uri: p.uri }} style={styles.thumb} />
-              <Text style={styles.remove}>REMOVE</Text>
+              <Text style={styles.remove}>{t('req.sheet.remove')}</Text>
             </Pressable>
           ))}
         </View>
@@ -78,7 +80,7 @@ function Photos(props: {
         <View style={styles.row}>
           <View style={styles.half}>
             <Button
-              title="Take photo"
+              title={t('req.sheet.takePhoto')}
               kind="secondary"
               onPress={() => {
                 props.onAdd('camera');
@@ -87,7 +89,7 @@ function Photos(props: {
           </View>
           <View style={styles.half}>
             <Button
-              title="Choose photo"
+              title={t('req.sheet.choosePhoto')}
               kind="secondary"
               onPress={() => {
                 props.onAdd('library');
@@ -110,7 +112,7 @@ export function RequestSheet(props: {
   onSend: (details: RequestDetails) => void;
 }): ReactNode {
   const [day, setDay] = useState<string | null>(null);
-  const { locale } = useLang();
+  const { t, locale } = useLang();
   const [slot, setSlot] = useState<VisitSlot | null>(null);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
@@ -129,21 +131,26 @@ export function RequestSheet(props: {
   return (
     <Modal visible transparent animationType="slide" onRequestClose={close}>
       <View style={styles.backdrop}>
-        <Pressable accessibilityLabel="Close" style={styles.dismiss} onPress={close} />
+        <Pressable accessibilityLabel={t('common.close')} style={styles.dismiss} onPress={close} />
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <SafeAreaView edges={['bottom']} style={styles.sheet}>
             <View style={styles.handle} />
             <View style={styles.header}>
               <View style={styles.headerText}>
-                <Text style={styles.title}>{props.service.name}</Text>
+                <Text style={styles.title}>{serviceName(props.service.code, props.service.name, t)}</Text>
                 <Text style={styles.subtitle}>{props.placeLabel}</Text>
               </View>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={12} onPress={close}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                hitSlop={12}
+                onPress={close}
+              >
                 <Ionicons name="close" size={26} color={colors.slate} />
               </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-              <Section title="Which day suits you?">
+              <Section title={t('req.sheet.day')}>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -162,13 +169,13 @@ export function RequestSheet(props: {
                   ))}
                 </ScrollView>
               </Section>
-              <Section title="What time?">
+              <Section title={t('req.sheet.time')}>
                 <View style={styles.row}>
                   {VISIT_SLOTS.map((s) => (
                     <View key={s.key} style={styles.third}>
                       <Choice
                         compact
-                        title={s.label}
+                        title={visitSlotLabel(s.key, t)}
                         detail={s.hours}
                         selected={slot === s.key}
                         onPress={() => {
@@ -180,13 +187,13 @@ export function RequestSheet(props: {
                 </View>
               </Section>
               <Field
-                label="What do you need?"
+                label={t('req.whatDoYouNeed')}
                 value={description}
                 onChangeText={setDescription}
                 multiline
                 maxLength={2000}
               />
-              <Section title={`Photos (optional, up to ${String(MAX_REQUEST_PHOTOS)})`}>
+              <Section title={t('req.sheet.photos', { max: MAX_REQUEST_PHOTOS })}>
                 <Photos
                   photos={photos}
                   onAdd={(source) => void addPhoto(source)}
@@ -197,7 +204,9 @@ export function RequestSheet(props: {
               </Section>
               {props.error === null ? null : <Notice tone="error">{props.error}</Notice>}
               <Button
-                title={`Send to ${props.service.routing === 'partner' ? 'our partner' : 'the JAD+ team'}`}
+                title={t(
+                  props.service.routing === 'partner' ? 'req.sheet.sendPartner' : 'req.sheet.sendTeam',
+                )}
                 busy={props.busy}
                 disabled={!ready}
                 onPress={() => {
@@ -206,9 +215,7 @@ export function RequestSheet(props: {
                   }
                 }}
               />
-              {ready ? null : (
-                <Text style={styles.hint}>Choose a day and a time, and describe what you need.</Text>
-              )}
+              {ready ? null : <Text style={styles.hint}>{t('req.sheet.hint')}</Text>}
             </ScrollView>
           </SafeAreaView>
         </KeyboardAvoidingView>

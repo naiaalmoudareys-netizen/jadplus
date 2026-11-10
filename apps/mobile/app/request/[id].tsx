@@ -37,7 +37,7 @@ export default function RequestPage(): ReactNode {
   if (detail.data === null) {
     return (
       <Page>
-        <Notice tone="error">{detail.error ?? 'This request could not be found.'}</Notice>
+        <Notice tone="error">{detail.error ?? t('req.notFound')}</Notice>
       </Page>
     );
   }
@@ -52,7 +52,9 @@ export default function RequestPage(): ReactNode {
       </Body>
       <View style={styles.card}>
         <Body>{residentStatusLabel(request.status, t)}</Body>
-        {request.partnerName === null ? null : <Body muted>Handled by {request.partnerName}</Body>}
+        {request.partnerName === null ? null : (
+          <Body muted>{t('req.handledBy', { name: request.partnerName })}</Body>
+        )}
         {arrival === null ? null : <Body>{arrival}</Body>}
         {arrival === null && preferred !== null ? <Body muted>{preferred}</Body> : null}
       </View>

@@ -3,16 +3,13 @@
  * anything else. Contact details are never changed in the app itself: the desk checks the owner's identity and
  * updates Salesforce (U2).
  */
-import {
-  DESK_REQUEST_HINTS,
-  DESK_REQUEST_TYPES,
-  DETAILS_REQUIRED,
-  type DeskRequestType,
-} from '@jadplus/shared';
+import { DESK_REQUEST_TYPES, DETAILS_REQUIRED, type DeskRequestType } from '@jadplus/shared';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ApiError } from '../src/api/client.js';
+import { errorText } from '../src/api/client.js';
 import { deskRequest } from '../src/api/endpoints.js';
+import { useT } from '../src/i18n/I18nProvider.js';
+import { deskHint, deskTypeLabel } from '../src/i18n/sharedLabels.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { Body, Button, Eyebrow, Field, Heading, Notice, Page } from '../src/ui/kit.js';
 
@@ -24,6 +21,7 @@ export default function DeskRequest(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const t = useT();
   // `details` may come filled in from Profile ("Request a copy of my data"); the owner can still change it.
   const { type: raw, details: prefill } = useLocalSearchParams<{ type: string; details?: string }>();
   const [details, setDetails] = useState(typeof prefill === 'string' ? prefill.slice(0, 1000) : '');
@@ -41,7 +39,7 @@ export default function DeskRequest(): ReactNode {
       await deskRequest(api, { type, dealId: null, details: details.trim() });
       router.back();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The request could not be sent. Please try again.');
+      setError(errorText(err, t, 'req.sendFailed'));
     } finally {
       setBusy(false);
     }
@@ -49,18 +47,18 @@ export default function DeskRequest(): ReactNode {
 
   return (
     <Page>
-      <Eyebrow>JAD+ desk</Eyebrow>
-      <Heading>{type}</Heading>
-      <Body muted>{DESK_REQUEST_HINTS[type]}</Body>
+      <Eyebrow>{t('title.desk')}</Eyebrow>
+      <Heading>{deskTypeLabel(type, t)}</Heading>
+      <Body muted>{deskHint(type, t)}</Body>
       <Field
-        label={required ? 'What do you need?' : 'Anything to add? (optional)'}
+        label={required ? t('req.whatDoYouNeed') : t('req.desk.optional')}
         value={details}
         onChangeText={setDetails}
         multiline
         maxLength={1000}
       />
       <Button
-        title="Send to the JAD+ desk"
+        title={t('req.desk.send')}
         busy={busy}
         disabled={required && details.trim() === ''}
         onPress={() => void send()}
