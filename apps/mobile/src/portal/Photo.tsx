@@ -19,7 +19,7 @@ export function Photo(props: { id: string | null; project: string | null; label:
   if (source === null) return null;
   return (
     <View style={styles.frame}>
-      <FittedPhoto source={source} label={props.label} />
+      <FittedPhoto source={source} label={props.label} mode={local === null ? 'fit' : 'fill'} />
     </View>
   );
 }

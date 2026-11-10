@@ -4,9 +4,11 @@ import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-n
 import logoCream from '../../assets/brand/logo/jadplus-cream.png';
 import logoInk from '../../assets/brand/logo/jadplus-ink.png';
 import signinPoster from '../../assets/brand/media/signin-poster.jpg';
-import photo171 from '../../assets/brand/projects/171gh.jpg';
-import photoJ188 from '../../assets/brand/projects/j188.jpg';
-import photoJad288 from '../../assets/brand/projects/jad288.jpg';
+// Wide versions cut to the building (made from the portrait originals with ImageMagick, sky and road trimmed),
+// so the building fills the box instead of shrinking to a thumbnail (Naya, 10-Nov-2026).
+import photo171 from '../../assets/brand/projects/wide/171gh.jpg';
+import photoJ188 from '../../assets/brand/projects/wide/j188.jpg';
+import photoJad288 from '../../assets/brand/projects/wide/jad288.jpg';
 import { projectKey, type ProjectKey } from '../brand/projects.js';
 import { colors, fonts, radius, space } from './theme.js';
 
@@ -45,11 +47,26 @@ export const HERO_HEIGHT = 220;
 export const PHOTO_BOX_ASPECT = 16 / 10;
 
 /**
- * The whole photo, fitted inside a box of fixed size (Naya, 10-Nov-2026: keep the box, fit the image).
- * Tall tower photos would leave empty bands, so a soft blurred copy of the same photo fills the box behind
- * the sharp, uncropped photo.
+ * A photo inside a box of fixed size. Bundled project photos are already cut to the box's shape, so they
+ * fill it ("fill"). Photos of unknown shape (from Salesforce) are fitted whole inside ("fit"), with a soft
+ * blurred copy of the same photo filling the rest of the box.
  */
-export function FittedPhoto(props: { source: ImageSourcePropType; label?: string }): ReactNode {
+export function FittedPhoto(props: {
+  source: ImageSourcePropType;
+  label?: string;
+  mode?: 'fill' | 'fit';
+}): ReactNode {
+  if (props.mode !== 'fit') {
+    return (
+      <Image
+        source={props.source}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+        accessibilityLabel={props.label}
+        accessibilityIgnoresInvertColors
+      />
+    );
+  }
   return (
     <>
       <Image source={props.source} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={24} />
