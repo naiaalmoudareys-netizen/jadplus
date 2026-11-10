@@ -146,6 +146,9 @@ pnpm --filter @jadplus/mobile start   # Expo
   preferred working day + window, up to 3 photos (phone re-encode + API sniff/strip, private R2,
   `/api/requests/:id/photos`). New Home (ADR 0014): greeting, needs-your-attention, shortcuts, next payment,
   top 2 requests, construction line, news carousel (+ hidden `news` route for "See all"). 317 tests.
+- 10-Nov-2026 (session 3, cont.): New request reworked (ADR 0015): project → unit → service; tapping a
+  service opens a bottom pop-up (day, time, description, photos, Send). Demo seed now gives the demo owner
+  the portal's two units (1204-J188, 506-JAD288-C). 320 tests.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

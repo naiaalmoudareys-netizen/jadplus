@@ -1,60 +1,25 @@
 /**
- * New request (ADR 0012, 0013): the owner picks the residence (always shown, so it is clear), the service (S1;
- * "coming soon" ones cannot be chosen, S2), a working day in the next two weeks and a time window, says what
- * they need, and may add up to 3 photos. The answer names who has the request: the partner company or the
- * JAD+ team. Photos are re-saved on the phone without location data before they are sent.
+ * New request (ADR 0012, 0013, 0015). One short screen: the owner picks the project, then the unit (both
+ * pre-selected when there is only one), then taps a service (S1; "coming soon" ones cannot be chosen, S2).
+ * The details (day, time window, description, up to 3 photos) are asked in a pop-up from the bottom
+ * (RequestSheet), so nobody scrolls through one long form. The answer names who has the request: the partner
+ * company or the JAD+ team. Photos are re-saved on the phone without location data before they are sent.
  */
-import {
-  DEFAULT_CALENDAR,
-  MAX_REQUEST_PHOTOS,
-  SERVICE_GROUPS,
-  VISIT_SLOTS,
-  dubaiDate,
-  preferredDays,
-  type MyPlace,
-  type RequestRaised,
-  type ServiceView,
-  type VisitSlot,
-} from '@jadplus/shared';
+import { SERVICE_GROUPS, type MyPlace, type RequestRaised, type ServiceView } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../src/api/client.js';
 import { addRequestPhoto, myPlaces, raiseRequest, services } from '../src/api/endpoints.js';
-import { dayLabel, placeLabel } from '../src/jobs/format.js';
-import { pickPhoto, preparePhoto, type PickedPhoto } from '../src/requests/photoPicker.js';
+import { placeLabel } from '../src/jobs/format.js';
+import { preparePhoto } from '../src/requests/photoPicker.js';
+import { groupByProject, placeDetail, placeKey } from '../src/requests/places.js';
+import { RequestSheet, type RequestDetails } from '../src/requests/RequestSheet.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
+import { Choice } from '../src/ui/Choice.js';
 import { useLoad } from '../src/ui/hooks.js';
-import { Body, Button, Eyebrow, Field, Heading, Loading, Notice, Page } from '../src/ui/kit.js';
-import { buttonRadius, colors, fonts, radius, space } from '../src/ui/theme.js';
-
-function Choice(props: {
-  title: string;
-  detail?: string;
-  selected: boolean;
-  disabled?: boolean;
-  compact?: boolean;
-  onPress: () => void;
-}): ReactNode {
-  const off = props.disabled === true;
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected: props.selected, disabled: off }}
-      disabled={off}
-      onPress={props.onPress}
-      style={[
-        styles.choice,
-        props.compact === true && styles.compact,
-        props.selected && styles.chosen,
-        off && styles.off,
-      ]}
-    >
-      <Text style={[styles.choiceTitle, props.selected && styles.chosenText]}>{props.title}</Text>
-      {props.detail === undefined ? null : <Text style={styles.choiceDetail}>{props.detail}</Text>}
-    </Pressable>
-  );
-}
+import { Body, Button, Eyebrow, Heading, Loading, Notice, Page } from '../src/ui/kit.js';
+import { colors, fonts, space } from '../src/ui/theme.js';
 
 function Section({ title, children }: { title: string; children: ReactNode }): ReactNode {
   return (
@@ -73,12 +38,9 @@ export default function NewRequest(): ReactNode {
   const catalogue = useLoad(loadServices);
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
+  const [chosenProject, setChosenProject] = useState<string | null>(null);
   const [chosenPlace, setChosenPlace] = useState<MyPlace | null>(null);
   const [service, setService] = useState<ServiceView | null>(null);
-  const [day, setDay] = useState<string | null>(null);
-  const [slot, setSlot] = useState<VisitSlot | null>(null);
-  const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<{ raised: RequestRaised; photoProblem: boolean } | null>(null);
@@ -87,31 +49,25 @@ export default function NewRequest(): ReactNode {
   if ((catalogue.loading && catalogue.data === null) || (places.loading && places.data === null)) {
     return <Loading />;
   }
-  const homes = places.data ?? [];
-  const place = chosenPlace ?? homes[0] ?? null;
-  const days = preferredDays(dubaiDate(Date.now()), DEFAULT_CALENDAR);
-  const ready =
-    place !== null && service !== null && day !== null && slot !== null && description.trim() !== '';
+  const projects = groupByProject(places.data ?? []);
+  const group = projects.find((g) => g.project === chosenProject) ?? projects[0] ?? null;
+  const units = group?.places ?? [];
+  const place = units.find((p) => p === chosenPlace) ?? units[0] ?? null;
 
-  const addPhoto = async (source: 'camera' | 'library') => {
-    const picked = await pickPhoto(source);
-    if (picked !== null) setPhotos((p) => [...p, picked].slice(0, MAX_REQUEST_PHOTOS));
-  };
-
-  const send = async () => {
-    if (!ready) return;
+  const send = async (details: RequestDetails) => {
+    if (place === null || service === null) return;
     setBusy(true);
     setError(null);
     try {
       const raised = await raiseRequest(api, place, {
         serviceCode: service.code,
-        description: description.trim(),
-        preferredDate: day,
-        preferredSlot: slot,
+        description: details.description,
+        preferredDate: details.preferredDate,
+        preferredSlot: details.preferredSlot,
       });
       // The request is saved first; a photo that fails does not lose the request.
       let photoProblem = false;
-      for (const photo of photos) {
+      for (const photo of details.photos) {
         try {
           await addRequestPhoto(api, raised.requestId, await preparePhoto(photo));
         } catch {
@@ -152,37 +108,63 @@ export default function NewRequest(): ReactNode {
     <Page>
       <Heading>New request</Heading>
 
-      <Section title="Which residence?">
-        {homes.length === 0 ? (
-          <Notice tone="error">
-            No residence is linked to your account yet. Please contact the JAD+ desk.
-          </Notice>
-        ) : null}
-        {homes.map((p) => (
-          <Choice
-            key={p.sfUnitId ?? p.tenancyId ?? ''}
-            title={placeLabel(p.location)}
-            selected={place === p}
-            onPress={() => {
-              setChosenPlace(p);
-            }}
-          />
-        ))}
-      </Section>
+      {projects.length === 0 ? (
+        <Notice tone="error">
+          No residence is linked to your account yet. Please contact the JAD+ desk.
+        </Notice>
+      ) : (
+        <>
+          <Section title="Project">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+              {projects.map((g) => (
+                <Choice
+                  key={g.project}
+                  compact
+                  title={g.project}
+                  detail={g.places.length === 1 ? '1 unit' : `${String(g.places.length)} units`}
+                  selected={g === group}
+                  onPress={() => {
+                    setChosenProject(g.project);
+                    setChosenPlace(null);
+                  }}
+                />
+              ))}
+            </ScrollView>
+          </Section>
+
+          <Section title="Unit">
+            {units.map((p) => {
+              const detail = placeDetail(p);
+              return (
+                <Choice
+                  key={placeKey(p)}
+                  title={p.location.unitName}
+                  {...(detail === null ? {} : { detail })}
+                  selected={p === place}
+                  onPress={() => {
+                    setChosenPlace(p);
+                  }}
+                />
+              );
+            })}
+          </Section>
+        </>
+      )}
 
       <Section title="What do you need?">
         {catalogue.error === null ? null : <Notice tone="error">{catalogue.error}</Notice>}
-        {SERVICE_GROUPS.map((group) =>
+        {SERVICE_GROUPS.map((g) =>
           (catalogue.data ?? [])
-            .filter((s) => s.group === group)
+            .filter((s) => s.group === g)
             .map((s) => (
               <Choice
                 key={s.code}
                 title={s.routing === 'coming_soon' ? `${s.name} · coming soon` : s.name}
                 detail={s.blurb}
-                selected={service?.code === s.code}
-                disabled={s.routing === 'coming_soon'}
+                selected={false}
+                disabled={s.routing === 'coming_soon' || place === null}
                 onPress={() => {
+                  setError(null);
                   setService(s);
                 }}
               />
@@ -190,119 +172,25 @@ export default function NewRequest(): ReactNode {
         )}
       </Section>
 
-      <Section title="Which day suits you?">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {days.map((d) => (
-            <Choice
-              key={d}
-              compact
-              title={dayLabel(d)}
-              selected={day === d}
-              onPress={() => {
-                setDay(d);
-              }}
-            />
-          ))}
-        </ScrollView>
-      </Section>
-
-      <Section title="What time?">
-        {VISIT_SLOTS.map((s) => (
-          <Choice
-            key={s.key}
-            title={s.label}
-            detail={s.hours}
-            selected={slot === s.key}
-            onPress={() => {
-              setSlot(s.key);
-            }}
-          />
-        ))}
-      </Section>
-
-      <Section title="Tell us what you need">
-        <Field
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          maxLength={2000}
+      {service === null || place === null ? null : (
+        <RequestSheet
+          key={`${service.code}:${placeKey(place)}`}
+          service={service}
+          placeLabel={placeLabel(place.location)}
+          busy={busy}
+          error={error}
+          onClose={() => {
+            setService(null);
+          }}
+          onSend={(details) => void send(details)}
         />
-      </Section>
-
-      <Section title={`Photos (optional, up to ${String(MAX_REQUEST_PHOTOS)})`}>
-        {photos.length === 0 ? null : (
-          <View style={styles.row}>
-            {photos.map((p, i) => (
-              <Pressable
-                key={p.uri}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove photo ${String(i + 1)}`}
-                onPress={() => {
-                  setPhotos((all) => all.filter((x) => x !== p));
-                }}
-              >
-                <Image source={{ uri: p.uri }} style={styles.thumb} />
-                <Text style={styles.remove}>REMOVE</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-        {photos.length < MAX_REQUEST_PHOTOS ? (
-          <View style={styles.row}>
-            <View style={styles.half}>
-              <Button title="Take photo" kind="secondary" onPress={() => void addPhoto('camera')} />
-            </View>
-            <View style={styles.half}>
-              <Button title="Choose photo" kind="secondary" onPress={() => void addPhoto('library')} />
-            </View>
-          </View>
-        ) : null}
-      </Section>
-
-      <Button
-        title={
-          service === null
-            ? 'Send request'
-            : `Send to ${service.routing === 'partner' ? 'our partner' : 'the JAD+ team'}`
-        }
-        busy={busy}
-        disabled={!ready}
-        onPress={() => void send()}
-      />
-      {ready ? null : (
-        <Body muted>Choose the residence, service, day and time, and describe what you need.</Body>
       )}
-      {error === null ? null : <Notice tone="error">{error}</Notice>}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
   section: { gap: space.sm },
-  row: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
-  half: { flex: 1, minWidth: 140 },
-  choice: {
-    backgroundColor: colors.card,
-    borderRadius: buttonRadius,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: space.md,
-    gap: 2,
-  },
-  compact: { paddingVertical: 12, paddingHorizontal: 14 },
-  chosen: { borderColor: colors.slate, borderWidth: 2 },
-  off: { opacity: 0.5 },
-  choiceTitle: { fontFamily: fonts.medium, fontSize: 16, color: colors.text },
-  chosenText: { color: colors.slate },
-  choiceDetail: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
-  thumb: { width: 96, height: 96, borderRadius: radius, backgroundColor: colors.backgroundAlt },
-  remove: {
-    fontFamily: fonts.semibold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: colors.urgent,
-    marginTop: 4,
-  },
+  row: { flexDirection: 'row', gap: space.sm },
   confirmation: { fontFamily: fonts.medium, fontSize: 20, lineHeight: 28, color: colors.navy },
 });

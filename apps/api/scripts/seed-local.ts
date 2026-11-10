@@ -39,6 +39,7 @@ async function user(id: string, email: string, name: string): Promise<string> {
 }
 
 const UNIT = 'a0XDEMO0000000001A';
+const UNIT_2 = 'a0XDEMO0000000002A';
 const run = now.toString(36).toUpperCase().slice(-6);
 const requestId = `demo-req-${run}`;
 const sql = [
@@ -53,8 +54,12 @@ const sql = [
   `INSERT OR IGNORE INTO partner_documents (id, partner_id, kind, r2_key, expires_on, uploaded_at, uploaded_by) VALUES
     ('demo-doc-1', 'demo-partner', 'trade_licence', 'demo/licence.pdf', '2027-12-31', ${now}, 'demo-owner'),
     ('demo-doc-2', 'demo-partner', 'insurance', 'demo/insurance.pdf', '2027-12-31', ${now}, 'demo-owner');`,
-  `INSERT OR IGNORE INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, building, address, deal_role, synced_at)
-    VALUES ('demo-owner', '${UNIT}', '006DEMO0000000001A', 'JAD288-1102', 'JAD 288', 'Building B', 'Jumeirah Village Circle, Dubai', 'Buyer', ${now});`,
+  // The same two units as the demo owner portal (src/portal/demo.ts), so My unit and New request agree.
+  `INSERT INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, building, address, deal_role, synced_at)
+    VALUES ('demo-owner', '${UNIT}', '006DEMO0000000001A', '1204-J188', 'J188', NULL, 'Al Jaddaf, Dubai', 'Buyer', ${now}),
+           ('demo-owner', '${UNIT_2}', '006DEMO0000000002A', '506-JAD288-C', 'JAD 288', 'Block C', 'Jumeirah Garden City, Dubai', 'Buyer', ${now})
+    ON CONFLICT (user_id, sf_unit_id) DO UPDATE SET unit_name = excluded.unit_name, project = excluded.project,
+      building = excluded.building, address = excluded.address, synced_at = excluded.synced_at;`,
   `UPDATE users SET owner_synced_at = ${now} WHERE id = 'demo-owner';`,
   `INSERT INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, raised_by_user_id, raised_by_role, description,
     is_emergency, emergency_type, fault_source, status, partner_id, next_due_at, next_due_kind, created_at, updated_at, status_changed_at)
