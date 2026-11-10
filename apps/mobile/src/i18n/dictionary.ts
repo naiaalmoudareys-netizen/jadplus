@@ -6,9 +6,22 @@ import { ownerLabels } from './strings/labels-owner.js';
 import { requestLabels } from './strings/labels-requests.js';
 import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
+import { screensAccess } from './strings/screens-access.js';
+import { screensOwner } from './strings/screens-owner.js';
+import { screensRequests } from './strings/screens-requests.js';
 import { merge } from './translate.js';
 
-export const PARTS = [common, profile, legal, labels, requestLabels, ownerLabels] as const;
+export const PARTS = [
+  common,
+  profile,
+  legal,
+  labels,
+  requestLabels,
+  ownerLabels,
+  screensOwner,
+  screensRequests,
+  screensAccess,
+] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;
 
