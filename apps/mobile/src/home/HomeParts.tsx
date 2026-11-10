@@ -49,6 +49,7 @@ const ATTENTION_ICON: Readonly<Record<AttentionItem['kind'], IconName>> = {
   confirm: 'checkmark-circle-outline',
   arriving: 'time-outline',
   overdue: 'card-outline',
+  invoice: 'receipt-outline',
 };
 
 /** Only shown when something needs the owner now. */

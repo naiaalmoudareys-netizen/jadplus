@@ -42,6 +42,8 @@ const attention = (
     t: lang.t,
     label: (r) => jobTitle(r, lang.t),
     arrival: (r) => arrivalLabel(r, lang.t),
+    invoices: [],
+    invoiceDetail: (i) => i.number,
   });
 
 describe('Home priorities', () => {

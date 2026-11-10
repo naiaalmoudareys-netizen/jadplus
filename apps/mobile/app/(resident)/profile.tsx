@@ -9,7 +9,7 @@
  * - JAD+ desk requests and their status (ADR 0011)
  * - privacy and terms: what was accepted when, the privacy notice, a copy of my data, close my account
  * - sign-in and security: switch view (R5, U7), sign out, sign out everywhere (T3)
- * - help: talk to a person, report an emergency, app version
+ * - help: talk to a person, the home guide (V1), report an emergency, app version
  */
 import Constants from 'expo-constants';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
@@ -194,6 +194,12 @@ export default function Profile(): ReactNode {
             }}
           />
         ) : null}
+        <SettingsRow
+          icon="book-outline"
+          title={t('guide.title')}
+          detail={t('guide.linkNote')}
+          onPress={open('/guide')}
+        />
         <SettingsRow
           icon="warning-outline"
           title={t('profile.emergency')}

@@ -3,13 +3,14 @@
  * and is there anything I need to do?": a greeting on the project photo, what needs attention now (only when
  * something does), the notifications bell (ADR 0019), one-tap shortcuts, the next payment, the two requests that matter most, construction
  * progress, and news & offers to swipe through. Everything else is one tap away in the tabs. A tenant also
- * sees their invitations and their home's end date (ADR 0021).
+ * sees their invitations and their home's end date (ADR 0021). Building notices (V1) show under "needs your
+ * attention" while there are any.
  */
 import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { myPlaces, myRequests, tenantTenancies } from '../../src/api/endpoints.js';
+import { myPlaces, myRequests, ownerInvoices, tenantTenancies } from '../../src/api/endpoints.js';
 import {
   attentionItems,
   greeting,
@@ -25,8 +26,10 @@ import {
   Shortcuts,
   type Shortcut,
 } from '../../src/home/HomeParts.js';
+import { BuildingNotices } from '../../src/building/BuildingParts.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
 import { InboxBell } from '../../src/inbox/InboxParts.js';
+import { aedFromFils, dueText } from '../../src/invoices/logic.js';
 import { useUnread } from '../../src/inbox/useUnread.js';
 import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
@@ -48,7 +51,8 @@ export default function Home(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
-  const { t, locale } = useLang();
+  const lang = useLang();
+  const { t, locale } = lang;
   const portal = usePortalOptional();
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
@@ -62,15 +66,23 @@ export default function Home(): ReactNode {
     [api, tenant],
   );
   const tenancies = useLoad(loadTenancies);
+  const owner = session.status === 'signed_in' && session.me.role === 'owner';
+  // ADR 0026: only the owner pays partner invoices; Home needs just the ones due soon (attention.ts).
+  const loadInvoices = useCallback(
+    () => (owner ? ownerInvoices(api).then((a) => a.invoices) : Promise.resolve([])),
+    [api, owner],
+  );
+  const invoices = useLoad(loadInvoices);
+  const reloadInvoices = invoices.reload;
   useFocusEffect(
     useCallback(() => {
       void reload();
-    }, [reload]),
+      void reloadInvoices();
+    }, [reload, reloadInvoices]),
   );
   if (session.status !== 'signed_in') return <Redirect href="/" />;
 
   const now = Date.now();
-  const owner = session.me.role === 'owner';
   const data = portal?.data ?? null;
   const home = places.data?.[0]?.location ?? null;
   const deal = data?.deals[portal?.dealIndex ?? 0] ?? data?.deals[0];
@@ -92,6 +104,8 @@ export default function Home(): ReactNode {
     t,
     label: (r) => jobTitle(r, t),
     arrival: (r) => arrivalLabel(r, t),
+    invoices: invoices.data ?? [],
+    invoiceDetail: (i) => `${aedFromFils(i.totalFils, locale)} · ${dueText(i, dubaiDate(now), lang)}`,
   });
   // Tabs remember where they were scrolled; links from Home say where to land (scrollTarget.ts).
   const openPayments = () => {
@@ -186,6 +200,7 @@ export default function Home(): ReactNode {
         }}
       />
       <Attention items={attention} onPress={openItem} />
+      <BuildingNotices />
       <Shortcuts items={shortcuts} />
 
       {plan === null || deal === undefined ? null : (

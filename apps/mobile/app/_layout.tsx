@@ -64,6 +64,7 @@ function Screens(): ReactNode {
       <Stack.Screen name="notifications" options={{ title: t('inbox.title') }} />
       <Stack.Screen name="new-request" options={{ title: t('title.newRequest') }} />
       <Stack.Screen name="desk-request" options={{ title: t('title.desk') }} />
+      <Stack.Screen name="guide" options={{ title: t('guide.title') }} />
       <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
     </Stack>
   );

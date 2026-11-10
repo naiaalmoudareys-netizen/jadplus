@@ -1,11 +1,13 @@
 /**
  * Payments (R1, O1, U11): the payment plan with paid / due soon / overdue, totals, receipts and charges.
- * "Pay now" opens JAD Global's secure payment site; JAD+ never takes payments or holds card data.
+ * "Pay now" opens JAD Global's secure payment site; JAD+ never takes payments or holds card data. Partners'
+ * service invoices follow, paid directly to the partner (ADR 0026).
  */
 import { dubaiDate, instalmentState, planSummary } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { useLang } from '../../src/i18n/I18nProvider.js';
+import { ServiceInvoices } from '../../src/invoices/ServiceInvoices.js';
 import { instalmentLabel } from '../../src/i18n/sharedLabels.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
@@ -34,6 +36,7 @@ export default function Payments(): ReactNode {
     return (
       <Page>
         <Notice>{t('owner.payments.none')}</Notice>
+        <ServiceInvoices />
       </Page>
     );
   }
@@ -167,6 +170,9 @@ export default function Payments(): ReactNode {
           </Card>
         </>
       )}
+
+      {/* ADR 0026: partners' invoices, paid directly to the partner, kept apart from the payment plan. */}
+      <ServiceInvoices />
     </Page>
   );
 }

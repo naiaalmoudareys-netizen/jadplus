@@ -2,12 +2,14 @@
  * The journey on the resident's request page (ADR 0018, 0019): the booked visit and where it stands
  * ("Technician on the way"), urgent make-safe work within the owner's limit (E8), the quote (the owner
  * decides; a tenant is told the owner decides), "Is the work done?", the finished-work photos, the rating, and
- * cancelling or "I arranged it myself" (E19). A tenant's request first waits for the owner's approval (A1, ADR 0021). Every button comes from `actions`, what the API allows now.
+ * cancelling or "I arranged it myself" (E19). A tenant's request first waits for the owner's approval (A1, ADR 0021). The owner also sees the partner's invoice
+ * (ADR 0026), paid directly to the partner. Every button comes from `actions`, what the API allows now.
  */
 import type { RequestDetail } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useT } from '../i18n/I18nProvider.js';
+import { RequestInvoice } from '../invoices/InvoiceCard.js';
 import { Body } from '../ui/kit.js';
 import { space } from '../ui/theme.js';
 import { CloseRequest } from './CloseRequest.js';
@@ -58,6 +60,7 @@ export function ResidentJourney(props: {
       />
       {actions.includes('rate') ? <RateRequest requestId={request.id} onDone={props.onChanged} /> : null}
       {rating === null ? null : <GivenRating rating={rating} />}
+      {props.owner ? <RequestInvoice requestId={request.id} /> : null}
       <CloseRequest requestId={request.id} actions={actions} onDone={props.onChanged} />
     </View>
   );

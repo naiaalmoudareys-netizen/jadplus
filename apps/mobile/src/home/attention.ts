@@ -2,8 +2,9 @@
  * What Home puts first (ADR 0014): a greeting, the things that need the owner's attention right now, and the
  * two requests that matter most. Plain logic, tested without a phone.
  */
-import { OPEN_STATUSES, dubaiDate, type RequestSummary } from '@jadplus/shared';
+import { OPEN_STATUSES, dubaiDate, type OwnerInvoice, type RequestSummary } from '@jadplus/shared';
 import type { Translate } from '../i18n/lang.js';
+import { invoicesForHome } from '../invoices/logic.js';
 
 const DUBAI_OFFSET_MS = 4 * 3_600_000;
 
@@ -16,7 +17,7 @@ export function greeting(now: number, t: Translate): string {
 }
 
 export interface AttentionItem {
-  readonly kind: 'overdue' | 'emergency' | 'approval' | 'quote' | 'confirm' | 'arriving';
+  readonly kind: 'overdue' | 'emergency' | 'approval' | 'quote' | 'confirm' | 'arriving' | 'invoice';
   readonly title: string;
   readonly detail: string;
   /** Where tapping goes: the Payments tab, or one request. */
@@ -36,7 +37,9 @@ function arrivingToday(r: RequestSummary, now: number): boolean {
 
 /**
  * Only what needs the person now, most urgent first: an emergency in progress, a tenant's request waiting for
- * the owner's approval (A1, owners only), a quote waiting for the owner's decision (L4, owners only), work to confirm (E10), a technician arriving today, an overdue payment.
+ * the owner's approval (A1, owners only), a quote waiting for the owner's decision (L4, owners only), work to
+ * confirm (E10), a technician arriving today, a partner's invoice due within 3 days or overdue (ADR 0026, owners
+ * only), an overdue payment.
  * Nothing here means all is well, and Home shows no section at all.
  */
 export function attentionItems(input: {
@@ -48,6 +51,10 @@ export function attentionItems(input: {
   readonly t: Translate;
   readonly label: (r: RequestSummary) => string;
   readonly arrival: (r: RequestSummary) => string | null;
+  /** The owner's partner invoices (ADR 0026); empty for a tenant. */
+  readonly invoices: readonly OwnerInvoice[];
+  /** "AED 1,050 · Due tomorrow" for an invoice. */
+  readonly invoiceDetail: (i: OwnerInvoice) => string;
 }): AttentionItem[] {
   const { t } = input;
   const items: AttentionItem[] = [];
@@ -93,6 +100,14 @@ export function attentionItems(input: {
         target: { requestId: r.id },
       });
     }
+  }
+  for (const i of input.owner ? invoicesForHome(input.invoices, dubaiDate(input.now)) : []) {
+    items.push({
+      kind: 'invoice',
+      title: t('attention.invoice'),
+      detail: input.invoiceDetail(i),
+      target: { requestId: i.requestId },
+    });
   }
   if (input.overdue !== null) {
     items.push({

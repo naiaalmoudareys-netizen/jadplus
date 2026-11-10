@@ -13,6 +13,13 @@ import {
   inboxResponse,
   ownerTenanciesResponse,
   tenantTenanciesResponse,
+  residentGuideResponse,
+  residentNoticesResponse,
+  ownerInvoicesResponse,
+  requestInvoiceResponse,
+  type OwnerInvoice,
+  type ResidentGuide,
+  type ResidentNotices,
   type ApprovalBody,
   type InviteTenantBody,
   type OwnerTenancy,
@@ -271,3 +278,25 @@ export const acceptTenancy = (api: ApiClient, id: string): Promise<unknown> =>
 /** A1, owner: approve or decline a tenant's request. */
 export const decideApproval = (api: ApiClient, requestId: string, body: ApprovalBody): Promise<unknown> =>
   api.post(request(requestId, 'approval'), body, z.unknown());
+
+/** V1, owner or tenant: current and soon-starting notices for their buildings. */
+export const myNotices = async (api: ApiClient): Promise<ResidentNotices['notices']> =>
+  (await api.get('/api/me/notices', residentNoticesResponse)).notices;
+
+/** V1, owner or tenant: the home guide for each of their buildings (information only, L3). */
+export const myGuide = async (api: ApiClient): Promise<ResidentGuide['places']> =>
+  (await api.get('/api/me/guide', residentGuideResponse)).places;
+
+/** ADR 0026, owner: their partner invoices (paid directly to the partner) and what is still to pay. */
+export const ownerInvoices = (
+  api: ApiClient,
+): Promise<{ invoices: OwnerInvoice[]; outstandingFils: number }> =>
+  api.get('/api/owner/invoices', ownerInvoicesResponse);
+
+/** ADR 0026, owner: the request's invoice, or null when none is active. */
+export const requestInvoice = async (api: ApiClient, requestId: string): Promise<OwnerInvoice | null> =>
+  (await api.get(request(requestId, 'invoice'), requestInvoiceResponse)).invoice;
+
+/** ADR 0026, owner: "I have paid" on the day given; the partner then confirms. */
+export const claimInvoicePaid = (api: ApiClient, invoiceId: string, paidOn: string): Promise<unknown> =>
+  api.post(`/api/owner/invoices/${encodeURIComponent(invoiceId)}/claim-paid`, { paidOn }, z.unknown());

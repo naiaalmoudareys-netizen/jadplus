@@ -13,6 +13,7 @@ import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { errorText } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
+import { GuideLink } from '../../src/building/BuildingParts.js';
 import { ConstructionSection } from '../../src/portal/ConstructionSection.js';
 import { documentRow } from '../../src/portal/deskRows.js';
 import { useLang, useT } from '../../src/i18n/I18nProvider.js';
@@ -205,6 +206,7 @@ export default function MyUnit(): ReactNode {
       <View style={styles.section} onLayout={scroll.onLayout('construction')}>
         <ConstructionSection project={u?.project ?? null} />
       </View>
+      <GuideLink />
       {/* U1: a residence the owner bought is not listed: one tap opens a case with the JAD+ desk. */}
       <DeskHelpLink title="help.unitMissing" note="help.unitMissingNote" text="help.unitMissingText" />
     </Page>

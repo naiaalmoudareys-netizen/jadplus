@@ -7,10 +7,12 @@ import { requestLabels } from './strings/labels-requests.js';
 import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
+import { screensBuilding } from './strings/screens-building.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
 import { screensInboxPartner } from './strings/screens-inbox-partner.js';
+import { screensInvoices } from './strings/screens-invoices.js';
 import { screensJob } from './strings/screens-job.js';
 import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
@@ -41,6 +43,8 @@ export const PARTS = [
   screensTenancy2,
   screensPartner,
   screensJob,
+  screensBuilding,
+  screensInvoices,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

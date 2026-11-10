@@ -49,7 +49,9 @@ export type InboxIcon =
   | 'person-add-outline'
   | 'checkmark-done-outline'
   | 'refresh-outline'
-  | 'star-outline';
+  | 'star-outline'
+  | 'receipt-outline'
+  | 'cash-outline';
 
 export interface InboxText {
   readonly title: string;
@@ -102,6 +104,12 @@ const LOOK: Readonly<Record<InboxKind, KindLook>> = {
   work_reopened: { icon: 'refresh-outline', needsYou: true },
   job_rated: { icon: 'star-outline', needsYou: false },
   job_cancelled: { icon: 'close-circle-outline', needsYou: false },
+  invoice_issued: { icon: 'receipt-outline', needsYou: true },
+  invoice_overdue: { icon: 'receipt-outline', needsYou: true },
+  invoice_paid: { icon: 'checkmark-circle-outline', needsYou: false },
+  invoice_not_received: { icon: 'help-circle-outline', needsYou: true },
+  invoice_cancelled: { icon: 'close-circle-outline', needsYou: false },
+  invoice_paid_claimed: { icon: 'cash-outline', needsYou: true },
 };
 
 const key = (kind: InboxKind, part: 'title' | 'detail'): MessageKey => `inbox.${kind}.${part}`;
@@ -127,6 +135,9 @@ function values(item: InboxItem, lang: Lang): Record<string, string | number> {
     days: QUOTE_VALID_DAYS - Math.round(QUOTE_REMINDER_AFTER / DAY),
     date: longDate(item.data.endsOn ?? null, lang.locale),
     stars: item.data.stars ?? '',
+    // Invoices (ADR 0026): the number (the request reference if an older item has none) and the due date.
+    number: item.data.invoiceNumber ?? item.ref ?? '',
+    dueOn: longDate(item.data.dueOn ?? null, lang.locale),
   };
 }
 
