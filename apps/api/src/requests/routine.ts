@@ -1,13 +1,12 @@
 /**
- * Routine (non-emergency) requests (BUILD_SPEC S1-S4, R1, U6; ADR 0012).
+ * Routine (non-emergency) requests (BUILD_SPEC S1-S4, R1, R2, A1, U6; ADR 0012, 0021).
  *
  * - GET  /api/services   the 12-service catalogue, each with who takes a request now: its partner, the JAD+
  *                        team, or nobody yet ("coming soon", S2: no promise)
- * - POST /api/requests   an owner raises a request for one of their units. A partner service goes straight to
- *                        its partner (primary, or backup when the primary is suspended) with the 4-working-hour
- *                        response clock (S4); an in-house service goes to the JAD+ team on the same clock.
- *
- * Tenants' routine requests need the owner's approval first (A1) and come with the tenant features.
+ * - POST /api/requests   an owner raises a request for one of their units, or a tenant for their current home.
+ *                        An owner's request goes straight to the service's partner (primary, or backup when the
+ *                        primary is suspended) with the 4-working-hour response clock (S4), or to the JAD+ team.
+ *                        A tenant's request first waits for the owner's approval (A1, approval.ts).
  */
 import {
   DEFAULT_CALENDAR,
@@ -19,6 +18,7 @@ import {
   raiseRequestBody,
   serviceRouting,
   type ServiceDelivery,
+  type ServiceRouting,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { auditStatement } from '../audit.js';
@@ -29,9 +29,11 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseJsonBody } from '../validate.js';
 import { place } from './emergency.js';
+import { inboxStatements } from './inbox.js';
 import { eventStatement, newRef, servicePartners } from './store.js';
 
 const MIN = 60_000;
+const HOUR = 60 * MIN;
 
 interface ServiceRow {
   code: string;
@@ -39,6 +41,24 @@ interface ServiceRow {
   grp: string;
   delivery: ServiceDelivery;
   blurb: string;
+}
+
+export interface Route {
+  readonly service: ServiceRow;
+  readonly partner: { readonly id: string; readonly name: string } | null;
+  readonly routing: ServiceRouting;
+}
+
+/** Who takes a request for this service now (S2, S3): its partner, the JAD+ team, or nobody yet. */
+export async function routeService(db: D1Database, code: string): Promise<Route | null> {
+  const service = await db
+    .prepare('SELECT code, name, grp, delivery, blurb FROM services WHERE code = ? AND listed = 1')
+    .bind(code)
+    .first<ServiceRow>();
+  if (service === null) return null;
+  const { primary, backup } = await servicePartners(db, service.code);
+  const partner = service.delivery === 'partner' ? choosePartner(primary, backup) : null;
+  return { service, partner, routing: serviceRouting(service.delivery, partner !== null) };
 }
 
 export function routineRoutes(deps: Deps): Hono<AppEnv> {
@@ -70,7 +90,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     });
   });
 
-  r.post('/requests', requireRole('owner'), async (c) => {
+  r.post('/requests', requireRole('owner', 'tenant'), async (c) => {
     const body = await parseJsonBody(c, raiseRequestBody);
     const db = c.env.DB;
     const now = c.get('now');
@@ -81,22 +101,25 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     if (!preferredDays(today, DEFAULT_CALENDAR).includes(body.preferredDate)) {
       throw new ApiError(400, 'Choose a working day within the next two weeks.');
     }
-
-    const service = await db
-      .prepare('SELECT code, name, grp, delivery, blurb FROM services WHERE code = ? AND listed = 1')
-      .bind(body.serviceCode)
-      .first<ServiceRow>();
-    if (service === null) throw new ApiError(404, 'This service is not available.');
-    const { primary, backup } = await servicePartners(db, service.code);
-    const partner = service.delivery === 'partner' ? choosePartner(primary, backup) : null;
-    const routing = serviceRouting(service.delivery, partner !== null);
+    const route = await routeService(db, body.serviceCode);
+    if (route === null) throw new ApiError(404, 'This service is not available.');
+    const { service, routing } = route;
     if (routing === 'coming_soon') {
       throw new ApiError(422, `${service.name} is coming soon.`, { body: { code: 'coming_soon' } });
     }
+    // A1: a tenant's request waits for the owner; the partner is chosen when the owner approves.
+    const tenant = actor.role === 'tenant';
+    const partner = tenant ? null : route.partner;
+    const status = tenant ? 'awaiting_owner' : partner === null ? 'submitted' : 'assigned';
+    const due = tenant
+      ? { at: now + 24 * HOUR, kind: 'owner_approval' }
+      : {
+          at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, DEFAULT_CALENDAR),
+          kind: 'routine_response',
+        };
 
     const id = newId();
     const ref = newRef();
-    const due = addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, DEFAULT_CALENDAR);
     const sys = { requestId: id, at: now, actorUserId: null, actorRole: 'system' as const };
     const statements: D1PreparedStatement[] = [
       db
@@ -104,7 +127,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           `INSERT INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, tenancy_id, raised_by_user_id,
              raised_by_role, description, is_emergency, status, partner_id, next_due_at, next_due_kind,
              preferred_date, preferred_slot, created_at, updated_at, status_changed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'owner', ?, 0, ?, ?, ?, 'routine_response', ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .bind(
           id,
@@ -114,10 +137,12 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           where.ownerUserId,
           where.tenancyId,
           actor.userId,
+          tenant ? 'tenant' : 'owner',
           body.description,
-          partner === null ? 'submitted' : 'assigned',
+          status,
           partner?.id ?? null,
-          due,
+          due.at,
+          due.kind,
           body.preferredDate,
           body.preferredSlot,
           now,
@@ -130,7 +155,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
         actorUserId: actor.userId,
         actorRole: actor.role,
         kind: 'created',
-        toStatus: 'submitted',
+        toStatus: tenant ? 'awaiting_owner' : 'submitted',
         data: { service: service.code },
       }),
       auditStatement(db, {
@@ -142,10 +167,19 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
         targetId: id,
         ipHash: c.get('ipHash'),
         httpRequestId: c.get('requestId'),
-        detail: { service: service.code, routing },
+        detail: { service: service.code, routing, awaitingOwner: tenant },
       }),
     ];
-    if (partner !== null) {
+    if (tenant) {
+      statements.push(
+        ...inboxStatements(
+          db,
+          { id, owner_user_id: where.ownerUserId, raised_by_user_id: actor.userId },
+          'approval_needed',
+          now,
+        ),
+      );
+    } else if (partner !== null) {
       statements.push(
         eventStatement(db, { ...sys, kind: 'status_changed', fromStatus: 'submitted', toStatus: 'assigned' }),
         eventStatement(db, { ...sys, kind: 'assigned', partnerId: partner.id }),
@@ -155,9 +189,18 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     c.get('log').log('info', 'Routine request raised', {
       service: service.code,
       routing,
-      dueInMin: Math.round((due - now) / MIN),
+      awaitingOwner: tenant,
+      dueInMin: Math.round((due.at - now) / MIN),
     });
-    return c.json({ requestId: id, ref, sentTo: partner?.name ?? 'the JAD+ team' }, 201);
+    return c.json(
+      {
+        requestId: id,
+        ref,
+        sentTo: route.partner?.name ?? 'the JAD+ team',
+        awaitingOwner: tenant,
+      },
+      201,
+    );
   });
 
   return r;

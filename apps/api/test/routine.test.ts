@@ -108,11 +108,11 @@ describe('raising a routine request (R1, S3, S4)', () => {
     expect(await res.json()).toMatchObject({ code: 'coming_soon' });
   });
 
-  it('C-AZ-1/C-AZ-2/C-VAL-1: owners only, own units only, known services only', async () => {
+  it('C-AZ-1/C-AZ-2/C-VAL-1: residents only, own units only, known services only', async () => {
     const w = await world();
-    expect((await raise(w, { ...tap, sfUnitId: undefined, tenancyId: 'ten-1' }, w.tenantToken)).status).toBe(
-      403,
-    );
+    expect((await raise(w, tap, w.primaryToken)).status).toBe(403);
+    // A tenant names their tenancy, never a unit (raiseRequestBody + place()).
+    expect((await raise(w, tap, w.tenantToken)).status).toBe(404);
     expect((await raise(w, { ...tap, sfUnitId: 'a0X000000000999AAA' })).status).toBe(404);
     expect((await raise(w, { ...tap, serviceCode: 'teleport' })).status).toBe(400);
     expect((await raise(w, { ...tap, description: ' ' })).status).toBe(400);

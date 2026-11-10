@@ -17,7 +17,7 @@ import {
 import type { MessageKey } from '../i18n/dictionary.js';
 import type { Lang } from '../i18n/lang.js';
 import { dayLabel } from '../jobs/format.js';
-import { aed } from '../portal/format.js';
+import { aed, longDate } from '../portal/format.js';
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -34,7 +34,13 @@ export type InboxIcon =
   | 'shield-checkmark-outline'
   | 'checkmark-circle-outline'
   | 'help-circle-outline'
-  | 'archive-outline';
+  | 'archive-outline'
+  | 'person-outline'
+  | 'thumbs-up-outline'
+  | 'thumbs-down-outline'
+  | 'key-outline'
+  | 'time-outline'
+  | 'log-out-outline';
 
 export interface InboxText {
   readonly title: string;
@@ -62,6 +68,13 @@ const LOOK: Readonly<Record<InboxKind, KindLook>> = {
   work_done: { icon: 'checkmark-circle-outline', needsYou: true },
   confirm_reminder: { icon: 'help-circle-outline', needsYou: true },
   auto_closed: { icon: 'archive-outline', needsYou: false },
+  approval_needed: { icon: 'person-outline', needsYou: true },
+  approval_reminder: { icon: 'hourglass-outline', needsYou: true },
+  request_approved: { icon: 'thumbs-up-outline', needsYou: false },
+  request_declined: { icon: 'thumbs-down-outline', needsYou: false },
+  tenancy_invited: { icon: 'key-outline', needsYou: true },
+  tenancy_ending: { icon: 'time-outline', needsYou: false },
+  tenancy_ended: { icon: 'log-out-outline', needsYou: false },
 };
 
 const key = (kind: InboxKind, part: 'title' | 'detail'): MessageKey => `inbox.${kind}.${part}`;
@@ -85,6 +98,7 @@ function values(item: InboxItem, lang: Lang): Record<string, string | number> {
     amount: amount === undefined ? '' : aed(amount, lang.locale),
     hours: item.kind === 'no_access' ? (item.data.hours ?? NO_ACCESS_REBOOK_HOURS) : AUTO_CLOSE_HOURS,
     days: QUOTE_VALID_DAYS - Math.round(QUOTE_REMINDER_AFTER / DAY),
+    date: longDate(item.data.endsOn ?? null, lang.locale),
   };
 }
 
@@ -103,19 +117,35 @@ const TITLE_WITHOUT_AMOUNT: Partial<Record<InboxKind, MessageKey>> = {
   make_safe_done: 'inbox.make_safe_done.titlePlain',
 };
 
+/** Tenancy lines that show the end date, and their wording when the item carries none (an ended invitation). */
+const DETAIL_WITHOUT_DATE: Partial<Record<InboxKind, MessageKey>> = {
+  tenancy_invited: 'inbox.tenancy_invited.detailPlain',
+  tenancy_ending: 'inbox.tenancy_ending.detailPlain',
+  tenancy_ended: 'inbox.tenancy_ended.detailPlain',
+};
+
 /** Title, detail line ("… · JAD-AB12CD") and icon for one notification. */
 export function inboxText(item: InboxItem, lang: Lang): InboxText {
   const v = values(item, lang);
   const look = LOOK[item.kind];
   const plainTitle = v.amount === '' ? TITLE_WITHOUT_AMOUNT[item.kind] : undefined;
   const noWindow = WINDOW_KINDS.has(item.kind) && v.when === '';
-  const sentence = noWindow ? '' : lang.t(key(item.kind, 'detail'), v);
+  const plainDetail = v.date === '' ? DETAIL_WITHOUT_DATE[item.kind] : undefined;
+  const sentence = noWindow ? '' : lang.t(plainDetail ?? key(item.kind, 'detail'), v);
   return {
     title: lang.t(plainTitle ?? key(item.kind, 'title'), v),
-    detail: sentence === '' ? item.ref : `${sentence} · ${item.ref}`,
+    detail: [sentence, item.ref ?? ''].filter((x) => x !== '').join(' · '),
     icon: look.icon,
     needsYou: look.needsYou,
   };
+}
+
+/** Where tapping a notification goes: its request, or (a tenancy item) My unit for owners and Home for tenants. */
+export type InboxTarget = { readonly requestId: string } | { readonly tab: 'unit' | 'home' };
+
+export function inboxTarget(item: InboxItem, owner: boolean): InboxTarget {
+  if (item.requestId !== null) return { requestId: item.requestId };
+  return { tab: owner ? 'unit' : 'home' };
 }
 
 export type InboxGroupKey = 'today' | 'yesterday' | 'earlier';

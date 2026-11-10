@@ -1,4 +1,7 @@
-/** My unit (R1, docs/DESIGN.md): the residence's facts, project and completion, from Salesforce. */
+/**
+ * My unit (R1, docs/DESIGN.md): the residence's facts, project and completion, from Salesforce, and its tenant
+ * (ADR 0021: invite, extend, end).
+ */
 import {
   DOCUMENT_REQUEST_TYPES,
   latestDeskRequest,
@@ -22,6 +25,7 @@ import { DemoBadge, Fact, LineItem, PortalError, UnitSwitcher } from '../../src/
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { Hero } from '../../src/ui/brand.js';
 import { DeskHelpLink } from '../../src/ui/HelpBits.js';
+import { TenantSection } from '../../src/tenancy/TenantSection.js';
 import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { space } from '../../src/ui/theme.js';
@@ -191,6 +195,9 @@ export default function MyUnit(): ReactNode {
         <Fact label={t('owner.fact.status')} value={deal.stage} />
         <Fact label={t('owner.fact.role')} value={deal.role} />
       </Card>
+      <View style={styles.section}>
+        <TenantSection key={u?.name ?? deal.id} unitName={u?.name ?? null} />
+      </View>
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal, t)} />
       <View style={styles.section} onLayout={scroll.onLayout('documents')}>
         <Documents data={data} deal={deal} />

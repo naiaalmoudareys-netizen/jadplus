@@ -101,6 +101,16 @@ describe('Home priorities', () => {
     expect(attention(list, null, fr, false)[0]?.title).toBe('Les travaux sont-ils terminés ?');
   });
 
+  it('A1: a tenant request waiting for approval needs the owner, not the tenant', () => {
+    const list = [req({ id: 'q', status: 'quote_sent' }), req({ id: 'w', status: 'awaiting_owner' })];
+    expect(attention(list).map((i) => [i.kind, i.title, i.detail])).toEqual([
+      ['quote', 'Quote waiting for your approval', 'Maintenance'],
+      ['approval', 'Tenant request waiting for your approval', 'Maintenance'],
+    ]);
+    expect(attention(list)[1]?.target).toEqual({ requestId: 'w' });
+    expect(attention(list, null, en, false)).toEqual([]);
+  });
+
   it('shows at most two open requests, emergencies first, and counts the open ones', () => {
     const list = [
       req({ id: 'old', createdAt: NOW - 5 * HOUR }),

@@ -40,6 +40,8 @@ export const JOB_ACTIONS = [
   'make_safe',
   'cancel',
   'arranged_myself',
+  'approve_request',
+  'decline_request',
 ] as const;
 export type JobAction = (typeof JOB_ACTIONS)[number];
 
@@ -89,6 +91,8 @@ export function jobActions(role: Role, s: JobState): JobAction[] {
       actions.push('make_safe');
     }
   }
+  // A1: a tenant's routine request waits for the owner.
+  if (role === 'owner' && s.status === 'awaiting_owner') actions.push('approve_request', 'decline_request');
   if (role === 'owner' && s.status === 'quote_sent' && s.pendingQuote) {
     actions.push('approve_quote', 'decline_quote');
   }

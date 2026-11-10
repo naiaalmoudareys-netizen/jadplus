@@ -52,6 +52,13 @@ export const AUDIT_ACTIONS = [
   'no_access_recorded',
   'request_cancelled',
   'request_owner_arranged',
+  'request_approved_by_owner',
+  'request_declined_by_owner',
+  'tenant_invited',
+  'tenancy_accepted',
+  'tenancy_extended',
+  'tenancy_ended_by_owner',
+  'tenancy_expired',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

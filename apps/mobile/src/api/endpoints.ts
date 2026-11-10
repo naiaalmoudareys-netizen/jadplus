@@ -11,6 +11,12 @@ import {
   servicesResponse,
   preferencesResponse,
   inboxResponse,
+  ownerTenanciesResponse,
+  tenantTenanciesResponse,
+  type ApprovalBody,
+  type InviteTenantBody,
+  type OwnerTenancy,
+  type TenantTenancy,
   type Inbox,
   type MarkReadBody,
   type CloseRequestBody,
@@ -225,3 +231,34 @@ export const makeSafe = (api: ApiClient, jobId: string, body: MakeSafeBody): Pro
 /** Owner or tenant: cancel before the work starts, or (owner, E19) "I arranged it myself". */
 export const closeRequest = (api: ApiClient, requestId: string, body: CloseRequestBody): Promise<unknown> =>
   api.post(request(requestId, 'close'), body, z.unknown());
+
+/** R2, O4 (ADR 0021), owner: their tenancies, with the tenant's name and masked contact. */
+export const ownerTenancies = async (api: ApiClient): Promise<OwnerTenancy[]> =>
+  (await api.get('/api/owner/tenancies', ownerTenanciesResponse)).tenancies;
+
+/** R2, owner: invite a tenant to one unit for fixed dates (email or mobile). */
+export const inviteTenant = (api: ApiClient, body: InviteTenantBody): Promise<unknown> =>
+  api.post('/api/owner/tenancies', body, z.unknown());
+
+const tenancy = (id: string, step: string): string =>
+  `/api/owner/tenancies/${encodeURIComponent(id)}/${step}`;
+
+/** U5, owner: a new end date (also brings back a tenancy that just ended). */
+export const extendTenancy = (api: ApiClient, id: string, endsOn: string): Promise<unknown> =>
+  api.post(tenancy(id, 'extend'), { endsOn }, z.unknown());
+
+/** Owner: end a tenancy now, or withdraw an invitation. */
+export const endTenancy = (api: ApiClient, id: string): Promise<unknown> =>
+  api.post(tenancy(id, 'end'), {}, z.unknown());
+
+/** R2, tenant: their invitations and current tenancies. */
+export const tenantTenancies = async (api: ApiClient): Promise<TenantTenancy[]> =>
+  (await api.get('/api/tenant/tenancies', tenantTenanciesResponse)).tenancies;
+
+/** R2, tenant: accept an invitation. */
+export const acceptTenancy = (api: ApiClient, id: string): Promise<unknown> =>
+  api.post(`/api/tenant/tenancies/${encodeURIComponent(id)}/accept`, {}, z.unknown());
+
+/** A1, owner: approve or decline a tenant's request. */
+export const decideApproval = (api: ApiClient, requestId: string, body: ApprovalBody): Promise<unknown> =>
+  api.post(request(requestId, 'approval'), body, z.unknown());

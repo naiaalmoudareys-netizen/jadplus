@@ -1,7 +1,7 @@
 /**
  * Notifications (ADR 0019): what happened on the person's requests and what is coming up, newest first under
  * Today, Yesterday and Earlier (Dubai dates), written by the app in the person's language. Tapping one marks it
- * read and opens its request; "Mark all as read" clears the dots; pull down to refresh.
+ * read and opens its request (a tenancy item: My unit for owners, Home for tenants); "Mark all as read" clears the dots; pull down to refresh.
  */
 import type { Inbox, InboxItem } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { inbox, markInboxRead } from '../src/api/endpoints.js';
 import { useLang } from '../src/i18n/I18nProvider.js';
 import { InboxEmpty, InboxRow } from '../src/inbox/InboxParts.js';
-import { inboxGroups } from '../src/inbox/wording.js';
+import { inboxGroups, inboxTarget } from '../src/inbox/wording.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { useLoad, useNow } from '../src/ui/hooks.js';
 import { Loading, Notice } from '../src/ui/kit.js';
@@ -36,6 +36,7 @@ export default function Notifications(): ReactNode {
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if (list.loading && list.data === null) return <Loading />;
 
+  const owner = session.me.role === 'owner';
   const items = withRead(list.data, read);
   const unread = items.some((i) => !i.read);
   const sections = inboxGroups(items, now).map((g) => ({
@@ -57,7 +58,9 @@ export default function Notifications(): ReactNode {
       setRead((r) => (r === 'all' ? r : new Set(r).add(item.id)));
       markInboxRead(api, { ids: [item.id] }).catch(() => undefined);
     }
-    router.push({ pathname: '/request/[id]', params: { id: item.requestId } });
+    const target = inboxTarget(item, owner);
+    if ('requestId' in target) router.push({ pathname: '/request/[id]', params: { id: target.requestId } });
+    else router.push(target.tab === 'unit' ? '/unit' : '/home');
   };
   const markAll = () => {
     setRead('all');

@@ -44,6 +44,7 @@ export function Shortcuts({ items }: { items: readonly Shortcut[] }): ReactNode 
 
 const ATTENTION_ICON: Readonly<Record<AttentionItem['kind'], IconName>> = {
   emergency: 'warning-outline',
+  approval: 'person-outline',
   quote: 'document-text-outline',
   confirm: 'checkmark-circle-outline',
   arriving: 'time-outline',

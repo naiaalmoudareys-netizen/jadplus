@@ -14,6 +14,8 @@ import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
 import { screensOwner2 } from './strings/screens-owner-2.js';
 import { screensRequests } from './strings/screens-requests.js';
+import { screensTenancy } from './strings/screens-tenancy.js';
+import { screensTenancy2 } from './strings/screens-tenancy-2.js';
 import { merge } from './translate.js';
 
 export const PARTS = [
@@ -31,6 +33,8 @@ export const PARTS = [
   screensJourney,
   screensInbox,
   screensExtras,
+  screensTenancy,
+  screensTenancy2,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

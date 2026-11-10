@@ -4,6 +4,8 @@
  * The details (day, time window, description, up to 3 photos) are asked in a pop-up from the bottom
  * (RequestSheet), so nobody scrolls through one long form. The answer names who has the request: the partner
  * company or the JAD+ team. Photos are re-saved on the phone without location data before they are sent.
+ * A tenant raises one for their home; it first waits for the owner's approval (A1, ADR 0021), and the answer
+ * says so.
  */
 import { SERVICE_GROUPS, type MyPlace, type RequestRaised, type ServiceView } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
@@ -95,11 +97,22 @@ export default function NewRequest(): ReactNode {
         <Heading>
           {service === null ? t('req.sent.yourRequest') : serviceName(service.code, service.name, t)}
         </Heading>
-        <Text style={styles.confirmation}>
-          {sent.raised.sentTo === JAD_TEAM
-            ? t('req.sent.toTeam')
-            : t('req.sent.to', { name: sent.raised.sentTo })}
-        </Text>
+        {sent.raised.awaitingOwner ? (
+          <>
+            <Text style={styles.confirmation}>{t('tenancy.sentForApproval')}</Text>
+            <Body muted>
+              {sent.raised.sentTo === JAD_TEAM
+                ? t('tenancy.afterApprovalTeam')
+                : t('tenancy.afterApproval', { name: sent.raised.sentTo })}
+            </Body>
+          </>
+        ) : (
+          <Text style={styles.confirmation}>
+            {sent.raised.sentTo === JAD_TEAM
+              ? t('req.sent.toTeam')
+              : t('req.sent.to', { name: sent.raised.sentTo })}
+          </Text>
+        )}
         <Body muted>{t('req.sent.reference', { ref: sent.raised.ref })}</Body>
         {sent.photoProblem ? <Notice tone="error">{t('req.sent.photoProblem')}</Notice> : null}
         <Button

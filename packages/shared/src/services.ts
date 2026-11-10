@@ -160,7 +160,9 @@ export type ServiceView = z.infer<typeof servicesResponse>['services'][number];
 export const requestRaisedResponse = z.object({
   requestId: z.string(),
   ref: z.string(),
-  /** "Primary Fixers LLC" or "the JAD+ team". */
+  /** "Primary Fixers LLC" or "the JAD+ team"; for a tenant's request, who will handle it once approved. */
   sentTo: z.string(),
+  /** A1: a tenant's routine request first waits for the owner's approval. */
+  awaitingOwner: z.boolean(),
 });
 export type RequestRaised = z.infer<typeof requestRaisedResponse>;

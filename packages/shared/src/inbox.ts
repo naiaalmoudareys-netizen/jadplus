@@ -22,6 +22,13 @@ export const INBOX_KINDS = [
   'work_done', // E10: please confirm
   'confirm_reminder', // A4: 24 h and 48 h after the work was marked done
   'auto_closed', // A4: closed after 72 h without an answer
+  'approval_needed', // A1: a tenant's request waits for the owner
+  'approval_reminder', // A1: 24 h later
+  'request_approved', // A1: to the tenant
+  'request_declined', // A1: to the tenant
+  'tenancy_invited', // R2: to the tenant
+  'tenancy_ending', // U4: 30 days before the end, to the tenant and the owner
+  'tenancy_ended', // U5: access ended; the owner can extend in one tap
 ] as const;
 export type InboxKind = (typeof INBOX_KINDS)[number];
 
@@ -31,7 +38,22 @@ export const OWNER_ONLY_KINDS: ReadonlySet<InboxKind> = new Set<InboxKind>([
   'quote_reminder',
   'quote_expired',
   'make_safe_done',
+  'approval_needed',
+  'approval_reminder',
 ]);
+
+/** Kinds only the person who raised the request receives (the owner made the decision). */
+export const REQUESTER_ONLY_KINDS: ReadonlySet<InboxKind> = new Set<InboxKind>([
+  'request_approved',
+  'request_declined',
+]);
+
+/** The people a request notification goes to: the owner, the person who raised it, or both (once). */
+export function inboxRecipients(kind: InboxKind, ownerUserId: string, raisedByUserId: string): string[] {
+  if (OWNER_ONLY_KINDS.has(kind)) return [ownerUserId];
+  if (REQUESTER_ONLY_KINDS.has(kind)) return [raisedByUserId];
+  return [...new Set([ownerUserId, raisedByUserId])];
+}
 
 /** The few facts the app needs to write the sentence. No personal data. */
 export const inboxData = z.object({
@@ -39,6 +61,9 @@ export const inboxData = z.object({
   windowEnd: z.number().int().optional(),
   amountAed: z.number().optional(),
   hours: z.number().int().optional(),
+  /** A tenancy's end date (YYYY-MM-DD) and the days left. */
+  endsOn: z.string().optional(),
+  days: z.number().int().optional(),
 });
 export type InboxData = z.infer<typeof inboxData>;
 
@@ -48,8 +73,10 @@ export const inboxResponse = z.object({
     z.object({
       id: z.string(),
       kind: z.enum(INBOX_KINDS),
-      requestId: z.string(),
-      ref: z.string(),
+      /** The request the item is about, or null for a tenancy item (then tenancyId is set). */
+      requestId: z.string().nullable(),
+      tenancyId: z.string().nullable(),
+      ref: z.string().nullable(),
       at: z.number().int(),
       read: z.boolean(),
       data: inboxData,

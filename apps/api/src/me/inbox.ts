@@ -7,7 +7,15 @@
  * Only the person's own items (C-AZ-2), and only for requests they may still see: a tenant whose tenancy ended
  * no longer sees that unit's notifications.
  */
-import { ROLES, dubaiDate, canViewRequest, inboxData, markReadBody, type UserRole } from '@jadplus/shared';
+import {
+  ROLES,
+  canViewRequest,
+  dubaiDate,
+  inboxData,
+  markReadBody,
+  type Actor,
+  type UserRole,
+} from '@jadplus/shared';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
@@ -20,14 +28,32 @@ const LIMIT = 50;
 interface Row {
   id: string;
   kind: string;
-  request_id: string;
-  ref: string;
+  request_id: string | null;
+  item_tenancy_id: string | null;
+  ref: string | null;
   at: number;
   read_at: number | null;
   data: string | null;
-  owner_user_id: string;
+  owner_user_id: string | null;
   tenancy_id: string | null;
   partner_id: string | null;
+  t_owner: string | null;
+  t_tenant: string | null;
+}
+
+/**
+ * Request items: only while the person may still see the request (canViewRequest). Tenancy items: in the
+ * view they belong to (the owner's in the owner view, the tenant's in the tenant view).
+ */
+async function visibleTo(db: D1Database, actor: Actor, row: Row, today: string): Promise<boolean> {
+  if (row.item_tenancy_id !== null) {
+    return (
+      (actor.role === 'owner' && row.t_owner === actor.userId) ||
+      (actor.role === 'tenant' && row.t_tenant === actor.userId)
+    );
+  }
+  if (row.owner_user_id === null) return false;
+  return canViewRequest(actor, await requestFacts(db, { ...row, owner_user_id: row.owner_user_id }), today);
 }
 
 export function inboxRoutes(): Hono<AppEnv> {
@@ -41,21 +67,23 @@ export function inboxRoutes(): Hono<AppEnv> {
     const today = dubaiDate(c.get('now'));
     const { results } = await db
       .prepare(
-        `SELECT i.id, i.kind, i.request_id, r.ref, i.at, i.read_at, i.data, r.owner_user_id, r.tenancy_id, r.partner_id
-         FROM inbox i JOIN requests r ON r.id = i.request_id
+        `SELECT i.id, i.kind, i.request_id, i.tenancy_id AS item_tenancy_id, r.ref, i.at, i.read_at, i.data,
+                r.owner_user_id, r.tenancy_id, r.partner_id, t.owner_user_id AS t_owner, t.tenant_user_id AS t_tenant
+         FROM inbox i LEFT JOIN requests r ON r.id = i.request_id LEFT JOIN tenancies t ON t.id = i.tenancy_id
          WHERE i.user_id = ? ORDER BY i.at DESC, i.rowid DESC LIMIT ?`,
       )
       .bind(actor.userId, LIMIT)
       .all<Row>();
     const visible: Row[] = [];
     for (const row of results) {
-      if (canViewRequest(actor, await requestFacts(db, row), today)) visible.push(row);
+      if (await visibleTo(db, actor, row, today)) visible.push(row);
     }
     return c.json({
       items: visible.map((row) => ({
         id: row.id,
         kind: row.kind,
         requestId: row.request_id,
+        tenancyId: row.item_tenancy_id,
         ref: row.ref,
         at: row.at,
         read: row.read_at !== null,

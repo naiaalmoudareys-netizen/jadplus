@@ -3,7 +3,7 @@ import type { InboxItem } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import { langOf } from '../src/i18n/lang.js';
 import { visitStatusLabel } from '../src/jobs/journey.js';
-import { badgeText, inboxGroups, inboxText, inboxTime } from '../src/inbox/wording.js';
+import { badgeText, inboxGroups, inboxTarget, inboxText, inboxTime } from '../src/inbox/wording.js';
 
 const en = langOf('en');
 const fr = langOf('fr');
@@ -19,6 +19,7 @@ const item = (over: Partial<InboxItem>): InboxItem => ({
   id: 'i1',
   kind: 'visit_booked',
   requestId: 'r1',
+  tenancyId: null,
   ref: 'JAD-AB12CD',
   at: NOW - 5 * MINUTE,
   read: false,
@@ -89,6 +90,46 @@ describe('L4, A2, A4, E8: decisions and closings', () => {
     expect(done.title).toBe('Les travaux sont-ils terminés ?');
     expect(done.detail).toBe('Clôture automatique après 72 heures · JAD-AB12CD');
     expect(inboxText(item({ kind: 'work_done' }), ar).title).toBe('تم إنجاز العمل');
+  });
+});
+
+describe('A1, R2, U4, U5: tenants and approvals', () => {
+  const tenancy = (over: Partial<InboxItem>): InboxItem =>
+    item({ requestId: null, tenancyId: 't1', ref: null, ...over });
+
+  it('A1: the owner is asked to approve a tenant request; the tenant hears the answer', () => {
+    const asked = inboxText(item({ kind: 'approval_needed' }), en);
+    expect(asked).toEqual({
+      title: 'Your tenant asked for a service',
+      detail: 'Waiting for your approval · JAD-AB12CD',
+      icon: 'person-outline',
+      needsYou: true,
+    });
+    expect(inboxText(item({ kind: 'request_declined' }), en).title).toBe('The owner declined your request');
+    expect(inboxText(item({ kind: 'request_approved' }), fr).title).toBe(
+      'Le propriétaire a accepté votre demande',
+    );
+  });
+
+  it('R2/U4/U5: tenancy items show the end date and no reference', () => {
+    expect(inboxText(tenancy({ kind: 'tenancy_invited', data: { endsOn: '2027-11-14' } }), en).detail).toBe(
+      'Until 14 Nov 2027. Accept it on Home',
+    );
+    expect(
+      inboxText(tenancy({ kind: 'tenancy_ending', data: { endsOn: '2026-12-31', days: 30 } }), en),
+    ).toMatchObject({ title: 'Tenancy ending soon', detail: 'Ends on 31 Dec 2026' });
+    expect(inboxText(tenancy({ kind: 'tenancy_ended', data: { endsOn: '2026-12-31' } }), en).detail).toBe(
+      'Access ended on 31 Dec 2026',
+    );
+    expect(inboxText(tenancy({ kind: 'tenancy_ended' }), en).detail).toBe(
+      'Access to the residence has ended',
+    );
+  });
+
+  it('a tenancy item opens My unit for an owner and Home for a tenant; a request item its request', () => {
+    expect(inboxTarget(tenancy({ kind: 'tenancy_ended' }), true)).toEqual({ tab: 'unit' });
+    expect(inboxTarget(tenancy({ kind: 'tenancy_invited' }), false)).toEqual({ tab: 'home' });
+    expect(inboxTarget(item({ kind: 'approval_needed' }), true)).toEqual({ requestId: 'r1' });
   });
 });
 

@@ -16,6 +16,7 @@ import { isVersionConflict, versionGuard } from '../requests/concurrency.js';
 import { inboxStatements, type InboxTarget } from '../requests/inbox.js';
 import { eventStatement } from '../requests/store.js';
 import { runReminders, type ReminderResult } from './reminders.js';
+import { runTenancyClock, type TenancyClockResult } from './tenancy-clock.js';
 
 const HOUR = 3_600_000;
 
@@ -30,6 +31,7 @@ export interface ClockResult {
   readonly autoClosed: number;
   readonly conflicts: number;
   readonly reminders: ReminderResult;
+  readonly tenancies: TenancyClockResult;
 }
 
 function closeStatements(
@@ -110,7 +112,8 @@ export async function runRequestClock(db: D1Database, now: number, log: Logger):
     }
   }
   const reminders = await runReminders(db, now);
-  const result = { expiredQuotes, autoClosed, conflicts, reminders };
+  const tenancies = await runTenancyClock(db, now);
+  const result = { expiredQuotes, autoClosed, conflicts, reminders, tenancies };
   if (results.length > 0)
     log.log('info', 'Request clock', { expiredQuotes, autoClosed, conflicts, ...reminders });
   return result;

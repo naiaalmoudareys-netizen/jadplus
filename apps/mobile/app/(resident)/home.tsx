@@ -2,13 +2,14 @@
  * Home (ADR 0014; Naya, 10-Nov-2026: "redesign the home page"). It answers "is everything fine with my home,
  * and is there anything I need to do?": a greeting on the project photo, what needs attention now (only when
  * something does), the notifications bell (ADR 0019), one-tap shortcuts, the next payment, the two requests that matter most, construction
- * progress, and news & offers to swipe through. Everything else is one tap away in the tabs.
+ * progress, and news & offers to swipe through. Everything else is one tap away in the tabs. A tenant also
+ * sees their invitations and their home's end date (ADR 0021).
  */
 import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { myPlaces, myRequests } from '../../src/api/endpoints.js';
+import { myPlaces, myRequests, tenantTenancies } from '../../src/api/endpoints.js';
 import {
   attentionItems,
   greeting,
@@ -34,10 +35,11 @@ import { DemoBadge, ProgressBar } from '../../src/portal/ui.js';
 import { projectKey } from '../../src/brand/projects.js';
 import { RequestRow } from '../../src/requests/RequestRow.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
+import { TenantHome } from '../../src/tenancy/TenantHome.js';
 import { Hero } from '../../src/ui/brand.js';
 import { scrollParams } from '../../src/ui/scrollTarget.js';
 import { useLoad } from '../../src/ui/hooks.js';
-import { Body, Card, Page } from '../../src/ui/kit.js';
+import { Body, Card, Notice, Page } from '../../src/ui/kit.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
 
 const REFRESH_MS = 30_000;
@@ -54,6 +56,12 @@ export default function Home(): ReactNode {
   const requests = useLoad(loadRequests, REFRESH_MS);
   const { reload } = requests;
   const unread = useUnread(api);
+  const tenant = session.status === 'signed_in' && session.me.role === 'tenant';
+  const loadTenancies = useCallback(
+    () => (tenant ? tenantTenancies(api) : Promise.resolve([])),
+    [api, tenant],
+  );
+  const tenancies = useLoad(loadTenancies);
   useFocusEffect(
     useCallback(() => {
       void reload();
@@ -129,6 +137,13 @@ export default function Home(): ReactNode {
         ]
       : [
           {
+            label: t('owner.home.request'),
+            icon: 'add-circle-outline' as const,
+            onPress: () => {
+              router.push('/new-request');
+            },
+          },
+          {
             label: t('tab.requests'),
             icon: 'list-outline' as const,
             onPress: () => {
@@ -160,6 +175,15 @@ export default function Home(): ReactNode {
             }}
           />
         }
+      />
+      {tenancies.error === null ? null : <Notice tone="error">{tenancies.error}</Notice>}
+      <TenantHome
+        tenancies={tenancies.data ?? []}
+        onChanged={() => {
+          void tenancies.reload();
+          void places.reload();
+          void reload();
+        }}
       />
       <Attention items={attention} onPress={openItem} />
       <Shortcuts items={shortcuts} />

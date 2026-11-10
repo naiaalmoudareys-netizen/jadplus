@@ -16,7 +16,7 @@ export function greeting(now: number, t: Translate): string {
 }
 
 export interface AttentionItem {
-  readonly kind: 'overdue' | 'emergency' | 'quote' | 'confirm' | 'arriving';
+  readonly kind: 'overdue' | 'emergency' | 'approval' | 'quote' | 'confirm' | 'arriving';
   readonly title: string;
   readonly detail: string;
   /** Where tapping goes: the Payments tab, or one request. */
@@ -35,8 +35,8 @@ function arrivingToday(r: RequestSummary, now: number): boolean {
 }
 
 /**
- * Only what needs the person now, most urgent first: an emergency in progress, a quote waiting for the
- * owner's decision (L4, owners only), work to confirm (E10), a technician arriving today, an overdue payment.
+ * Only what needs the person now, most urgent first: an emergency in progress, a tenant's request waiting for
+ * the owner's approval (A1, owners only), a quote waiting for the owner's decision (L4, owners only), work to confirm (E10), a technician arriving today, an overdue payment.
  * Nothing here means all is well, and Home shows no section at all.
  */
 export function attentionItems(input: {
@@ -62,6 +62,13 @@ export function attentionItems(input: {
           (r.partnerName === null
             ? t('attention.withJad')
             : t('attention.withPartner', { partner: r.partnerName })),
+        target: { requestId: r.id },
+      });
+    } else if (input.owner && r.status === 'awaiting_owner') {
+      items.push({
+        kind: 'approval',
+        title: t('tenancy.attention.approval'),
+        detail: input.label(r),
         target: { requestId: r.id },
       });
     } else if (input.owner && r.status === 'quote_sent') {

@@ -1,6 +1,6 @@
 /**
  * Requests tab (Naya, 10-Nov-2026: between Payments and Profile): report an emergency, raise a new request
- * (owners; tenants' requests need the owner's approval and come with the tenant features, A1), and follow
+ * (a tenant's routine request waits for the owner's approval, A1, ADR 0021), and follow
  * every request with its status, who is handling it and when they arrive (R1, R2).
  */
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
@@ -28,7 +28,6 @@ export default function Requests(): ReactNode {
     }, [reload]),
   );
   if (session.status !== 'signed_in') return <Redirect href="/" />;
-  const owner = session.me.role === 'owner';
   return (
     <Page>
       <Button
@@ -38,14 +37,12 @@ export default function Requests(): ReactNode {
           router.push('/emergency');
         }}
       />
-      {owner ? (
-        <Button
-          title={t('title.newRequest')}
-          onPress={() => {
-            router.push('/new-request');
-          }}
-        />
-      ) : null}
+      <Button
+        title={t('title.newRequest')}
+        onPress={() => {
+          router.push('/new-request');
+        }}
+      />
       <Heading>{t('req.myRequests')}</Heading>
       {requests.error === null ? null : <Notice tone="error">{requests.error}</Notice>}
       {requests.data !== null && requests.data.length === 0 ? <Body muted>{t('req.noRequests')}</Body> : null}
