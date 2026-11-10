@@ -46,6 +46,12 @@ export const AUDIT_ACTIONS = [
   'job_rated',
   'quote_expired',
   'request_auto_closed',
+  'make_safe_cap_changed',
+  'make_safe_recorded',
+  'technician_on_the_way',
+  'no_access_recorded',
+  'request_cancelled',
+  'request_owner_arranged',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

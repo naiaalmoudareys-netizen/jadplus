@@ -53,16 +53,25 @@ function readFlowRow(db: D1Database, id: string): Promise<FlowRow | null> {
 }
 
 /** The request's journey state as the rules see it. */
-async function stateOf(db: D1Database, row: FlowRow): Promise<JobState> {
+async function stateOf(db: D1Database, row: FlowRow, viewer: string): Promise<JobState> {
   const counts = await db
     .prepare(
       `SELECT
          (SELECT count(*) FROM quotes WHERE request_id = ?1 AND status = 'pending') AS pending,
          (SELECT count(*) FROM quotes WHERE request_id = ?1 AND partner_id = ?2) AS sent,
-         (SELECT count(*) FROM ratings WHERE request_id = ?1) AS rated`,
+         (SELECT count(*) FROM ratings WHERE request_id = ?1) AS rated,
+         (SELECT count(*) FROM make_safe_works WHERE request_id = ?1) AS make_safe,
+         (SELECT status FROM visits WHERE request_id = ?1 AND status IN ('booked', 'on_the_way', 'arrived')
+           ORDER BY created_at DESC LIMIT 1) AS visit`,
     )
     .bind(row.id, row.partner_id)
-    .first<{ pending: number; sent: number; rated: number }>();
+    .first<{
+      pending: number;
+      sent: number;
+      rated: number;
+      make_safe: number;
+      visit: 'booked' | 'on_the_way' | 'arrived' | null;
+    }>();
   return {
     status: row.status,
     isEmergency: row.is_emergency === 1,
@@ -72,6 +81,9 @@ async function stateOf(db: D1Database, row: FlowRow): Promise<JobState> {
     hasPartner: row.partner_id !== null,
     rated: (counts?.rated ?? 0) > 0,
     closeReason: row.close_reason,
+    visit: counts?.visit ?? 'none',
+    makeSafeRecorded: (counts?.make_safe ?? 0) > 0,
+    raisedByMe: row.raised_by_user_id === viewer,
   };
 }
 
@@ -86,7 +98,7 @@ export async function loadForAction(c: Ctx, id: string, action: JobAction): Prom
   if (row === null || !canActOnRequest(actor, await requestFacts(db, row), dubaiDate(c.get('now')))) {
     throw new ApiError(404, 'Not found.');
   }
-  const state = await stateOf(db, row);
+  const state = await stateOf(db, row, actor.userId);
   if (!jobActions(actor.role, state).includes(action)) {
     throw new ApiError(409, 'This step is not possible for this request now. Refresh and try again.');
   }
@@ -96,6 +108,7 @@ export async function loadForAction(c: Ctx, id: string, action: JobAction): Prom
 interface ExtrasRow {
   window_start: number;
   window_end: number;
+  status: 'booked' | 'on_the_way' | 'arrived' | 'done';
   tech_user_id: string | null;
   tech_name_enc: unknown;
 }
@@ -110,19 +123,19 @@ interface QuoteRow {
   expires_at: number;
 }
 
-type Extras = Pick<RequestDetail, 'visit' | 'quote' | 'completionPhotos' | 'rating' | 'actions'>;
+type Extras = Pick<RequestDetail, 'visit' | 'quote' | 'makeSafe' | 'completionPhotos' | 'rating' | 'actions'>;
 
 /** What the request page shows beyond the summary and messages (the caller has checked the person may see it). */
 export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise<Extras> {
   const db = c.env.DB;
   const row = await readFlowRow(db, id);
   if (row === null) throw new ApiError(404, 'Not found.');
-  const [visit, quote, photos, rating] = await Promise.all([
+  const [visit, quote, photos, rating, makeSafe] = await Promise.all([
     db
       .prepare(
-        `SELECT v.window_start, v.window_end, t.user_id AS tech_user_id, u.name_enc AS tech_name_enc
+        `SELECT v.window_start, v.window_end, v.status, t.user_id AS tech_user_id, u.name_enc AS tech_name_enc
          FROM visits v LEFT JOIN technicians t ON t.id = v.technician_id LEFT JOIN users u ON u.id = t.user_id
-         WHERE v.request_id = ? AND v.status <> 'cancelled' ORDER BY v.created_at DESC LIMIT 1`,
+         WHERE v.request_id = ? AND v.status NOT IN ('cancelled', 'no_access') ORDER BY v.created_at DESC LIMIT 1`,
       )
       .bind(row.id)
       .first<ExtrasRow>(),
@@ -143,6 +156,10 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
       .prepare('SELECT stars, comment FROM ratings WHERE request_id = ?')
       .bind(row.id)
       .first<{ stars: number; comment: string | null }>(),
+    db
+      .prepare('SELECT amount_fils, scope, at FROM make_safe_works WHERE request_id = ?')
+      .bind(row.id)
+      .first<{ amount_fils: number; scope: string; at: number }>(),
   ]);
   // E4: the resident sees the technician's name (only the name, never contact details).
   const techUser = visit?.tech_user_id ?? null;
@@ -152,7 +169,14 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
       ? null
       : await decryptField(c.get('keys'), toBytes(nameEnc), `users.name:${techUser}`);
   return {
-    visit: visit === null ? null : { start: visit.window_start, end: visit.window_end, technician },
+    visit:
+      visit === null
+        ? null
+        : { start: visit.window_start, end: visit.window_end, technician, status: visit.status },
+    makeSafe:
+      makeSafe === null
+        ? null
+        : { amountAed: makeSafe.amount_fils / 100, scope: makeSafe.scope, at: makeSafe.at },
     quote:
       quote === null
         ? null
@@ -167,6 +191,6 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
           },
     completionPhotos: photos.results,
     rating,
-    actions: canAct ? jobActions(c.get('auth').role, await stateOf(db, row)) : [],
+    actions: canAct ? jobActions(c.get('auth').role, await stateOf(db, row, c.get('auth').userId)) : [],
   };
 }

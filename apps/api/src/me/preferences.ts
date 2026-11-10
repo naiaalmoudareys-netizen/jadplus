@@ -3,7 +3,8 @@
  *
  * - GET  /api/me/preferences   language, notification switches, terms and marketing consent
  * - POST /api/me/preferences   change the language and/or switches (only the fields sent)
- * - POST /api/me/consents      accept the current terms, or give / withdraw marketing consent
+ * - POST /api/me/consents      accept the current terms, give / withdraw marketing consent, or set / remove the
+ *                               owner's make-safe limit (E8, owners only)
  *
  * Consents are evidence: appended to the consents table (never edited) with version, time and IP hash, and
  * written to the audit log in the same batch (C-AUD-1, C-LEG-1).
@@ -15,12 +16,14 @@ import {
   TERMS_VERSION,
   consentBody,
   preferencesBody,
+  type ConsentBody,
   type Language,
   type Preferences,
   type UserRole,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
-import { auditStatement } from '../audit.js';
+import { auditStatement, type AuditAction } from '../audit.js';
+import { ApiError } from '../errors.js';
 import { requireRole } from '../auth/middleware.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
@@ -40,14 +43,21 @@ interface ConsentRow {
   version: string;
   accepted: number;
   at: number;
+  make_safe_cap_fils: number | null;
 }
 
+const CONSENT_AUDIT = {
+  terms: 'terms_accepted',
+  marketing: 'marketing_consent_changed',
+  make_safe_cap: 'make_safe_cap_changed',
+} as const satisfies Record<ConsentBody['kind'], AuditAction>;
+
 const LATEST_CONSENT =
-  'SELECT version, accepted, at FROM consents WHERE user_id = ? AND kind = ? ORDER BY at DESC, rowid DESC LIMIT 1';
+  'SELECT version, accepted, at, make_safe_cap_fils FROM consents WHERE user_id = ? AND kind = ? ORDER BY at DESC, rowid DESC LIMIT 1';
 
 /** The person's settings, with the defaults when they never changed anything. */
 async function readPreferences(db: D1Database, userId: string): Promise<Preferences> {
-  const [row, terms, marketing] = await Promise.all([
+  const [row, terms, marketing, cap] = await Promise.all([
     db
       .prepare(
         'SELECT language, notify_payments, notify_construction, notify_news, notify_offers FROM user_preferences WHERE user_id = ?',
@@ -56,6 +66,7 @@ async function readPreferences(db: D1Database, userId: string): Promise<Preferen
       .first<PrefRow>(),
     db.prepare(LATEST_CONSENT).bind(userId, 'terms').first<ConsentRow>(),
     db.prepare(LATEST_CONSENT).bind(userId, 'marketing').first<ConsentRow>(),
+    db.prepare(LATEST_CONSENT).bind(userId, 'make_safe_cap').first<ConsentRow>(),
   ]);
   return {
     language: row?.language ?? DEFAULT_LANGUAGE,
@@ -71,6 +82,10 @@ async function readPreferences(db: D1Database, userId: string): Promise<Preferen
     terms: terms === null ? null : { version: terms.version, at: terms.at },
     termsCurrent: terms?.version === TERMS_VERSION,
     marketing: marketing?.accepted === 1 ? { version: marketing.version, at: marketing.at } : null,
+    makeSafeCap:
+      cap?.accepted === 1 && cap.make_safe_cap_fils !== null
+        ? { aed: cap.make_safe_cap_fils / 100, at: cap.at }
+        : null,
   };
 }
 
@@ -134,22 +149,35 @@ export function preferenceRoutes(): Hono<AppEnv> {
     const a = c.get('auth');
     const db = c.env.DB;
     const now = c.get('now');
+    // E8: only an owner can pre-authorise make-safe work on their home.
+    if (body.kind === 'make_safe_cap' && a.role !== 'owner') throw new ApiError(403, 'Not allowed.');
+    const capFils = body.kind === 'make_safe_cap' && body.capAed !== null ? body.capAed * 100 : null;
     await db.batch([
       db
         .prepare(
-          'INSERT INTO consents (id, user_id, kind, version, accepted, at, ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          `INSERT INTO consents (id, user_id, kind, version, accepted, make_safe_cap_fils, at, ip_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .bind(newId(), a.userId, body.kind, body.version, Number(body.accepted), now, c.get('ipHash')),
+        .bind(
+          newId(),
+          a.userId,
+          body.kind,
+          body.version,
+          Number(body.accepted),
+          capFils,
+          now,
+          c.get('ipHash'),
+        ),
       auditStatement(db, {
         at: now,
         actorUserId: a.userId,
         actorRole: a.role,
-        action: body.kind === 'terms' ? 'terms_accepted' : 'marketing_consent_changed',
+        action: CONSENT_AUDIT[body.kind],
         targetType: 'user',
         targetId: a.userId,
         ipHash: c.get('ipHash'),
         httpRequestId: c.get('requestId'),
-        detail: { version: body.version, accepted: body.accepted },
+        detail: { version: body.version, accepted: body.accepted, capFils },
       }),
     ]);
     return c.json(await readPreferences(db, a.userId), 201);

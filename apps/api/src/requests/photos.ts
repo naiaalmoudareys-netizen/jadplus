@@ -47,11 +47,16 @@ export function photoRoutes(): Hono<AppEnv> {
     const { id } = parseParams(c, requestIdParam);
     const row = await visibleRequest(c, id);
     if (!(await canMessage(c, row))) throw new ApiError(409, 'Photos can only be added to an open request.');
-    // Residents show the problem; the partner shows the finished work (E10, ADR 0018), only while working.
+    // Residents show the problem. The partner shows the finished work once working (E10, ADR 0018), or, on a
+    // booked visit, the closed door when nobody let them in (A7, ADR 0019).
     const byPartner = c.get('auth').role === 'partner' || c.get('auth').role === 'partner_admin';
-    const purpose = byPartner ? 'completion_photo' : 'request_photo';
-    if (byPartner && row.status !== 'in_progress' && row.status !== 'completed') {
-      throw new ApiError(409, 'Photos of the finished work can be added once the work has started.');
+    const purpose = !byPartner
+      ? 'request_photo'
+      : row.status === 'scheduled'
+        ? 'no_access_photo'
+        : 'completion_photo';
+    if (byPartner && !['scheduled', 'in_progress', 'completed'].includes(row.status)) {
+      throw new ApiError(409, 'Photos can be added once the visit is booked.');
     }
     const declared = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
     const bytes = new Uint8Array(await c.req.arrayBuffer());

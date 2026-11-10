@@ -1,7 +1,7 @@
 /**
  * Demo data for a developer's LOCAL database only (never preview or production): a fictional partner with
- * one technician, a fictional owner, and one new emergency job each time it runs, so the app can be tried end
- * to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
+ * one technician, a fictional owner with two units, and one open demo emergency (added only when none is open;
+ * older ones and kinds no longer offered are closed, ADR 0017), so the app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
  *
  * People are obviously fictional (CLAUDE.md "People"). Personal fields are encrypted with the local keys from
  * .dev.vars, exactly as the API stores them; the SQL file is written under .wrangler/ (git-ignored).
@@ -40,6 +40,7 @@ async function user(id: string, email: string, name: string): Promise<string> {
 
 const UNIT = 'a0XDEMO0000000001A';
 const UNIT_2 = 'a0XDEMO0000000002A';
+const OPEN = "status NOT IN ('closed', 'cancelled')";
 const run = now.toString(36).toUpperCase().slice(-6);
 const requestId = `demo-req-${run}`;
 const sql = [
@@ -61,14 +62,28 @@ const sql = [
     ON CONFLICT (user_id, sf_unit_id) DO UPDATE SET unit_name = excluded.unit_name, project = excluded.project,
       building = excluded.building, address = excluded.address, synced_at = excluded.synced_at;`,
   `UPDATE users SET owner_synced_at = ${now} WHERE id = 'demo-owner';`,
+  // ADR 0017: emergencies are water leak and AC failure only; demo requests of other kinds are closed.
+  `UPDATE requests SET status = 'cancelled', close_reason = 'cancelled_by_jad', next_due_at = NULL, next_due_kind = NULL,
+    updated_at = ${now}, status_changed_at = ${now}, version = version + 1
+    WHERE emergency_type IS NOT NULL AND emergency_type NOT IN ('water_leak', 'ac_failure') AND ${OPEN};`,
+  // One open demo emergency at a time: older open ones are closed, and a new one is added only if none is open.
+  `UPDATE requests SET status = 'cancelled', close_reason = 'cancelled_by_jad', next_due_at = NULL, next_due_kind = NULL,
+    updated_at = ${now}, status_changed_at = ${now}, version = version + 1
+    WHERE owner_user_id = 'demo-owner' AND is_emergency = 1 AND ${OPEN}
+      AND id <> (SELECT id FROM requests WHERE owner_user_id = 'demo-owner' AND is_emergency = 1 AND ${OPEN}
+                 ORDER BY created_at DESC LIMIT 1);`,
   `INSERT INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, raised_by_user_id, raised_by_role, description,
     is_emergency, emergency_type, fault_source, status, partner_id, next_due_at, next_due_kind, created_at, updated_at, status_changed_at)
-    VALUES (${text(requestId)}, 'JAD-D${run.slice(-5)}', 'maintenance', '${UNIT}', 'demo-owner', 'demo-owner', 'owner',
-    'Water coming through the kitchen ceiling.', 1, 'water_leak', 'unit', 'assigned', 'demo-partner',
-    ${now + 15 * 60_000}, 'emergency_ack', ${now}, ${now}, ${now});`,
-  `INSERT INTO request_events (id, request_id, at, actor_user_id, actor_role, kind, to_status, partner_id) VALUES
-    ('${requestId}-e1', ${text(requestId)}, ${now}, 'demo-owner', 'owner', 'created', 'submitted', NULL),
-    ('${requestId}-e2', ${text(requestId)}, ${now}, NULL, 'system', 'assigned', NULL, 'demo-partner');`,
+    SELECT ${text(requestId)}, 'JAD-D${run.slice(-5)}', 'maintenance', '${UNIT}', 'demo-owner', 'demo-owner', 'owner',
+      'Water coming through the kitchen ceiling.', 1, 'water_leak', 'unit', 'assigned', 'demo-partner',
+      ${now + 15 * 60_000}, 'emergency_ack', ${now}, ${now}, ${now}
+    WHERE NOT EXISTS (SELECT 1 FROM requests WHERE owner_user_id = 'demo-owner' AND is_emergency = 1 AND ${OPEN});`,
+  `INSERT INTO request_events (id, request_id, at, actor_user_id, actor_role, kind, to_status, partner_id)
+    SELECT '${requestId}-e1', ${text(requestId)}, ${now}, 'demo-owner', 'owner', 'created', 'submitted', NULL
+    WHERE EXISTS (SELECT 1 FROM requests WHERE id = ${text(requestId)})
+    UNION ALL
+    SELECT '${requestId}-e2', ${text(requestId)}, ${now}, NULL, 'system', 'assigned', NULL, 'demo-partner'
+    WHERE EXISTS (SELECT 1 FROM requests WHERE id = ${text(requestId)});`,
 ];
 
 mkdirSync(join(ROOT, '.wrangler'), { recursive: true });

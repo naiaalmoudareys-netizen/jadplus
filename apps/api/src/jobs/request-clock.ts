@@ -5,20 +5,21 @@
  * - A4: work marked done and not confirmed within 72 hours closes by itself ("auto closed"), with the
  *   partner's finished-work photos as the evidence.
  *
- * Reminders (quote day 10, confirmation 24 h / 48 h) are sent once message providers are connected (phase E,
- * ADR 0007); the deadlines themselves apply now. Each change is one batch guarded by the request version, so a
- * decision made at the same moment wins and the sweep skips that request.
+ * Both are written to the people's in-app notifications (ADR 0019), and then the reminders run (reminders.ts:
+ * visits, quote day 10, confirmation 24 h / 48 h). Each change is one batch guarded by the request version, so
+ * a decision made at the same moment wins and the sweep skips that request.
  */
 import { AUTO_CLOSE_HOURS, type CloseReason } from '@jadplus/shared';
 import { auditStatement, type AuditAction } from '../audit.js';
 import type { Logger } from '../logger.js';
 import { isVersionConflict, versionGuard } from '../requests/concurrency.js';
+import { inboxStatements, type InboxTarget } from '../requests/inbox.js';
 import { eventStatement } from '../requests/store.js';
+import { runReminders, type ReminderResult } from './reminders.js';
 
 const HOUR = 3_600_000;
 
-interface Due {
-  id: string;
+interface Due extends InboxTarget {
   status: 'quote_sent' | 'completed';
   version: number;
   quote_id: string | null;
@@ -28,6 +29,7 @@ export interface ClockResult {
   readonly expiredQuotes: number;
   readonly autoClosed: number;
   readonly conflicts: number;
+  readonly reminders: ReminderResult;
 }
 
 function closeStatements(
@@ -69,11 +71,11 @@ function closeStatements(
 export async function runRequestClock(db: D1Database, now: number, log: Logger): Promise<ClockResult> {
   const { results } = await db
     .prepare(
-      `SELECT r.id, r.status, r.version, q.id AS quote_id
+      `SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, q.id AS quote_id
        FROM requests r JOIN quotes q ON q.request_id = r.id AND q.status = 'pending'
        WHERE r.status = 'quote_sent' AND q.expires_at <= ?1
        UNION ALL
-       SELECT r.id, r.status, r.version, NULL AS quote_id
+       SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, NULL AS quote_id
        FROM requests r WHERE r.status = 'completed' AND r.status_changed_at <= ?2`,
     )
     .bind(now, now - AUTO_CLOSE_HOURS * HOUR)
@@ -85,9 +87,13 @@ export async function runRequestClock(db: D1Database, now: number, log: Logger):
   for (const r of results) {
     const statements =
       r.quote_id === null
-        ? closeStatements(db, r, now, 'auto_closed', 'request_auto_closed')
+        ? [
+            ...closeStatements(db, r, now, 'auto_closed', 'request_auto_closed'),
+            ...inboxStatements(db, r, 'auto_closed', now),
+          ]
         : [
             ...closeStatements(db, r, now, 'quote_expired', 'quote_expired'),
+            ...inboxStatements(db, r, 'quote_expired', now),
             db
               .prepare(
                 "UPDATE quotes SET status = 'expired', decided_at = ? WHERE id = ? AND status = 'pending'",
@@ -103,7 +109,9 @@ export async function runRequestClock(db: D1Database, now: number, log: Logger):
       conflicts += 1;
     }
   }
-  const result = { expiredQuotes, autoClosed, conflicts };
-  if (results.length > 0) log.log('info', 'Request clock', { ...result });
+  const reminders = await runReminders(db, now);
+  const result = { expiredQuotes, autoClosed, conflicts, reminders };
+  if (results.length > 0)
+    log.log('info', 'Request clock', { expiredQuotes, autoClosed, conflicts, ...reminders });
   return result;
 }

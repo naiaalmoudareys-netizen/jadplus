@@ -42,6 +42,7 @@ export type EventKind =
   | 'quote_sent'
   | 'quote_decided'
   | 'rated'
+  | 'no_access'
   | 'note';
 
 export interface EventInput {

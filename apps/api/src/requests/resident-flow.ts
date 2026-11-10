@@ -5,10 +5,13 @@
  *                                            never approves chargeable work; a tenant cannot)
  * - POST /api/requests/:id/confirm          the resident confirms the work is done, or says it is not (A5)
  * - POST /api/requests/:id/rating           1-5 stars once the request is closed (S5 scorecard)
+ * - POST /api/requests/:id/close            cancel before the work starts, or the owner used their own
+ *                                            contractor (E19, ADR 0019)
  *
  * Only on the person's own request (C-AZ-2) and only when jobflow.ts allows the step; one atomic batch each.
  */
 import {
+  closeRequestBody,
   confirmBody,
   confirmation,
   maskContactDetails,
@@ -126,6 +129,36 @@ export function residentFlowRoutes(): Hono<AppEnv> {
       }),
     ]);
     return c.json({ id, stars: body.stars }, 201);
+  });
+
+  r.post('/requests/:id/close', requireRole('owner', 'tenant'), async (c) => {
+    const { id } = parseParams(c, requestIdParam);
+    const body = await parseJsonBody(c, closeRequestBody);
+    const { row } = await loadForAction(c, id, body.reason);
+    const cancel = body.reason === 'cancel';
+    const db = c.env.DB;
+    await withConflictCheck(() =>
+      db.batch([
+        ...changeStatements(c, row, {
+          to: cancel ? 'cancelled' : 'closed',
+          closeReason: cancel ? 'cancelled_by_requester' : 'owner_arranged',
+          nextDue: null,
+          audit: cancel ? 'request_cancelled' : 'request_owner_arranged',
+        }),
+        // A booked visit is called off, so the technician does not come.
+        db
+          .prepare(
+            "UPDATE visits SET status = 'cancelled' WHERE request_id = ? AND status IN ('booked', 'on_the_way')",
+          )
+          .bind(id),
+        db
+          .prepare(
+            "UPDATE quotes SET status = 'withdrawn', decided_at = ? WHERE request_id = ? AND status = 'pending'",
+          )
+          .bind(c.get('now'), id),
+      ]),
+    );
+    return c.json({ id, status: cancel ? 'cancelled' : 'closed' });
   });
 
   return r;

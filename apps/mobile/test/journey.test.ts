@@ -60,7 +60,12 @@ describe('quote amount', () => {
 });
 
 describe('journey wording', () => {
-  const visit = { start: Date.UTC(2026, 10, 11, 5, 0), end: Date.UTC(2026, 10, 11, 8, 0), technician: 'Sam' };
+  const visit = {
+    start: Date.UTC(2026, 10, 11, 5, 0),
+    end: Date.UTC(2026, 10, 11, 8, 0),
+    technician: 'Sam',
+    status: 'booked' as const,
+  };
   const quote = {
     id: 'q',
     revision: 1,

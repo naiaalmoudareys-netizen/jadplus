@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_SWITCHES,
+  MAKE_SAFE_VERSION,
   MARKETING_VERSION,
   TERMS_VERSION,
   consentBody,
@@ -52,5 +53,17 @@ describe('profile payloads (C-VAL-1)', () => {
     expect(
       consentBody.safeParse({ kind: 'make_safe_cap', version: TERMS_VERSION, accepted: true }).success,
     ).toBe(false);
+  });
+});
+
+describe('make-safe limit (E8)', () => {
+  it('one of the offered limits, or none; the limit is given exactly when accepted', () => {
+    const ok = (body: object) =>
+      consentBody.safeParse({ kind: 'make_safe_cap', version: MAKE_SAFE_VERSION, ...body }).success;
+    expect(ok({ accepted: true, capAed: 500 })).toBe(true);
+    expect(ok({ accepted: false, capAed: null })).toBe(true);
+    expect(ok({ accepted: true, capAed: 750 })).toBe(false);
+    expect(ok({ accepted: true, capAed: null })).toBe(false);
+    expect(ok({ accepted: false, capAed: 500 })).toBe(false);
   });
 });

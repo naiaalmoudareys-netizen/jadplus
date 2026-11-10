@@ -25,6 +25,9 @@ const base: JobState = {
   hasPartner: true,
   rated: false,
   closeReason: null,
+  visit: 'none',
+  makeSafeRecorded: false,
+  raisedByMe: false,
 };
 const state = (over: Partial<JobState>): JobState => ({ ...base, ...over });
 
@@ -68,6 +71,32 @@ describe('who can do what', () => {
     expect(jobActions('owner', closed)).toEqual(['rate']);
     expect(jobActions('owner', { ...closed, rated: true })).toEqual([]);
     expect(jobActions('owner', state({ status: 'closed', closeReason: 'quote_expired' }))).toEqual([]);
+  });
+});
+
+describe('visits, make-safe, cancelling (A7, A8, E8, E19)', () => {
+  it('A8/A7: on a booked visit the technician can say they are on the way, or that nobody let them in', () => {
+    const booked = state({ status: 'scheduled', visit: 'booked' });
+    expect(jobActions('partner', booked)).toEqual(expect.arrayContaining(['on_my_way', 'no_access']));
+    const onWay = jobActions('partner', { ...booked, visit: 'on_the_way' });
+    expect(onWay).toContain('no_access');
+    expect(onWay).not.toContain('on_my_way');
+    expect(jobActions('partner', state({ status: 'scheduled' }))).not.toContain('no_access');
+  });
+
+  it('E8: make-safe work is recorded once, on an acknowledged emergency only', () => {
+    const emergency = state({ isEmergency: true, acknowledged: true, status: 'in_progress' });
+    expect(jobActions('partner', emergency)).toContain('make_safe');
+    expect(jobActions('partner', { ...emergency, makeSafeRecorded: true })).not.toContain('make_safe');
+    expect(jobActions('partner', state({ status: 'in_progress' }))).not.toContain('make_safe');
+  });
+
+  it('cancel before the work starts (a tenant only their own request); E19 owner-arranged', () => {
+    expect(jobActions('owner', state({}))).toEqual(['cancel', 'arranged_myself']);
+    expect(jobActions('owner', state({ status: 'in_progress' }))).toEqual([]);
+    expect(jobActions('tenant', state({ status: 'submitted' }))).toEqual([]);
+    expect(jobActions('tenant', state({ status: 'submitted', raisedByMe: true }))).toEqual(['cancel']);
+    expect(jobActions('tenant', state({ status: 'scheduled', raisedByMe: true }))).toEqual([]);
   });
 });
 

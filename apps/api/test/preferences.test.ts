@@ -22,6 +22,7 @@ describe('profile settings', () => {
       terms: null,
       termsCurrent: false,
       marketing: null,
+      makeSafeCap: null,
     });
   });
 

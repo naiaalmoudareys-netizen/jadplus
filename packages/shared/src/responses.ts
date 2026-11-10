@@ -134,7 +134,12 @@ export const requestDetailResponse = z.object({
   canMessage: z.boolean(),
   /** The booked visit (ADR 0018): window and the technician's name (E4). */
   visit: z
-    .object({ start: z.number().int(), end: z.number().int(), technician: z.string().nullable() })
+    .object({
+      start: z.number().int(),
+      end: z.number().int(),
+      technician: z.string().nullable(),
+      status: z.enum(['booked', 'on_the_way', 'arrived', 'done']),
+    })
     .nullable(),
   /** The latest quote (L4, A2, A3). */
   quote: z
@@ -148,6 +153,8 @@ export const requestDetailResponse = z.object({
       expiresAt: z.number().int(),
     })
     .nullable(),
+  /** E8: urgent work done within the owner's limit on an emergency. */
+  makeSafe: z.object({ amountAed: z.number(), scope: z.string(), at: z.number().int() }).nullable(),
   /** Photos the partner added when finishing the work (E10). */
   completionPhotos: z.array(z.object({ id: z.string() })),
   rating: z.object({ stars: z.number().int(), comment: z.string().nullable() }).nullable(),

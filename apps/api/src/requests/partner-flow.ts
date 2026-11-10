@@ -27,6 +27,7 @@ import { ApiError } from '../errors.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
 import { loadForAction } from './flow.js';
+import { inboxStatements } from './inbox.js';
 import { eventStatement } from './store.js';
 import { changeStatements, firstResponseStatement } from './transition.js';
 
@@ -93,6 +94,10 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
           partnerId: actor.partnerId,
           data: { visit: visitId, windowStart: body.windowStart, windowEnd: body.windowEnd },
         }),
+        ...inboxStatements(db, row, 'visit_booked', now, {
+          windowStart: body.windowStart,
+          windowEnd: body.windowEnd,
+        }),
         ...(first === null ? [] : [first]),
       ]),
     );
@@ -142,6 +147,7 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
           partnerId: actor.partnerId,
           data: { quote: quoteId, revision },
         }),
+        ...inboxStatements(db, row, 'quote_received', now, { amountAed: toFils(body.amountAed) / 100 }),
         ...(first === null ? [] : [first]),
       ]),
     );
@@ -176,6 +182,7 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
     await withConflictCheck(() =>
       db.batch([
         ...changeStatements(c, row, { to: 'completed', nextDue: null, audit: 'work_completed' }),
+        ...inboxStatements(db, row, 'work_done', now),
         db
           .prepare(
             "UPDATE visits SET status = 'done' WHERE request_id = ? AND status IN ('booked', 'on_the_way', 'arrived')",

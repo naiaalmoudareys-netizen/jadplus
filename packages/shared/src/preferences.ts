@@ -28,6 +28,11 @@ export const MARKETING_TOPICS: ReadonlySet<NotificationTopic> = new Set(['news',
  */
 export const TERMS_VERSION = '2026-11-draft';
 export const MARKETING_VERSION = '2026-11-draft';
+/** The make-safe limit wording (E8, L2 "make-safe cap pre-authorised"). */
+export const MAKE_SAFE_VERSION = '2026-11-draft';
+
+/** The limits an owner can choose for urgent make-safe work in an emergency (AED; E8). */
+export const MAKE_SAFE_CAP_CHOICES = [250, 500, 1000, 2000] as const;
 
 export type NotificationSwitches = Readonly<Record<NotificationTopic, boolean>>;
 
@@ -68,6 +73,21 @@ export type PreferencesBody = z.infer<typeof preferencesBody>;
 /** POST /api/me/consents: accept the current terms, or give / withdraw marketing consent. */
 export const consentBody = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('terms'), version: z.literal(TERMS_VERSION), accepted: z.literal(true) }),
+  // E8: the owner's make-safe limit, or none (accepted false). Owners only (checked by the API).
+  z
+    .strictObject({
+      kind: z.literal('make_safe_cap'),
+      version: z.literal(MAKE_SAFE_VERSION),
+      accepted: z.boolean(),
+      capAed: z
+        .number()
+        .refine(
+          (n) => (MAKE_SAFE_CAP_CHOICES as readonly number[]).includes(n),
+          'Choose one of the offered limits.',
+        )
+        .nullable(),
+    })
+    .refine((b) => b.accepted === (b.capAed !== null), 'A limit is given exactly when it is accepted.'),
   z.strictObject({
     kind: z.literal('marketing'),
     version: z.literal(MARKETING_VERSION),
@@ -92,5 +112,7 @@ export const preferencesResponse = z.object({
   termsCurrent: z.boolean(),
   /** Marketing consent: null when never given or withdrawn. */
   marketing: consentState,
+  /** E8: the owner's make-safe limit in AED, or null when none is set. */
+  makeSafeCap: z.object({ aed: z.number(), at: z.number().int() }).nullable(),
 });
 export type Preferences = z.infer<typeof preferencesResponse>;

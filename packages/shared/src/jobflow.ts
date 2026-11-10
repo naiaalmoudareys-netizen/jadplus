@@ -7,10 +7,14 @@
  * - A3: after a decline the partner may send ONE revised quote; declining that closes the request.
  * - A4: work marked done and not confirmed closes by itself after 72 hours.
  * - A5: "not done" reopens the request with the same partner.
+ * - A7: the technician could not get in: recorded with a photo, rebooked within 24 hours, not held against them.
+ * - A8: the technician says they are on the way.
+ * - E8: on an emergency, urgent make-safe work up to the owner's pre-agreed limit needs no quote.
+ * - E19: the owner may close a request because they used their own contractor.
  * These are pure rules: the API enforces them, the apps only show the buttons they allow.
  */
 import { z } from 'zod';
-import type { CloseReason, Role, Status } from './lifecycle.js';
+import { canTransition, type CloseReason, type Role, type Status } from './lifecycle.js';
 import { idSchema } from './schemas.js';
 
 const HOUR = 3_600_000;
@@ -31,6 +35,11 @@ export const JOB_ACTIONS = [
   'confirm_done',
   'not_done',
   'rate',
+  'on_my_way',
+  'no_access',
+  'make_safe',
+  'cancel',
+  'arranged_myself',
 ] as const;
 export type JobAction = (typeof JOB_ACTIONS)[number];
 
@@ -47,6 +56,12 @@ export interface JobState {
   readonly hasPartner: boolean;
   readonly rated: boolean;
   readonly closeReason: CloseReason | null;
+  /** Where the booked visit stands (A7, A8). */
+  readonly visit: 'none' | 'booked' | 'on_the_way' | 'arrived';
+  /** Make-safe work within the owner's limit has been recorded on this emergency (E8). */
+  readonly makeSafeRecorded: boolean;
+  /** The signed-in person raised this request (a tenant may cancel only their own). */
+  readonly raisedByMe: boolean;
 }
 
 const RATEABLE: ReadonlySet<CloseReason> = new Set<CloseReason>(['confirmed', 'auto_closed']);
@@ -67,6 +82,12 @@ export function jobActions(role: Role, s: JobState): JobAction[] {
     }
     if (s.status === 'scheduled' || s.status === 'reopened') actions.push('start_work');
     if (s.status === 'in_progress') actions.push('work_done');
+    if (s.status === 'scheduled' && s.visit === 'booked') actions.push('on_my_way');
+    if (s.status === 'scheduled' && (s.visit === 'booked' || s.visit === 'on_the_way'))
+      actions.push('no_access');
+    if (s.isEmergency && ['scheduled', 'in_progress'].includes(s.status) && !s.makeSafeRecorded) {
+      actions.push('make_safe');
+    }
   }
   if (role === 'owner' && s.status === 'quote_sent' && s.pendingQuote) {
     actions.push('approve_quote', 'decline_quote');
@@ -82,7 +103,13 @@ export function jobActions(role: Role, s: JobState): JobAction[] {
     ) {
       actions.push('rate');
     }
+    // Before the work starts the requester may cancel (a tenant only their own request).
+    if (canTransition(role, s.status, 'cancelled') && (role === 'owner' || s.raisedByMe))
+      actions.push('cancel');
   }
+  // E19: the owner used their own contractor; the request closes as "owner arranged".
+  if (role === 'owner' && (s.status === 'assigned' || s.status === 'scheduled'))
+    actions.push('arranged_myself');
   return actions;
 }
 
@@ -167,3 +194,21 @@ export const ratingBody = z.strictObject({
   comment: z.string().trim().max(1000).optional(),
 });
 export type RatingBody = z.infer<typeof ratingBody>;
+
+/** A7: within how long a visit is rebooked after "no access". */
+export const NO_ACCESS_REBOOK_HOURS = 24;
+
+/** POST /api/partner/jobs/:id/no-access: the photo (uploaded first) shows the technician was there. */
+export const noAccessBody = z.strictObject({ photoId: idSchema });
+export type NoAccessBody = z.infer<typeof noAccessBody>;
+
+/** POST /api/partner/jobs/:id/make-safe: urgent work done within the owner's limit (E8). */
+export const makeSafeBody = z.strictObject({
+  amountAed: aedAmount,
+  scope: z.string().trim().min(1).max(2000),
+});
+export type MakeSafeBody = z.infer<typeof makeSafeBody>;
+
+/** POST /api/requests/:id/close: cancel (before work starts) or "I arranged it myself" (E19). */
+export const closeRequestBody = z.strictObject({ reason: z.enum(['cancel', 'arranged_myself']) });
+export type CloseRequestBody = z.infer<typeof closeRequestBody>;
