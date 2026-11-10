@@ -100,7 +100,7 @@ export function isOverdue(job: PartnerJob, now: number): boolean {
 }
 
 /** E4: whether this job is an emergency still waiting for this partner's acknowledgement. */
-export function needsAcknowledgement(job: PartnerJob): boolean {
+export function needsAcknowledgement(job: Pick<PartnerJob, 'emergency' | 'status'>): boolean {
   return job.emergency && job.status === 'assigned';
 }
 

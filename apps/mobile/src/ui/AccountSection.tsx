@@ -1,11 +1,10 @@
 /** Account actions: switch view (R5, U7), sign out, and sign out on every device (T3 lost phone). */
 import type { RoleContextView } from '@jadplus/shared';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { errorText } from '../api/client.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../session/SessionProvider.js';
-import { Body, Button, Notice } from './kit.js';
 
 export interface AccountActions {
   readonly role: RoleContextView['role'] | null;
@@ -17,7 +16,7 @@ export interface AccountActions {
   readonly signOut: (everywhere: boolean) => void;
 }
 
-/** The actions, for any screen that offers them (Profile, technicians' Account page). */
+/** The actions, for any screen that offers them (the owners' and the technicians' Profile). */
 export function useAccountActions(): AccountActions {
   const session = useSession();
   const controller = useSessionController();
@@ -50,45 +49,4 @@ export function useAccountActions(): AccountActions {
     switchTo: (c) => void run(() => controller.switchTo(c)),
     signOut: (everywhere) => void run(() => controller.signOut(everywhere)),
   };
-}
-
-/** The same actions as plain buttons (technicians' and partner offices' Account page). */
-export function AccountSection(): ReactNode {
-  const t = useT();
-  const a = useAccountActions();
-  if (a.role === null) return null;
-  return (
-    <>
-      <Body muted>{`${t('profile.currentView')}: ${t(`role.${a.role}`)}`}</Body>
-      {a.others.map((c) => (
-        <Button
-          key={`${c.role}:${c.partnerId ?? ''}`}
-          title={t('profile.switchTo', { role: t(`role.${c.role}`) })}
-          kind="secondary"
-          busy={a.busy}
-          onPress={() => {
-            a.switchTo(c);
-          }}
-        />
-      ))}
-      <Button
-        title={t('profile.signOut')}
-        kind="secondary"
-        busy={a.busy}
-        onPress={() => {
-          a.signOut(false);
-        }}
-      />
-      <Body muted>{t('profile.signOutEverywhereNote')}</Body>
-      <Button
-        title={t('profile.signOutEverywhere')}
-        kind="danger"
-        busy={a.busy}
-        onPress={() => {
-          a.signOut(true);
-        }}
-      />
-      {a.error === null ? null : <Notice tone="error">{a.error}</Notice>}
-    </>
-  );
 }

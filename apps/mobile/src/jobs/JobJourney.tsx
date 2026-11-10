@@ -4,7 +4,7 @@
  * "I'm on my way", book the visit, make safe (emergencies), send a quote, start, mark done, and "No one at the
  * door". Steps open on demand, except a first booking, which is the next step.
  */
-import type { RequestDetail } from '@jadplus/shared';
+import type { JobAction, RequestDetail } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useT } from '../i18n/I18nProvider.js';
@@ -44,13 +44,17 @@ type Opened = 'visit' | 'quote' | 'safe' | 'door' | null;
 export function JobJourney({
   detail,
   onChanged,
+  shownAbove = null,
 }: {
   detail: RequestDetail;
   onChanged: () => void;
+  /** A one-tap step already offered as the page's "Next step" button, so it is not shown twice. */
+  shownAbove?: JobAction | null;
 }): ReactNode {
   const t = useT();
   const [opened, setOpened] = useState<Opened>(null);
-  const { request, visit, quote, actions, makeSafe } = detail;
+  const { request, visit, quote, makeSafe } = detail;
+  const actions = detail.actions.filter((a) => a !== shownAbove);
   const revised = quote?.status === 'declined';
   const done = () => {
     setOpened(null);

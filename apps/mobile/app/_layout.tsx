@@ -57,14 +57,13 @@ function Screens(): ReactNode {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       <Stack.Screen name="(resident)" options={{ headerShown: false }} />
-      <Stack.Screen name="partner/index" options={{ title: t('title.myJobs'), headerBackVisible: false }} />
+      <Stack.Screen name="partner/(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="partner/job/[id]" options={{ title: t('title.job') }} />
       <Stack.Screen name="emergency" options={{ title: t('title.emergency') }} />
       <Stack.Screen name="request/[id]" options={{ title: t('title.request') }} />
       <Stack.Screen name="notifications" options={{ title: t('inbox.title') }} />
       <Stack.Screen name="new-request" options={{ title: t('title.newRequest') }} />
       <Stack.Screen name="desk-request" options={{ title: t('title.desk') }} />
-      <Stack.Screen name="settings" options={{ title: t('title.account') }} />
       <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
     </Stack>
   );

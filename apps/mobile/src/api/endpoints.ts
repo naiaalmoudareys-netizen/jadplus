@@ -27,6 +27,7 @@ import {
   type PreferencesBody,
   meResponse,
   partnerJobsResponse,
+  partnerStatsResponse,
   partnerTeamResponse,
   sessionResponse,
   type AcknowledgeEmergencyBody,
@@ -47,12 +48,14 @@ import {
   type RequestSummary,
   type MeResponse,
   type PartnerJob,
+  type PartnerStats,
   type PartnerTeam,
   type RoleContextView,
   type ServiceView,
   type SessionResponse,
 } from '@jadplus/shared';
 import { z } from 'zod';
+import type { StatsPeriod } from '../partner/logic.js';
 import type { ApiClient } from './client.js';
 
 /** "Email or mobile number" as typed; the API normalises and validates it. */
@@ -81,8 +84,14 @@ export const signOut = (api: ApiClient): Promise<void> => api.postNoContent('/ap
 export const signOutEverywhere = (api: ApiClient): Promise<void> =>
   api.postNoContent('/api/auth/sign-out-everywhere');
 
-export const partnerJobs = async (api: ApiClient): Promise<PartnerJob[]> =>
-  (await api.get('/api/partner/jobs', partnerJobsResponse)).jobs;
+/** R3: the open queue, or the jobs finished in the last 30 days (newest first) for the "Done" tab. */
+export const partnerJobs = async (api: ApiClient, view: 'open' | 'done' = 'open'): Promise<PartnerJob[]> =>
+  (await api.get(view === 'done' ? '/api/partner/jobs?view=done' : '/api/partner/jobs', partnerJobsResponse))
+    .jobs;
+
+/** S5, S8: the technician's own numbers (the whole company's for the partner office). */
+export const partnerStats = (api: ApiClient, days: StatsPeriod): Promise<PartnerStats> =>
+  api.get(`/api/partner/stats?days=${String(days)}`, partnerStatsResponse);
 
 export const partnerTeam = (api: ApiClient): Promise<PartnerTeam> =>
   api.get('/api/partner/team', partnerTeamResponse);
