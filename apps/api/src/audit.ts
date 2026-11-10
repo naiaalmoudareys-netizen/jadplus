@@ -6,6 +6,7 @@
 import type { UserRole } from '@jadplus/shared';
 import { ADMIN_OPS_ACTIONS } from './audit-actions/admin-ops.js';
 import { ADMIN_PLATFORM_ACTIONS } from './audit-actions/admin-platform.js';
+import { INVOICE_ACTIONS } from './audit-actions/invoices.js';
 import { PARTNER_OFFICE_ACTIONS } from './audit-actions/partner-office.js';
 
 export type AuditActorRole = UserRole | 'system' | 'anonymous';
@@ -68,6 +69,7 @@ export const AUDIT_ACTIONS = [
   ...ADMIN_OPS_ACTIONS,
   ...ADMIN_PLATFORM_ACTIONS,
   ...PARTNER_OFFICE_ACTIONS,
+  ...INVOICE_ACTIONS,
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

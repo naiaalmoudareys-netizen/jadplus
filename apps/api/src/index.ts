@@ -7,6 +7,7 @@ import type { Sender, Senders } from './delivery/senders.js';
 import { runEscalationSweep } from './jobs/escalation.js';
 import { runRequestClock } from './jobs/request-clock.js';
 import { runPartnerReview } from './jobs/partner-review.js';
+import { runInvoiceClock } from './invoices/clock.js';
 import { createLogger } from './logger.js';
 import { ownerPortalSource } from './portal/source.js';
 import { financeWorkerDirectory } from './salesforce/directory.js';
@@ -57,10 +58,12 @@ export default {
   scheduled(controller, env, ctx) {
     const now = Date.now();
     // wrangler.toml: every minute = escalation (E5-E7), the request clock (A2, A4), then alert delivery, so new alerts go out the same
-    // minute; 02:00 UTC (06:00 Dubai) = daily partner check (S6, S7).
+    // minute; 02:00 UTC (06:00 Dubai) = daily partner check (S6, S7), then overdue invoices (ADR 0026).
     const job =
       controller.cron === DAILY_PARTNER_CHECK
-        ? runPartnerReview(env.DB, now, createLogger({ job: 'partner_review' }))
+        ? runPartnerReview(env.DB, now, createLogger({ job: 'partner_review' })).then(() =>
+            runInvoiceClock(env.DB, now),
+          )
         : runEscalationSweep(env.DB, now, createLogger({ job: 'escalation' }))
             .then(() => runRequestClock(env.DB, now, createLogger({ job: 'request_clock' })))
             .then(() => runDelivery(env, sendersFor(env), now, createLogger({ job: 'delivery' })));

@@ -41,6 +41,13 @@ export const INBOX_KINDS = [
   'work_reopened', // A5: the resident says it is not done
   'job_rated', // S5
   'job_cancelled', // the resident cancelled, or the owner arranged it
+  // Partner invoices (ADR 0026): JAD+ records them, the owner pays the partner directly.
+  'invoice_issued', // to the owner: an invoice to pay, with the total and due date
+  'invoice_overdue', // to the owner: the due date passed and it is not paid (once)
+  'invoice_paid', // to the owner: the partner confirmed the payment arrived
+  'invoice_not_received', // to the owner: the partner has not received the payment the owner reported
+  'invoice_cancelled', // to the owner: the partner cancelled the invoice
+  'invoice_paid_claimed', // to the partner office: the owner says they have paid; please confirm
 ] as const;
 export type InboxKind = (typeof INBOX_KINDS)[number];
 
@@ -52,6 +59,12 @@ export const OWNER_ONLY_KINDS: ReadonlySet<InboxKind> = new Set<InboxKind>([
   'make_safe_done',
   'approval_needed',
   'approval_reminder',
+  // Tenants never see invoices: the owner pays (ADR 0026).
+  'invoice_issued',
+  'invoice_overdue',
+  'invoice_paid',
+  'invoice_not_received',
+  'invoice_cancelled',
 ]);
 
 /** Kinds only the person who raised the request receives (the owner made the decision). */
@@ -79,6 +92,7 @@ export const PARTNER_KINDS: ReadonlySet<InboxKind> = new Set<InboxKind>([
   'work_reopened',
   'job_rated',
   'job_cancelled',
+  'invoice_paid_claimed',
 ]);
 
 /** The few facts the app needs to write the sentence. No personal data. */
@@ -93,6 +107,9 @@ export const inboxData = z.object({
   /** An emergency job (shown as urgent). */
   urgent: z.boolean().optional(),
   stars: z.number().int().optional(),
+  /** An invoice's due date (YYYY-MM-DD) and number (ADR 0026). */
+  dueOn: z.string().optional(),
+  invoiceNumber: z.string().optional(),
 });
 export type InboxData = z.infer<typeof inboxData>;
 
