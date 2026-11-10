@@ -11,12 +11,14 @@ import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { ApiError } from '../src/api/client.js';
 import { myPlaces, raiseEmergency } from '../src/api/endpoints.js';
 import {
-  EMERGENCY_OPTIONS,
-  FAULT_SOURCE_OPTIONS,
-  LIFE_SAFETY_OPTIONS,
   asksWhereFrom,
   callLink,
+  emergencyOptions,
+  faultSourceOptions,
+  lifeSafetyOptions,
+  lifeSafetyReport,
 } from '../src/emergency/options.js';
+import { useT } from '../src/i18n/I18nProvider.js';
 import { placeLabel } from '../src/jobs/format.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { useLoad } from '../src/ui/hooks.js';
@@ -68,6 +70,7 @@ export default function Emergency(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const t = useT();
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
   const [chosenPlace, setChosenPlace] = useState<MyPlace | null>(null);
@@ -86,7 +89,7 @@ export default function Emergency(): ReactNode {
   const list = places.data ?? [];
   const place = chosenPlace ?? (list.length === 1 ? (list[0] ?? null) : null);
 
-  const reportLifeSafety = (value: LifeSafetyType, label: string) => {
+  const reportLifeSafety = (value: LifeSafetyType) => {
     // E3: the numbers come first, before anything else can go wrong.
     setLifeSafety({ alertFailed: false });
     // Someone with several homes may not have chosen one yet: alert JAD+ about the first rather than none.
@@ -95,7 +98,11 @@ export default function Emergency(): ReactNode {
       setLifeSafety({ alertFailed: true });
       return;
     }
-    raiseEmergency(api, target, { type: value, faultSource: 'unit', description: label }).catch(() => {
+    raiseEmergency(api, target, {
+      type: value,
+      faultSource: 'unit',
+      description: lifeSafetyReport(value),
+    }).catch(() => {
       setLifeSafety({ alertFailed: true });
     });
   };
@@ -140,17 +147,17 @@ export default function Emergency(): ReactNode {
   return (
     <Page>
       <Heading>What is happening?</Heading>
-      {LIFE_SAFETY_OPTIONS.map((o) => (
+      {lifeSafetyOptions(t).map((o) => (
         <Choice
           key={o.value}
           label={o.label}
           danger
           onPress={() => {
-            reportLifeSafety(o.value, o.label);
+            reportLifeSafety(o.value);
           }}
         />
       ))}
-      {EMERGENCY_OPTIONS.map((o) => (
+      {emergencyOptions(t).map((o) => (
         <Choice
           key={o.value}
           label={o.label}
@@ -169,7 +176,7 @@ export default function Emergency(): ReactNode {
           {list.map((p) => (
             <Choice
               key={p.sfUnitId ?? p.tenancyId ?? ''}
-              label={placeLabel(p.location)}
+              label={placeLabel(p.location, t)}
               selected={place === p}
               onPress={() => {
                 setChosenPlace(p);
@@ -181,7 +188,7 @@ export default function Emergency(): ReactNode {
       {type !== null && asksWhereFrom(type) ? (
         <>
           <Body>Where is the water coming from?</Body>
-          {FAULT_SOURCE_OPTIONS.map((o) => (
+          {faultSourceOptions(t).map((o) => (
             <Choice
               key={o.value}
               label={o.label}

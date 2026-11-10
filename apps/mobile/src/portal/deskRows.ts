@@ -4,6 +4,8 @@
  * document attached: OPEN. Done without a file (e.g. sent another way): REQUEST again is offered.
  */
 import type { OwnerPortalAnswer } from '@jadplus/shared';
+import type { MessageKey } from '../i18n/dictionary.js';
+import type { Translate } from '../i18n/lang.js';
 
 type DeskRequest = OwnerPortalAnswer['deskRequests'][number];
 
@@ -13,25 +15,32 @@ export interface DocumentRow {
   readonly action: { readonly kind: 'request' } | { readonly kind: 'open'; readonly fileId: string } | null;
 }
 
-export function documentRow(request: DeskRequest | null): DocumentRow {
+export function documentRow(request: DeskRequest | null, t: Translate): DocumentRow {
   if (request === null) return { note: null, action: { kind: 'request' } };
   switch (request.status) {
     case 'New':
-      return { note: 'Requested', action: null };
+      return { note: t('desk.requested'), action: null };
     case 'In progress':
-      return { note: 'In progress', action: null };
+      return { note: t('desk.status.inProgress'), action: null };
     case 'Completed': {
       const [fileId] = request.fileIds;
       return fileId === undefined
-        ? { note: 'Completed', action: { kind: 'request' } }
-        : { note: 'Ready', action: { kind: 'open', fileId } };
+        ? { note: t('desk.status.completed'), action: { kind: 'request' } }
+        : { note: t('desk.ready'), action: { kind: 'open', fileId } };
     }
     case 'Cancelled':
       return { note: null, action: { kind: 'request' } };
   }
 }
 
-/** Plain status for the list of desk requests. */
-export function deskStatusLabel(status: DeskRequest['status']): string {
-  return status === 'New' ? 'Received' : status;
+const STATUS_KEYS: Readonly<Record<DeskRequest['status'], MessageKey>> = {
+  New: 'desk.status.new',
+  'In progress': 'desk.status.inProgress',
+  Completed: 'desk.status.completed',
+  Cancelled: 'desk.status.cancelled',
+};
+
+/** Plain status for the list of desk requests ("Received" for New). */
+export function deskStatusLabel(status: DeskRequest['status'], t: Translate): string {
+  return t(STATUS_KEYS[status]);
 }

@@ -12,6 +12,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../src/api/client.js';
 import { addRequestPhoto, myPlaces, raiseRequest, services } from '../src/api/endpoints.js';
 import { placeLabel } from '../src/jobs/format.js';
+import { useT } from '../src/i18n/I18nProvider.js';
 import { preparePhoto } from '../src/requests/photoPicker.js';
 import { groupByProject, placeDetail, placeKey } from '../src/requests/places.js';
 import { RequestSheet, type RequestDetails } from '../src/requests/RequestSheet.js';
@@ -34,6 +35,7 @@ export default function NewRequest(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const t = useT();
   const loadServices = useCallback(() => services(api), [api]);
   const catalogue = useLoad(loadServices);
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
@@ -176,7 +178,7 @@ export default function NewRequest(): ReactNode {
         <RequestSheet
           key={`${service.code}:${placeKey(place)}`}
           service={service}
-          placeLabel={placeLabel(place.location)}
+          placeLabel={placeLabel(place.location, t)}
           busy={busy}
           error={error}
           onClose={() => {

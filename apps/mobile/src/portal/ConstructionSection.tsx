@@ -6,6 +6,7 @@ import type { ConstructionUpdate } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { longDate } from './format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { Photo } from './Photo.js';
 import { usePortal } from './PortalProvider.js';
 import { projectKey } from '../brand/projects.js';
@@ -40,6 +41,7 @@ function forProject(updates: readonly ConstructionUpdate[], project: string | nu
 /** Construction progress for the unit's project, at the end of My unit (Naya, 10-Nov-2026). */
 export function ConstructionSection({ project }: { project: string | null }): ReactNode {
   const { data } = usePortal();
+  const { locale } = useLang();
   if (data === null) return null;
   const updates = forProject(data.updates, project);
   return (
@@ -50,7 +52,7 @@ export function ConstructionSection({ project }: { project: string | null }): Re
         <Card key={u.id}>
           <Photos update={u} />
           <Text style={styles.eyebrow}>
-            {[u.project, u.building, u.date === null ? null : longDate(u.date)]
+            {[u.project, u.building, u.date === null ? null : longDate(u.date, locale)]
               .filter((x) => x !== null)
               .join(' · ')
               .toUpperCase()}
@@ -65,7 +67,9 @@ export function ConstructionSection({ project }: { project: string | null }): Re
             </View>
           )}
           {u.details === null ? null : <Body>{u.details}</Body>}
-          {u.handover === null ? null : <Body muted>{`Expected handover ${longDate(u.handover)}`}</Body>}
+          {u.handover === null ? null : (
+            <Body muted>{`Expected handover ${longDate(u.handover, locale)}`}</Body>
+          )}
         </Card>
       ))}
     </>

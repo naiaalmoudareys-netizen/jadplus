@@ -4,6 +4,7 @@ import { dubaiDate, isOffer, newsFeed, type ConstructionUpdate, type OwnerPost }
 import type { ComponentProps, ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { longDate } from '../portal/format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { Photo } from '../portal/Photo.js';
 import { ProgressBar } from '../portal/ui.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
@@ -141,6 +142,7 @@ export function NewsCarousel({
   onOpen: () => void;
 }): ReactNode {
   const today = dubaiDate(Date.now());
+  const { locale } = useLang();
   const feed = newsFeed(posts, 'all', today).sort((a, b) => Number(isOffer(b)) - Number(isOffer(a)));
   if (feed.length === 0) return null;
   return (
@@ -154,7 +156,7 @@ export function NewsCarousel({
         >
           <Photo id={post.photos[0] ?? null} project={post.project} label={post.title} />
           <Text style={[styles.eyebrow, isOffer(post) && styles.bronze]}>
-            {`${isOffer(post) ? 'OWNERS ONLY' : post.type.toUpperCase()} · ${longDate(post.date).toUpperCase()}`}
+            {`${isOffer(post) ? 'OWNERS ONLY' : post.type.toUpperCase()} · ${longDate(post.date, locale).toUpperCase()}`}
           </Text>
           <Text style={styles.newsTitle} numberOfLines={2}>
             {post.title}

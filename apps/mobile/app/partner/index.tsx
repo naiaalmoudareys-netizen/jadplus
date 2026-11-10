@@ -8,6 +8,7 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'rea
 import type { PartnerJob } from '@jadplus/shared';
 import { partnerJobs } from '../../src/api/endpoints.js';
 import { arrivalLabel, dueLabel, isOverdue, jobTitle, statusLabel } from '../../src/jobs/format.js';
+import { useT } from '../../src/i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { useLoad, useNow } from '../../src/ui/hooks.js';
 import { Body, Notice, Page } from '../../src/ui/kit.js';
@@ -16,21 +17,22 @@ import { colors, fonts, radius, space } from '../../src/ui/theme.js';
 const REFRESH_MS = 30_000;
 
 function JobRow({ job, now, onPress }: { job: PartnerJob; now: number; onPress: () => void }): ReactNode {
-  const due = dueLabel(job, now);
+  const t = useT();
+  const due = dueLabel(job, now, t);
   const late = isOverdue(job, now);
-  const arrival = arrivalLabel(job);
+  const arrival = arrivalLabel(job, t);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${jobTitle(job)}, ${job.ref}, ${statusLabel(job.status)}${due === null ? '' : `, ${due}`}`}
+      accessibilityLabel={`${jobTitle(job, t)}, ${job.ref}, ${statusLabel(job.status, t)}${due === null ? '' : `, ${due}`}`}
       onPress={onPress}
       style={({ pressed }) => [styles.row, job.emergency && styles.emergency, pressed && styles.pressed]}
     >
       <View style={styles.rowTop}>
-        <Text style={[styles.title, job.emergency && styles.urgentText]}>{jobTitle(job)}</Text>
+        <Text style={[styles.title, job.emergency && styles.urgentText]}>{jobTitle(job, t)}</Text>
         <Text style={styles.ref}>{job.ref}</Text>
       </View>
-      <Text style={styles.status}>{statusLabel(job.status)}</Text>
+      <Text style={styles.status}>{statusLabel(job.status, t)}</Text>
       {due === null ? null : <Text style={[styles.due, late && styles.urgentText]}>{due}</Text>}
       {arrival === null ? null : <Text style={styles.status}>{arrival}</Text>}
     </Pressable>

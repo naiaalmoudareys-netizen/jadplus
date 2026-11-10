@@ -24,6 +24,7 @@ import {
   Shortcuts,
   type Shortcut,
 } from '../../src/home/HomeParts.js';
+import { useLang } from '../../src/i18n/I18nProvider.js';
 import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
@@ -43,6 +44,7 @@ export default function Home(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const { t, locale } = useLang();
   const portal = usePortalOptional();
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
@@ -73,10 +75,11 @@ export default function Home(): ReactNode {
 
   const attention = attentionItems({
     requests: all,
-    overdue: overdue ? { amount: aed(plan.overdueAmount) } : null,
+    overdue: overdue ? { amount: aed(plan.overdueAmount, locale) } : null,
     now,
-    label: jobTitle,
-    arrival: arrivalLabel,
+    t,
+    label: (r) => jobTitle(r, t),
+    arrival: (r) => arrivalLabel(r, t),
   });
   // Tabs remember where they were scrolled; links from Home say where to land (scrollTarget.ts).
   const openPayments = () => {
@@ -139,8 +142,8 @@ export default function Home(): ReactNode {
       {portal === null ? null : <DemoBadge />}
       <Hero
         project={project}
-        eyebrow={deal === undefined ? (home?.project ?? 'JAD Global') : unitTitle(deal)}
-        title={name === null ? greeting(now) : `${greeting(now)}, ${name}`}
+        eyebrow={deal === undefined ? (home?.project ?? 'JAD Global') : unitTitle(deal, t)}
+        title={name === null ? greeting(now, t) : `${greeting(now, t)}, ${name}`}
       />
       <Attention items={attention} onPress={openItem} />
       <Shortcuts items={shortcuts} />
@@ -156,12 +159,12 @@ export default function Home(): ReactNode {
             <Text style={styles.label}>{overdue ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
             <Text style={[styles.amount, overdue && styles.urgent]}>
               {overdue
-                ? aed(plan.overdueAmount)
+                ? aed(plan.overdueAmount, locale)
                 : plan.next === null
                   ? 'Nothing due'
-                  : aed(plan.next.state.balance)}
+                  : aed(plan.next.state.balance, locale)}
             </Text>
-            {nextDue === null ? null : <Body muted>{`Due ${longDate(nextDue)}`}</Body>}
+            {nextDue === null ? null : <Body muted>{`Due ${longDate(nextDue, locale)}`}</Body>}
             <ProgressBar percent={plan.percentPaid} />
             <Text style={styles.small}>{`${String(Math.round(plan.percentPaid))}% of your plan paid`}</Text>
           </Card>

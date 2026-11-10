@@ -13,6 +13,7 @@ import {
   preferredVisitLabel,
   residentStatusLabel,
 } from '../../src/jobs/format.js';
+import { useLang } from '../../src/i18n/I18nProvider.js';
 import { RequestPhotos } from '../../src/requests/RequestPhotos.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Conversation } from '../../src/ui/Conversation.js';
@@ -25,6 +26,8 @@ const REFRESH_MS = 30_000;
 export default function RequestPage(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
+  const lang = useLang();
+  const { t } = lang;
   const { id } = useLocalSearchParams<{ id: string }>();
   const load = useCallback(() => requestDetail(api, id), [api, id]);
   const detail = useLoad(load, REFRESH_MS);
@@ -39,16 +42,16 @@ export default function RequestPage(): ReactNode {
     );
   }
   const { request, messages, canMessage, photos } = detail.data;
-  const preferred = preferredVisitLabel(request);
-  const arrival = arrivalLabel(request);
+  const preferred = preferredVisitLabel(request, lang);
+  const arrival = arrivalLabel(request, t);
   return (
     <Page>
-      <Heading>{jobTitle(request)}</Heading>
+      <Heading>{jobTitle(request, t)}</Heading>
       <Body muted>
-        {request.ref} · {placeLabel(request.location)}
+        {request.ref} · {placeLabel(request.location, t)}
       </Body>
       <View style={styles.card}>
-        <Body>{residentStatusLabel(request.status)}</Body>
+        <Body>{residentStatusLabel(request.status, t)}</Body>
         {request.partnerName === null ? null : <Body muted>Handled by {request.partnerName}</Body>}
         {arrival === null ? null : <Body>{arrival}</Body>}
         {arrival === null && preferred !== null ? <Body muted>{preferred}</Body> : null}

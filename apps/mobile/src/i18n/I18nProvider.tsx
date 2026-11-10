@@ -7,13 +7,12 @@ import { DEFAULT_LANGUAGE, LANGUAGES, type Language } from '@jadplus/shared';
 import * as SecureStore from 'expo-secure-store';
 import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { DICTIONARY, type MessageKey } from './dictionary.js';
+import { langOf, type Lang, type Translate } from './lang.js';
 import { LANGUAGE_INFO, type LanguageInfo } from './languages.js';
-import { fill, type Params } from './translate.js';
+
+export type { Lang, Translate } from './lang.js';
 
 const KEY = 'jadplus.language';
-
-export type Translate = (key: MessageKey, params?: Params) => string;
 
 export interface I18n {
   readonly language: Language;
@@ -21,17 +20,14 @@ export interface I18n {
   /** True once the person has picked a language on this phone (otherwise their account's is used). */
   readonly chosen: boolean;
   readonly t: Translate;
+  /** `t` and the locale together, for the formatting helpers (jobs/format, portal/format, …). */
+  readonly lang: Lang;
   readonly setLanguage: (language: Language) => void;
 }
 
 const I18nContext = createContext<I18n | null>(null);
 
 const asLanguage = (value: string | null): Language | null => LANGUAGES.find((l) => l === value) ?? null;
-
-export function translator(language: Language): Translate {
-  const table = DICTIONARY[language];
-  return (key, params) => fill(table[key], params);
-}
 
 export function I18nProvider({ children }: { children: ReactNode }): ReactNode {
   const [state, setState] = useState<{ language: Language; chosen: boolean } | null>(null);
@@ -52,19 +48,18 @@ export function I18nProvider({ children }: { children: ReactNode }): ReactNode {
     SecureStore.setItemAsync(KEY, language).catch(() => undefined);
   }, []);
 
-  const value = useMemo<I18n | null>(
-    () =>
-      state === null
-        ? null
-        : {
-            language: state.language,
-            info: LANGUAGE_INFO[state.language],
-            chosen: state.chosen,
-            t: translator(state.language),
-            setLanguage,
-          },
-    [state, setLanguage],
-  );
+  const value = useMemo<I18n | null>(() => {
+    if (state === null) return null;
+    const lang = langOf(state.language);
+    return {
+      language: state.language,
+      info: LANGUAGE_INFO[state.language],
+      chosen: state.chosen,
+      t: lang.t,
+      lang,
+      setLanguage,
+    };
+  }, [state, setLanguage]);
   if (value === null) return null;
   return (
     <I18nContext value={value}>
@@ -82,6 +77,11 @@ export function useI18n(): I18n {
 /** The translate function for the current language. */
 export function useT(): Translate {
   return useI18n().t;
+}
+
+/** The translate function and locale together, for the formatting helpers. */
+export function useLang(): Lang {
+  return useI18n().lang;
 }
 
 const styles = StyleSheet.create({

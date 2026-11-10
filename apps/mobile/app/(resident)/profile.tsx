@@ -98,10 +98,10 @@ export default function Profile(): ReactNode {
               key={r.id}
               icon="document-text-outline"
               title={r.type}
-              detail={[r.ref, r.unitName, r.reply, longDate(r.createdAt.slice(0, 10))]
+              detail={[r.ref, r.unitName, r.reply, longDate(r.createdAt.slice(0, 10), info.locale)]
                 .filter((x) => x !== null)
                 .join(' · ')}
-              value={deskStatusLabel(r.status)}
+              value={deskStatusLabel(r.status, t)}
             />
           ))}
         </Group>

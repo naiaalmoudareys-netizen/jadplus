@@ -3,10 +3,12 @@ import type { RequestSummary } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../jobs/format.js';
+import { useT } from '../i18n/I18nProvider.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
 
 export function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => void }): ReactNode {
-  const arrival = arrivalLabel(r);
+  const t = useT();
+  const arrival = arrivalLabel(r, t);
   return (
     <Pressable
       accessibilityRole="button"
@@ -14,13 +16,13 @@ export function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => v
       style={({ pressed }) => [styles.row, r.emergency && styles.emergency, pressed && styles.pressed]}
     >
       <View style={styles.rowTop}>
-        <Text style={[styles.title, r.emergency && styles.urgent]}>{jobTitle(r)}</Text>
+        <Text style={[styles.title, r.emergency && styles.urgent]}>{jobTitle(r, t)}</Text>
         <Text style={styles.ref}>{r.ref}</Text>
       </View>
-      <Text style={styles.status}>{residentStatusLabel(r.status)}</Text>
+      <Text style={styles.status}>{residentStatusLabel(r.status, t)}</Text>
       {r.partnerName === null ? null : <Text style={styles.place}>{r.partnerName}</Text>}
       {arrival === null ? null : <Text style={styles.status}>{arrival}</Text>}
-      <Text style={styles.place}>{placeLabel(r.location)}</Text>
+      <Text style={styles.place}>{placeLabel(r.location, t)}</Text>
     </Pressable>
   );
 }

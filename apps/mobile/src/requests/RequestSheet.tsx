@@ -28,6 +28,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { dayLabel } from '../jobs/format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { Choice } from '../ui/Choice.js';
 import { Button, Eyebrow, Field, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
@@ -109,6 +110,7 @@ export function RequestSheet(props: {
   onSend: (details: RequestDetails) => void;
 }): ReactNode {
   const [day, setDay] = useState<string | null>(null);
+  const { locale } = useLang();
   const [slot, setSlot] = useState<VisitSlot | null>(null);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
@@ -151,7 +153,7 @@ export function RequestSheet(props: {
                     <Choice
                       key={d}
                       compact
-                      title={dayLabel(d)}
+                      title={dayLabel(d, locale)}
                       selected={day === d}
                       onPress={() => {
                         setDay(d);

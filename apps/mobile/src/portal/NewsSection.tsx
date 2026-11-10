@@ -10,6 +10,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../api/client.js';
 import { interestedInOffer } from '../api/endpoints.js';
 import { aed, area, longDate } from './format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { Photo } from './Photo.js';
 import { usePortal } from './PortalProvider.js';
 import { Fact } from './ui.js';
@@ -18,13 +19,14 @@ import { Body, Button, Card, Heading, Notice } from '../ui/kit.js';
 import { buttonRadius, colors, fonts, space } from '../ui/theme.js';
 
 function Prices({ price, offerPrice }: { price: number | null; offerPrice: number | null }): ReactNode {
+  const { locale } = useLang();
   if (offerPrice === null) return null;
   return (
     <View style={styles.prices}>
-      <Text style={styles.offerPrice}>{aed(offerPrice)}</Text>
+      <Text style={styles.offerPrice}>{aed(offerPrice, locale)}</Text>
       {price === null || price <= offerPrice ? null : (
-        <Text style={styles.listPrice} accessibilityLabel={`List price ${aed(price)}`}>
-          {aed(price)}
+        <Text style={styles.listPrice} accessibilityLabel={`List price ${aed(price, locale)}`}>
+          {aed(price, locale)}
         </Text>
       )}
     </View>
@@ -66,6 +68,8 @@ function Interest({
 }
 
 function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: () => void }): ReactNode {
+  const lang = useLang();
+  const { locale } = lang;
   const { post } = props;
   const [open, setOpen] = useState(false);
   const offer = isOffer(post);
@@ -84,7 +88,7 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
       >
         <Photo id={post.photos[0] ?? null} project={post.project} label={post.title} />
         <Text style={[styles.eyebrow, offer && styles.offerEyebrow]}>
-          {`${kind} · ${longDate(post.date)}`.toUpperCase()}
+          {`${kind} · ${longDate(post.date, locale)}`.toUpperCase()}
         </Text>
         <Text style={styles.title}>{post.title}</Text>
         {post.summary === null ? null : <Text style={styles.summary}>{post.summary}</Text>}
@@ -99,12 +103,12 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
               <Fact label="Residence" value={o.unitName} />
               <Fact label="Type" value={o.type} />
               <Fact label="Floor" value={o.floor} />
-              <Fact label="Size" value={area(o.totalArea)} />
+              <Fact label="Size" value={area(o.totalArea, lang)} />
               <Fact label="View" value={o.view} />
             </View>
           ) : null}
           {offer && post.expires !== null ? (
-            <Body muted>{`Offer ends ${longDate(post.expires)}`}</Body>
+            <Body muted>{`Offer ends ${longDate(post.expires, locale)}`}</Body>
           ) : null}
           {offer ? <Interest post={post} interested={props.interested} onDone={props.onInterested} /> : null}
           {post.link === null ? null : (

@@ -6,6 +6,7 @@ import { Button, Notice } from '../ui/kit.js';
 import { buttonRadius, colors, fonts, space } from '../ui/theme.js';
 import { usePortal } from './PortalProvider.js';
 import { unitTitle } from './format.js';
+import { useT } from '../i18n/I18nProvider.js';
 
 /** Shown while the data is the demo owner, never real Salesforce data (ADR 0010). */
 export function DemoBadge(): ReactNode {
@@ -21,6 +22,7 @@ export function DemoBadge(): ReactNode {
 /** For owners with more than one unit: choose which one the tab shows. */
 export function UnitSwitcher(): ReactNode {
   const { data, dealIndex, setDealIndex } = usePortal();
+  const t = useT();
   const deals = data?.deals ?? [];
   if (deals.length < 2) return null;
   return (
@@ -35,7 +37,7 @@ export function UnitSwitcher(): ReactNode {
           }}
           style={[styles.chip, i === dealIndex && styles.chipOn]}
         >
-          <Text style={[styles.chipText, i === dealIndex && styles.chipTextOn]}>{unitTitle(d)}</Text>
+          <Text style={[styles.chipText, i === dealIndex && styles.chipTextOn]}>{unitTitle(d, t)}</Text>
         </Pressable>
       ))}
     </View>

@@ -3,15 +3,16 @@
  * two requests that matter most. Plain logic, tested without a phone.
  */
 import { OPEN_STATUSES, dubaiDate, type RequestSummary } from '@jadplus/shared';
+import type { Translate } from '../i18n/lang.js';
 
 const DUBAI_OFFSET_MS = 4 * 3_600_000;
 
 /** "Good morning" / "Good afternoon" / "Good evening" by the Dubai hour. */
-export function greeting(now: number): string {
+export function greeting(now: number, t: Translate): string {
   const hour = new Date(now + DUBAI_OFFSET_MS).getUTCHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('greeting.morning');
+  if (hour < 17) return t('greeting.afternoon');
+  return t('greeting.evening');
 }
 
 export interface AttentionItem {
@@ -41,24 +42,29 @@ export function attentionItems(input: {
   readonly requests: readonly RequestSummary[];
   readonly overdue: { readonly amount: string } | null;
   readonly now: number;
+  readonly t: Translate;
   readonly label: (r: RequestSummary) => string;
   readonly arrival: (r: RequestSummary) => string | null;
 }): AttentionItem[] {
+  const { t } = input;
   const items: AttentionItem[] = [];
   for (const r of input.requests) {
     if (!isOpen(r)) continue;
     if (r.emergency && r.status !== 'completed') {
       items.push({
         kind: 'emergency',
-        title: `${input.label(r)} · emergency`,
+        title: t('attention.emergency', { label: input.label(r) }),
         detail:
-          input.arrival(r) ?? (r.partnerName === null ? 'Being handled by JAD+' : `With ${r.partnerName}`),
+          input.arrival(r) ??
+          (r.partnerName === null
+            ? t('attention.withJad')
+            : t('attention.withPartner', { partner: r.partnerName })),
         target: { requestId: r.id },
       });
     } else if (arrivingToday(r, input.now)) {
       items.push({
         kind: 'arriving',
-        title: `Technician today · ${input.label(r)}`,
+        title: t('attention.arriving', { label: input.label(r) }),
         detail: input.arrival(r) ?? '',
         target: { requestId: r.id },
       });
@@ -67,7 +73,7 @@ export function attentionItems(input: {
   if (input.overdue !== null) {
     items.push({
       kind: 'overdue',
-      title: 'Payment overdue',
+      title: t('attention.overdue'),
       detail: input.overdue.amount,
       target: { tab: 'payments' },
     });

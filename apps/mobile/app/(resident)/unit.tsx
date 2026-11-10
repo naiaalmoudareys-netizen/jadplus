@@ -13,6 +13,7 @@ import { ApiError } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
 import { ConstructionSection } from '../../src/portal/ConstructionSection.js';
 import { documentRow } from '../../src/portal/deskRows.js';
+import { useLang } from '../../src/i18n/I18nProvider.js';
 import { useSessionController } from '../../src/session/SessionProvider.js';
 import { area, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
@@ -58,6 +59,7 @@ function FloorPlan({ fileId, unit }: { fileId: string | null; unit: string }): R
  */
 function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal }): ReactNode {
   const doc = useOpenDocument();
+  const { t, locale } = useLang();
   const { reload } = usePortal();
   const { api } = useSessionController();
   const [sending, setSending] = useState<string | null>(null);
@@ -79,7 +81,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
       <Heading>Documents</Heading>
       <Card>
         {DOCUMENT_REQUEST_TYPES.map((type) => {
-          const row = documentRow(latestDeskRequest(data.deskRequests, type, deal.id));
+          const row = documentRow(latestDeskRequest(data.deskRequests, type, deal.id), t);
           const action = row.action;
           return (
             <LineItem
@@ -100,7 +102,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
                   ? {
                       action: 'Open',
                       onPress: () => {
-                        doc.open(action.fileId, `${type} ${unitTitle(deal)}`);
+                        doc.open(action.fileId, `${type} ${unitTitle(deal, t)}`);
                       },
                     }
                   : {
@@ -116,7 +118,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
           <LineItem
             key={d.fileId}
             title={d.name}
-            detail={d.added === null ? null : `Added ${longDate(d.added)}`}
+            detail={d.added === null ? null : `Added ${longDate(d.added, locale)}`}
             amount=""
             note={doc.opening === d.fileId ? 'Opening…' : null}
             onPress={() => {
@@ -137,6 +139,8 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
 export default function MyUnit(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   const scroll = useScrollTarget();
+  const lang = useLang();
+  const { t, locale } = lang;
   if (loading && data === null) return <Loading />;
   if (data === null || error !== null) {
     return (
@@ -158,7 +162,11 @@ export default function MyUnit(): ReactNode {
     <Page scrollRef={scroll.ref}>
       <DemoBadge />
       <UnitSwitcher />
-      <Hero project={u?.project ?? null} eyebrow={u?.project ?? 'Your residence'} title={unitTitle(deal)} />
+      <Hero
+        project={u?.project ?? null}
+        eyebrow={u?.project ?? 'Your residence'}
+        title={unitTitle(deal, t)}
+      />
       {u === null ? (
         <Body muted>The unit details are not available yet. Please contact the JAD+ desk.</Body>
       ) : (
@@ -168,9 +176,9 @@ export default function MyUnit(): ReactNode {
           <Fact label="Bathrooms" value={u.bathrooms} />
           <Fact label="Floor" value={u.floor} />
           <Fact label="Building" value={u.building} />
-          <Fact label="Internal area" value={area(u.internalArea)} />
-          <Fact label="Balcony" value={area(u.balconyArea)} />
-          <Fact label="Total area" value={area(u.totalArea)} />
+          <Fact label="Internal area" value={area(u.internalArea, lang)} />
+          <Fact label="Balcony" value={area(u.balconyArea, lang)} />
+          <Fact label="Total area" value={area(u.totalArea, lang)} />
           <Fact label="View" value={u.view} />
           <Fact label="Parking" value={u.parking} />
         </Card>
@@ -178,12 +186,12 @@ export default function MyUnit(): ReactNode {
       <Card>
         <Fact label="Project" value={u?.project ?? null} />
         <Fact label="Location" value={u?.address ?? null} />
-        <Fact label="Expected completion" value={longDate(u?.completion ?? null)} />
+        <Fact label="Expected completion" value={longDate(u?.completion ?? null, locale)} />
         <Fact label="Deal" value={deal.ref} />
         <Fact label="Status" value={deal.stage} />
         <Fact label="Your role" value={deal.role} />
       </Card>
-      <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal)} />
+      <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal, t)} />
       <View style={styles.section} onLayout={scroll.onLayout('documents')}>
         <Documents data={data} deal={deal} />
       </View>

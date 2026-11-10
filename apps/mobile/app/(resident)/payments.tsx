@@ -5,6 +5,7 @@
 import { dubaiDate, instalmentState, planSummary } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
+import { useLang } from '../../src/i18n/I18nProvider.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
@@ -17,6 +18,7 @@ export default function Payments(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   const doc = useOpenDocument();
   const scroll = useScrollTarget();
+  const { t, locale } = useLang();
   if (loading && data === null) return <Loading />;
   if (data === null || error !== null) {
     return (
@@ -41,27 +43,28 @@ export default function Payments(): ReactNode {
     <Page scrollRef={scroll.ref}>
       <DemoBadge />
       <UnitSwitcher />
-      <Eyebrow>{unitTitle(deal)}</Eyebrow>
+      <Eyebrow>{unitTitle(deal, t)}</Eyebrow>
       <Heading>Payments</Heading>
       {overdue ? (
         <Notice tone="error">
-          {aed(s.overdueAmount)} is overdue. Settle it whenever you are ready, or ask the JAD+ desk for help.
+          {aed(s.overdueAmount, locale)} is overdue. Settle it whenever you are ready, or ask the JAD+ desk
+          for help.
         </Notice>
       ) : null}
       <Card>
         <Text style={styles.kpiLabel}>PAID SO FAR</Text>
         <Text style={styles.kpi}>
-          {aed(s.paid)} <Text style={styles.kpiOf}>of {aed(s.total)}</Text>
+          {aed(s.paid, locale)} <Text style={styles.kpiOf}>of {aed(s.total, locale)}</Text>
         </Text>
         <ProgressBar percent={s.percentPaid} />
         <Body muted>{`${String(Math.round(s.percentPaid))}% paid`}</Body>
         {s.next === null ? null : (
           <View style={styles.next}>
             <Text style={styles.kpiLabel}>NEXT PAYMENT</Text>
-            <Text style={styles.nextAmount}>{aed(s.next.state.balance)}</Text>
+            <Text style={styles.nextAmount}>{aed(s.next.state.balance, locale)}</Text>
             <Body muted>
               {s.next.instalment.name}
-              {s.next.instalment.due === null ? '' : ` · ${longDate(s.next.instalment.due)}`}
+              {s.next.instalment.due === null ? '' : ` · ${longDate(s.next.instalment.due, locale)}`}
             </Body>
           </View>
         )}
@@ -78,10 +81,10 @@ export default function Payments(): ReactNode {
               <Text style={styles.rowTitle}>{i.name}</Text>
               <Pill kind={st.kind} label={st.label} />
             </View>
-            <Body>{aed(i.amount)}</Body>
+            <Body>{aed(i.amount, locale)}</Body>
             <Body muted>
-              {i.due === null ? '' : `Due ${longDate(i.due)}`}
-              {i.paid > 0 && st.kind !== 'paid' ? ` · Paid ${aed(i.paid)}` : ''}
+              {i.due === null ? '' : `Due ${longDate(i.due, locale)}`}
+              {i.paid > 0 && st.kind !== 'paid' ? ` · Paid ${aed(i.paid, locale)}` : ''}
             </Body>
           </Card>
         );
@@ -95,8 +98,8 @@ export default function Payments(): ReactNode {
               <LineItem
                 key={p.name}
                 title={p.for ?? p.name}
-                detail={p.start === null ? null : `Since ${longDate(p.start)}`}
-                amount={aed(p.outstanding)}
+                detail={p.start === null ? null : `Since ${longDate(p.start, locale)}`}
+                amount={aed(p.outstanding, locale)}
                 tone="bad"
               />
             ))}
@@ -114,8 +117,8 @@ export default function Payments(): ReactNode {
                 <LineItem
                   key={c.name}
                   title={c.name}
-                  detail={c.due === null ? null : longDate(c.due)}
-                  amount={aed(paid ? c.amount : c.amount - c.paid)}
+                  detail={c.due === null ? null : longDate(c.due, locale)}
+                  amount={aed(paid ? c.amount : c.amount - c.paid, locale)}
                   note={paid ? 'Paid' : 'To pay'}
                   tone={paid ? 'good' : 'normal'}
                 />
@@ -134,8 +137,14 @@ export default function Payments(): ReactNode {
                 key={r.id}
                 title={r.for ?? 'Payment'}
                 detail={[r.name, r.method].filter((x) => x !== null).join(' · ')}
-                amount={aed(r.amount)}
-                note={doc.opening === r.fileId ? 'Opening…' : r.paidOn === null ? null : longDate(r.paidOn)}
+                amount={aed(r.amount, locale)}
+                note={
+                  doc.opening === r.fileId
+                    ? 'Opening…'
+                    : r.paidOn === null
+                      ? null
+                      : longDate(r.paidOn, locale)
+                }
                 {...(r.fileId === null
                   ? {}
                   : {

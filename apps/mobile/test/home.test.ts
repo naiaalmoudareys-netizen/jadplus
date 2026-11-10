@@ -2,7 +2,12 @@
 import type { RequestSummary } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import { attentionItems, greeting, openCount, topRequests } from '../src/home/attention.js';
-import { arrivalLabel, jobTitle, preferredVisitLabel } from '../src/jobs/format.js';
+import { langOf, type Lang } from '../src/i18n/lang.js';
+import { arrivalLabel, dayLabel, jobTitle, preferredVisitLabel } from '../src/jobs/format.js';
+
+const en = langOf('en');
+const ar = langOf('ar');
+const fr = langOf('fr');
 
 const NOW = Date.UTC(2026, 10, 10, 6, 0, 0); // 10:00 Dubai, Tue 10 Nov 2026
 const HOUR = 3_600_000;
@@ -22,20 +27,21 @@ const req = (over: Partial<RequestSummary>): RequestSummary => ({
   ...over,
 });
 
-const attention = (requests: RequestSummary[], overdue: string | null = null) =>
+const attention = (requests: RequestSummary[], overdue: string | null = null, lang: Lang = en) =>
   attentionItems({
     requests,
     overdue: overdue === null ? null : { amount: overdue },
     now: NOW,
-    label: jobTitle,
-    arrival: arrivalLabel,
+    t: lang.t,
+    label: (r) => jobTitle(r, lang.t),
+    arrival: (r) => arrivalLabel(r, lang.t),
   });
 
 describe('Home priorities', () => {
   it('greets by the Dubai time of day', () => {
-    expect(greeting(NOW)).toBe('Good morning');
-    expect(greeting(NOW + 4 * HOUR)).toBe('Good afternoon');
-    expect(greeting(NOW + 10 * HOUR)).toBe('Good evening');
+    expect(greeting(NOW, en.t)).toBe('Good morning');
+    expect(greeting(NOW + 4 * HOUR, en.t)).toBe('Good afternoon');
+    expect(greeting(NOW + 10 * HOUR, en.t)).toBe('Good evening');
   });
 
   it('needs attention: an open emergency, a technician today, an overdue payment; nothing when all is fine', () => {
@@ -57,6 +63,20 @@ describe('Home priorities', () => {
       ['arriving', 'Technician today · Maintenance'],
       ['overdue', 'Payment overdue'],
     ]);
+    expect(items[0]?.detail).toBe('With Demo Fixers LLC');
+  });
+
+  it('ADR 0016: greeting and attention in the chosen language', () => {
+    expect(greeting(NOW, ar.t)).toBe('صباح الخير');
+    const items = attention(
+      [req({ id: 'e', emergency: true, emergencyType: 'water_leak', partnerName: null })],
+      'AED 1',
+      fr,
+    );
+    expect(items.map((i) => [i.title, i.detail])).toEqual([
+      ["Fuite d'eau · urgence", 'Pris en charge par JAD+'],
+      ['Paiement en retard', 'AED 1'],
+    ]);
   });
 
   it('shows at most two open requests, emergencies first, and counts the open ones', () => {
@@ -73,9 +93,17 @@ describe('Home priorities', () => {
 
 describe('preferred visit', () => {
   it('ADR 0013: reads as day and time window', () => {
-    expect(preferredVisitLabel(req({ preferredVisit: { date: '2026-11-11', slot: 'morning' } }))).toBe(
+    expect(preferredVisitLabel(req({ preferredVisit: { date: '2026-11-11', slot: 'morning' } }), en)).toBe(
       'Preferred: Wed 11 Nov · Morning (9:00 - 12:00)',
     );
-    expect(preferredVisitLabel(req({}))).toBeNull();
+    expect(preferredVisitLabel(req({}), en)).toBeNull();
+    expect(dayLabel('2026-11-10', en.locale)).toBe('Tue 10 Nov');
+  });
+
+  it('ADR 0016: day and window in the chosen language, on the same calendar day', () => {
+    expect(preferredVisitLabel(req({ preferredVisit: { date: '2026-11-11', slot: 'morning' } }), fr)).toBe(
+      'Préférence : mer. 11 nov. · Matin (9:00 - 12:00)',
+    );
+    expect(dayLabel('2026-11-10', ar.locale)).toBe('الثلاثاء، 10 نوفمبر');
   });
 });

@@ -2,26 +2,46 @@
 import { EMERGENCY_NUMBERS, EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import {
-  EMERGENCY_OPTIONS,
-  FAULT_SOURCE_OPTIONS,
-  LIFE_SAFETY_OPTIONS,
   asksWhereFrom,
   callLink,
+  emergencyOptions,
+  faultSourceOptions,
+  lifeSafetyOptions,
+  lifeSafetyReport,
 } from '../src/emergency/options.js';
 import { projectKey } from '../src/brand/projects.js';
+import { translator } from '../src/i18n/lang.js';
 import { placeLabel, residentStatusLabel } from '../src/jobs/format.js';
+
+const en = translator('en');
+const ar = translator('ar');
 
 describe('emergency choices', () => {
   it('E2/E3: every emergency and life-safety type can be chosen, in plain words', () => {
-    expect(EMERGENCY_OPTIONS.map((o) => o.value)).toEqual([...EMERGENCY_TYPES]);
-    expect(LIFE_SAFETY_OPTIONS.map((o) => o.value)).toEqual([...LIFE_SAFETY_TYPES]);
-    expect(LIFE_SAFETY_OPTIONS.find((o) => o.value === 'injury')?.label).toBe('Someone is injured');
+    expect(emergencyOptions(en).map((o) => o.value)).toEqual([...EMERGENCY_TYPES]);
+    expect(lifeSafetyOptions(en).map((o) => o.value)).toEqual([...LIFE_SAFETY_TYPES]);
+    expect(lifeSafetyOptions(en).find((o) => o.value === 'injury')?.label).toBe('Someone is injured');
+    expect(emergencyOptions(en).map((o) => o.label)).toEqual([
+      'Water leak',
+      'No power',
+      'AC failure',
+      'Locked out',
+      "Door or window won't lock",
+    ]);
+  });
+
+  it('ADR 0016: choices read in the chosen language; JAD+ is always told in English', () => {
+    expect(emergencyOptions(ar).find((o) => o.value === 'water_leak')?.label).toBe('تسرب مياه');
+    expect(lifeSafetyOptions(ar).find((o) => o.value === 'injury')?.label).toBe('يوجد شخص مصاب');
+    expect(faultSourceOptions(ar).map((o) => o.value)).toEqual(faultSourceOptions(en).map((o) => o.value));
+    expect(lifeSafetyReport('injury')).toBe('Someone is injured');
+    expect(lifeSafetyReport('gas_smell')).toBe('Gas smell');
   });
 
   it('E12: only a leak asks where the water comes from; every source the API knows is offered', () => {
     expect(asksWhereFrom('water_leak')).toBe(true);
     expect(asksWhereFrom('lockout')).toBe(false);
-    expect(FAULT_SOURCE_OPTIONS.map((o) => o.value)).toEqual([
+    expect(faultSourceOptions(en).map((o) => o.value)).toEqual([
       'unit',
       'building',
       'neighbour',
@@ -37,15 +57,15 @@ describe('emergency choices', () => {
 
 describe('what residents read', () => {
   it('R1/R2: statuses in plain words', () => {
-    expect(residentStatusLabel('assigned')).toBe('Sent to the service partner');
-    expect(residentStatusLabel('scheduled')).toBe('Technician on the way');
+    expect(residentStatusLabel('assigned', en)).toBe('Sent to the service partner');
+    expect(residentStatusLabel('scheduled', en)).toBe('Technician on the way');
   });
 
   it('places read as unit, building and project', () => {
     expect(
-      placeLabel({ unitName: 'JAD288-1102', project: 'JAD 288', building: 'Building B', address: null }),
+      placeLabel({ unitName: 'JAD288-1102', project: 'JAD 288', building: 'Building B', address: null }, en),
     ).toBe('JAD288-1102 · Building B · JAD 288');
-    expect(placeLabel(null)).toBe('Unit details with JAD+');
+    expect(placeLabel(null, en)).toBe('Unit details with JAD+');
   });
 });
 

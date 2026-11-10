@@ -19,6 +19,7 @@ import {
   preferredVisitLabel,
   statusLabel,
 } from '../../../src/jobs/format.js';
+import { useLang } from '../../../src/i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
 import { RequestPhotos } from '../../../src/requests/RequestPhotos.js';
 import { Conversation } from '../../../src/ui/Conversation.js';
@@ -116,6 +117,8 @@ export default function Job(): ReactNode {
   const { api } = useSessionController();
   const { id } = useLocalSearchParams<{ id: string }>();
   const now = useNow();
+  const lang = useLang();
+  const { t } = lang;
   const load = useCallback(async () => (await partnerJobs(api)).find((j) => j.id === id) ?? null, [api, id]);
   const job = useLoad(load);
   // Messages with the resident and JAD+ (ADR 0009); refreshed every 30 seconds until push alerts exist.
@@ -132,13 +135,13 @@ export default function Job(): ReactNode {
     );
   }
   const j = job.data;
-  const due = dueLabel(j, now);
-  const arrival = arrivalLabel(j);
+  const due = dueLabel(j, now, t);
+  const arrival = arrivalLabel(j, t);
   return (
     <Page>
-      <Heading>{jobTitle(j)}</Heading>
+      <Heading>{jobTitle(j, t)}</Heading>
       <Body muted>
-        {j.ref} · {statusLabel(j.status)}
+        {j.ref} · {statusLabel(j.status, t)}
       </Body>
       {due === null ? null : (
         <Text style={[styles.due, isOverdue(j, now) && styles.urgent]} accessibilityLiveRegion="polite">
@@ -146,9 +149,9 @@ export default function Job(): ReactNode {
         </Text>
       )}
       {arrival === null ? null : <Body>{arrival}</Body>}
-      {preferredVisitLabel(j) === null ? null : <Body muted>{preferredVisitLabel(j)}</Body>}
+      {preferredVisitLabel(j, lang) === null ? null : <Body muted>{preferredVisitLabel(j, lang)}</Body>}
       <View style={styles.card}>
-        <Body>{placeLabel(j.location)}</Body>
+        <Body>{placeLabel(j.location, t)}</Body>
         {j.location?.address ? <Body muted>{j.location.address}</Body> : null}
       </View>
       <View style={styles.card}>
