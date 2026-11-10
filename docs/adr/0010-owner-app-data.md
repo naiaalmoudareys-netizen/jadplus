@@ -36,7 +36,7 @@ Salesforce connected only at go-live.
 8. **Photos** (construction updates, offers) come through `GET /api/owner/files/:id`: owner only, Salesforce
    file ids only, fetched for that owner's email so Salesforce's own check (`JADPortalApi.file`) decides, and
    only images or PDFs are passed on, marked private to the phone. Demo photos are the bundled project photos.
-9. **Design follow-up (Naya, 10-Nov-2026)**: every photo frame takes the photo's own proportions, so the whole photo shows and nothing is cropped, receipts and
+9. **Design follow-up (Naya, 10-Nov-2026)**: photo boxes keep their size and the whole photo is fitted inside (never cropped), over a soft blurred copy of itself that fills the box, receipts and
    fees as tidy two-sided rows, news as calm cards (photo, "TYPE · DATE", title, summary; tap for the full text;
    owners' price with the list price crossed out), and every owner tab says when it could not load, with
    "Try again".

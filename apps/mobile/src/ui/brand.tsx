@@ -1,6 +1,6 @@
 /** JAD+ brand pieces from apps/mobile/assets/brand (docs/DESIGN.md): logo and project hero under a slate veil. */
 import type { ReactNode } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import logoCream from '../../assets/brand/logo/jadplus-cream.png';
 import logoInk from '../../assets/brand/logo/jadplus-ink.png';
 import signinPoster from '../../assets/brand/media/signin-poster.jpg';
@@ -39,29 +39,37 @@ export function Logo({ onPhoto = false }: { onPhoto?: boolean }): ReactNode {
   );
 }
 
-/**
- * Width ÷ height of a bundled image. Photo frames take the photo's own proportions, so the whole photo is
- * always shown and never cropped (Naya, 10-Nov-2026: "it must fit the entire image").
- */
-export function naturalAspect(asset: number): number {
-  const resolved = Image.resolveAssetSource(asset);
-  const width = resolved?.width ?? 0;
-  const height = resolved?.height ?? 0;
-  return width > 0 && height > 0 ? width / height : 4 / 3;
-}
+/** Height of the photo box with the title on it (the size Naya approved; the photo is fitted inside). */
+export const HERO_HEIGHT = 220;
+/** Width ÷ height of the box for other photos (news, construction). */
+export const PHOTO_BOX_ASPECT = 16 / 10;
 
-/** The whole photo (no cropping) with a slate veil, the logo, a bronze eyebrow and a title. */
-export function Hero(props: { project?: string | null; eyebrow: string; title: string }): ReactNode {
-  const key = projectKey(props.project ?? null);
-  const photo = key === null ? signinPoster : PROJECT_PHOTOS[key];
+/**
+ * The whole photo, fitted inside a box of fixed size (Naya, 10-Nov-2026: keep the box, fit the image).
+ * Tall tower photos would leave empty bands, so a soft blurred copy of the same photo fills the box behind
+ * the sharp, uncropped photo.
+ */
+export function FittedPhoto(props: { source: ImageSourcePropType; label?: string }): ReactNode {
   return (
-    <View style={[styles.hero, { aspectRatio: naturalAspect(photo) }]}>
+    <>
+      <Image source={props.source} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={24} />
       <Image
-        source={photo}
+        source={props.source}
         style={StyleSheet.absoluteFill}
         resizeMode="contain"
+        accessibilityLabel={props.label}
         accessibilityIgnoresInvertColors
       />
+    </>
+  );
+}
+
+/** A photo box with a slate veil, the logo, a bronze eyebrow and a title (sign-in, home, my unit). */
+export function Hero(props: { project?: string | null; eyebrow: string; title: string }): ReactNode {
+  const key = projectKey(props.project ?? null);
+  return (
+    <View style={styles.hero}>
+      <FittedPhoto source={key === null ? signinPoster : PROJECT_PHOTOS[key]} />
       <View style={styles.veil}>
         <Logo onPhoto />
         <View style={styles.heroText}>
@@ -77,12 +85,13 @@ export function Hero(props: { project?: string | null; eyebrow: string; title: s
 
 const styles = StyleSheet.create({
   logo: { width: 134, height: 23 },
-  hero: { width: '100%', borderRadius: radius, overflow: 'hidden', backgroundColor: colors.slate },
+  hero: { height: HERO_HEIGHT, borderRadius: radius, overflow: 'hidden', backgroundColor: colors.slate },
   veil: {
     flex: 1,
     justifyContent: 'space-between',
     padding: space.lg,
-    backgroundColor: 'rgba(57,69,81,0.55)',
+    // Lighter veil than before, so the fitted photo stays visible behind the title.
+    backgroundColor: 'rgba(57,69,81,0.38)',
   },
   heroText: { gap: space.xs },
   eyebrow: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 2.4, color: colors.bronzeSoft },
