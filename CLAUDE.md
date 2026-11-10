@@ -100,13 +100,14 @@ pnpm --filter @jadplus/mobile start   # Expo
   `apps/api/src/owners/` (link + unit check), migration 0007 `owner_units`. Salesforce side written but NOT
   deployed: `integrations/salesforce` (new Apex class JADPlusIdentity + Account.Mobile_Match_Key__c +
   finance-worker door snippet; Apex tests not yet run in the org). 183 tests, `pnpm check` green.
-- Waiting on Naya: (a) `git push -u origin main` (the push is blocked for Claude by the permission check;
-  repo is private, personal account); (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
+- 10-Nov-2026 (session 3, cont.): pushed to GitHub by Naya. Daily partner check (S6, S7, P3: auto-suspend on
+  lapsed documents, waiting jobs to backup, review list), admin review list API, on-call rota API — ADR 0006,
+  migration 0008. 203 tests.
+- Waiting on Naya: (a) pushes: Claude's push is blocked by the permission check, Naya runs `git push`; (b) review ADRs 0002-0005; (c) deploy the Salesforce side in the order
   of `integrations/salesforce/README.md` (sandbox first); (d) Microsoft Graph sender for email codes and an
   SMS/WhatsApp provider for mobile codes.
 - Next, in order:
-  1. Phase A remainder: outbox delivery worker (at least email + on-call SMS/call decision), daily scorecard and
-     licence/insurance job (S6/S7 suspend → backup), on-call rota API, admin review list.
+  1. Phase A remainder: outbox delivery worker (at least email + on-call SMS/call decision).
   2. `apps/mobile` Expo scaffold (expo-router, TypeScript strict, ESLint, SecureStore session); partner technician screens first.
   3. `apps/console` scaffold with cookie sessions + CSRF (ADR 0003 item 14): admin requests inbox, SLA risk list, scorecards.
   4. Phase B: tenant invitations, routine requests, owner approvals, quotes (A1-A3, U4/U5).

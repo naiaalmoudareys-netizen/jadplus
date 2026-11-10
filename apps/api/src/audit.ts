@@ -21,6 +21,12 @@ export const AUDIT_ACTIONS = [
   'emergency_raised',
   'emergency_acknowledged',
   'emergency_escalated',
+  'job_reassigned',
+  'partner_suspended',
+  'partner_reinstated',
+  'partner_flagged',
+  'partner_review_resolved',
+  'on_call_rota_set',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

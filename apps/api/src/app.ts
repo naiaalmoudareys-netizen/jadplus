@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import { requestId } from 'hono/request-id';
+import { adminRoutes } from './admin/routes.js';
 import { authenticate } from './auth/middleware.js';
 import { authRoutes } from './auth/routes.js';
 import { requestContext, type Deps } from './context.js';
@@ -39,6 +40,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/auth', authRoutes(deps));
   app.route('/api', requestRoutes(deps));
   app.route('/api/partner', partnerRoutes());
+  app.route('/api/admin', adminRoutes());
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
 

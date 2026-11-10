@@ -4,6 +4,7 @@ export * from './calendar.js';
 export * from './emergency.js';
 export * from './escalation.js';
 export * from './lifecycle.js';
+export * from './oncall.js';
 export * from './owners.js';
 export * from './schemas.js';
 export * from './scorecard.js';

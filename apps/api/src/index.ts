@@ -3,6 +3,7 @@ import type { SignInIdentifier } from '@jadplus/shared';
 import { createApp } from './app.js';
 import type { Bindings } from './env.js';
 import { runEscalationSweep } from './jobs/escalation.js';
+import { runPartnerReview } from './jobs/partner-review.js';
 import { createLogger } from './logger.js';
 import { financeWorkerDirectory } from './salesforce/directory.js';
 
@@ -19,13 +20,20 @@ function sendSignInCode(env: Bindings, to: SignInIdentifier, code: string): Prom
   return Promise.resolve();
 }
 
+/** Must match the second cron in wrangler.toml. */
+const DAILY_PARTNER_CHECK = '0 2 * * *';
+
 const app = createApp({ now: () => Date.now(), sendSignInCode, ownerDirectory: financeWorkerDirectory });
 
 export default {
   fetch: app.fetch,
-  scheduled(_controller, env, ctx) {
-    ctx.waitUntil(
-      runEscalationSweep(env.DB, Date.now(), createLogger({ job: 'escalation' })).then(() => undefined),
-    );
+  scheduled(controller, env, ctx) {
+    const now = Date.now();
+    // wrangler.toml: every minute = escalation (E5-E7); 02:00 UTC (06:00 Dubai) = daily partner check (S6, S7).
+    const job =
+      controller.cron === DAILY_PARTNER_CHECK
+        ? runPartnerReview(env.DB, now, createLogger({ job: 'partner_review' }))
+        : runEscalationSweep(env.DB, now, createLogger({ job: 'escalation' }));
+    ctx.waitUntil(job.then(() => undefined));
   },
 } satisfies ExportedHandler<Bindings>;

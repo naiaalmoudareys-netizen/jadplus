@@ -14,6 +14,16 @@ export function parseParams<S extends z.ZodType>(c: Context<AppEnv>, schema: S):
   return result.data;
 }
 
+/** Query strings are validated like bodies (unknown keys rejected). */
+export function parseQuery<S extends z.ZodType>(c: Context<AppEnv>, schema: S): z.output<S> {
+  const result = schema.safeParse(c.req.query());
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
+    throw new ApiError(400, 'Some details are missing or not valid.', { body: { issues } });
+  }
+  return result.data;
+}
+
 export async function parseJsonBody<S extends z.ZodType>(
   c: Context<AppEnv>,
   schema: S,

@@ -19,6 +19,6 @@ migrations_dir = "migrations"
 binding = "MEDIA"
 bucket_name = "jadplus-preview-media"
 
-# Emergency escalation sweep (E5-E7): every minute.
+# Every minute: emergency escalation sweep (E5-E7). 02:00 UTC = 06:00 Dubai: daily partner check (S6, S7).
 [triggers]
-crons = ["* * * * *"]
+crons = ["* * * * *", "0 2 * * *"]

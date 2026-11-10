@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { CLIENTS } from './auth.js';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { ROLES } from './lifecycle.js';
+import { isMonday } from './oncall.js';
 import { normalisePhone, type SignInIdentifier } from './owners.js';
 
 /** Emails are compared lower-cased and trimmed, so the blind index is stable. */
@@ -100,3 +101,23 @@ export const requestIdParam = z.strictObject({ id: idSchema });
 
 export type RaiseEmergencyBody = z.infer<typeof raiseEmergencyBody>;
 export type AcknowledgeEmergencyBody = z.infer<typeof acknowledgeEmergencyBody>;
+
+/** GET /api/admin/partner-review — the S6/S7 review list; open items by default. */
+export const reviewListQuery = z.strictObject({ status: z.enum(['open', 'all']).default('open') });
+
+/** POST /api/admin/partner-review/:id/resolve — what the admin decided (kept as evidence). */
+export const resolveReviewBody = z.strictObject({ note: z.string().trim().min(1).max(1000) });
+
+const mondaySchema = z.string().refine(isMonday, 'Weeks start on a Monday (YYYY-MM-DD).');
+
+/** GET /api/admin/on-call?from=YYYY-MM-DD — rota weeks from that Monday on. */
+export const onCallQuery = z.strictObject({ from: mondaySchema.optional() });
+
+/** PUT /api/admin/on-call/:week — who is on call that week (section 11). */
+export const onCallWeekParam = z.strictObject({ week: mondaySchema });
+export const setOnCallBody = z
+  .strictObject({ first: idSchema, second: idSchema })
+  .refine((b) => b.first !== b.second, { message: 'Two different people are needed on call.' });
+
+export type ResolveReviewBody = z.infer<typeof resolveReviewBody>;
+export type SetOnCallBody = z.infer<typeof setOnCallBody>;

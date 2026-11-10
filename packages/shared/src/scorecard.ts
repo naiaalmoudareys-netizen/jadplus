@@ -83,3 +83,44 @@ export function partnerCompliance(
       : 'ok';
   return { action, licence, insurance };
 }
+
+/** Why a partner is suspended: lapsed documents (lifted automatically when renewed) or an admin decision. */
+export type SuspendedBy = 'compliance' | 'admin';
+
+export interface PartnerStanding {
+  readonly status: 'active' | 'suspended' | 'ended';
+  readonly suspendedBy: SuspendedBy | null;
+}
+
+/**
+ * S7/P3, applied daily: a lapsed or missing licence or insurance suspends an active partner. A partner the
+ * daily check suspended is reinstated once both documents are valid again; a suspension by an admin is never
+ * lifted automatically, and an ended contract is never touched.
+ */
+export function complianceChange(p: PartnerStanding, c: Compliance): 'suspend' | 'reinstate' | null {
+  if (p.status === 'active' && c.action === 'suspend') return 'suspend';
+  if (p.status === 'suspended' && p.suspendedBy === 'compliance' && c.action !== 'suspend')
+    return 'reinstate';
+  return null;
+}
+
+const DOCUMENT_LABEL = { licence: 'Trade licence', insurance: 'Insurance' } as const;
+
+/** Plain reason shown to JAD+ Admin and the partner office, e.g. "Insurance lapsed". */
+export function suspensionReason(c: Compliance): string {
+  const parts: string[] = [];
+  for (const doc of ['licence', 'insurance'] as const) {
+    const standing = c[doc];
+    if (standing === 'lapsed') parts.push(`${DOCUMENT_LABEL[doc]} lapsed`);
+    if (standing === 'missing') parts.push(`${DOCUMENT_LABEL[doc]} not on file`);
+  }
+  return parts.join('; ');
+}
+
+/**
+ * S6: the review-list key of a flag. One open item per partner and concern, so a concern already on the
+ * admin's list is not added again by every daily run.
+ */
+export function reviewKey(flag: ReviewFlag): string {
+  return flag.kind === 'breach' ? flag.breach : flag.kind;
+}
