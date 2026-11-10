@@ -157,11 +157,12 @@ describe('Salesforce answer to the owner app', () => {
     expect(out.posts[0]?.photos).toEqual([]);
   });
 
-  it('C-PD-1: identity documents are listed by name and file id only; nationality and desk requests never reach the app', () => {
+  it('C-PD-1: identity documents by name and file id only; desk requests without the owner text; no nationality', () => {
     const out = fromSalesforce(salesforceOwnerAnswer.parse(raw), 'https://pay.jadglobal.ae/', TODAY);
     expect(out.documents).toEqual([{ name: 'Passport', fileId: '068000000000002AAA', added: '2025-12-01' }]);
     const json = JSON.stringify(out);
-    expect(json).not.toMatch(/nationality|Sample|a0Y|desk-only-note|passwd/);
+    expect(json).not.toMatch(/nationality|Sample|desk-only-note|passwd|update my passport/);
+    expect(out.deskRequests.map((r) => [r.id, r.type, r.status])).toEqual([['a0Y', 'Other', 'New']]);
     expect(out.person).toEqual({
       name: 'Layla Haddad',
       firstName: 'Layla',

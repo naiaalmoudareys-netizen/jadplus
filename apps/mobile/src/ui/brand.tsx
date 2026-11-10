@@ -63,7 +63,7 @@ export function FittedPhoto(props: {
     return (
       <Image
         source={props.source}
-        style={[StyleSheet.absoluteFill, styles.plain]}
+        style={[styles.fill, styles.plain]}
         resizeMode="contain"
         accessibilityLabel={props.label}
       />
@@ -73,7 +73,7 @@ export function FittedPhoto(props: {
     return (
       <Image
         source={props.source}
-        style={StyleSheet.absoluteFill}
+        style={styles.fill}
         resizeMode="cover"
         accessibilityLabel={props.label}
         accessibilityIgnoresInvertColors
@@ -82,10 +82,10 @@ export function FittedPhoto(props: {
   }
   return (
     <>
-      <Image source={props.source} style={StyleSheet.absoluteFill} resizeMode="cover" blurRadius={24} />
+      <Image source={props.source} style={styles.fill} resizeMode="cover" blurRadius={24} />
       <Image
         source={props.source}
-        style={StyleSheet.absoluteFill}
+        style={styles.fill}
         resizeMode="contain"
         accessibilityLabel={props.label}
         accessibilityIgnoresInvertColors
@@ -114,6 +114,12 @@ export function Hero(props: { project?: string | null; eyebrow: string; title: s
 }
 
 const styles = StyleSheet.create({
+  /**
+   * An image filling its box. Bundled images carry their own pixel size as a default width and height, which
+   * wins over left/right/top/bottom alone and showed only a corner of the image (Naya's floor plan
+   * screenshot, 10-Nov-2026). The explicit 100% width and height make every image scale into its box.
+   */
+  fill: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
   plain: { backgroundColor: colors.card },
   logo: { width: 134, height: 23 },
   hero: { height: HERO_HEIGHT, borderRadius: radius, overflow: 'hidden', backgroundColor: colors.slate },

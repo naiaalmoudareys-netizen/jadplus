@@ -132,6 +132,11 @@ pnpm --filter @jadplus/mobile start   # Expo
   system viewer from a private temp folder cleared on sign-out. 284 tests. Naya: desk requests stay in
   Salesforce (JAD_Plus_Request__c), like the prototype. Owner view order: documents (done) → desk requests →
   Profile switches (N4, L1), then the console.
+- 10-Nov-2026 (session 3, cont.): image fix (bundled images need explicit 100% size, else drawn at their own
+  pixel size: Naya's floor plan screenshot); desk requests (ADR 0011, migration 0012): Documents rows
+  (Reservation Form, SPA, statement, NOC, title deed) with Request / status / Open, Profile "JAD+ desk"
+  (contact change, close account, other). Production → Salesforce `jadplus-desk` route. 292 tests.
+  Next: Profile switches (N4, L1), then the console.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

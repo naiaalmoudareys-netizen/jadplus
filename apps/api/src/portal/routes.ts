@@ -6,17 +6,19 @@
  *
  * The data is looked up by the owner's own verified email, never by anything the app sends (C-AZ-2).
  */
-import { dubaiDate, isFileId, isOffer, postVisible, type OwnerPortal } from '@jadplus/shared';
+import { dubaiDate, isFileId, isOffer, postVisible } from '@jadplus/shared';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { auditStatement } from '../audit.js';
 import { requireRole } from '../auth/middleware.js';
 import type { Deps } from '../context.js';
-import { decryptField, newId, toBytes } from '../crypto.js';
+import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseParams } from '../validate.js';
+import { demoDeskRequests } from './desk.js';
+import { UNAVAILABLE, loadPortal, ownerEmail } from './owner.js';
 import { samplePdf } from './sample-pdf.js';
 import { ownerFile } from './source.js';
 
@@ -41,29 +43,6 @@ function demoDocument(c: Ctx, fileId: string): Response {
   });
 }
 
-const UNAVAILABLE = 'We could not load your details right now. Please try again shortly.';
-
-async function ownerEmail(c: Ctx): Promise<string> {
-  const { userId } = c.get('auth');
-  const row = await c.env.DB.prepare('SELECT email_enc FROM users WHERE id = ?')
-    .bind(userId)
-    .first<{ email_enc: unknown }>();
-  if (row === null || row.email_enc === null) {
-    throw new ApiError(409, 'Your email is not on file yet. Please contact the JAD+ desk.');
-  }
-  return decryptField(c.get('keys'), toBytes(row.email_enc), `users.email:${userId}`);
-}
-
-async function loadPortal(c: Ctx, deps: Deps): Promise<OwnerPortal> {
-  const email = await ownerEmail(c);
-  try {
-    return await deps.ownerPortal(c.env, email, c.get('now'));
-  } catch (err) {
-    c.get('log').log('warn', 'Owner data could not be loaded', { err });
-    throw new ApiError(503, UNAVAILABLE);
-  }
-}
-
 export function portalRoutes(deps: Deps): Hono<AppEnv> {
   const owner = new Hono<AppEnv>();
   owner.use('*', requireRole('owner'));
@@ -75,7 +54,12 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
     )
       .bind(c.get('auth').userId)
       .all<{ post_id: string }>();
-    return c.json({ ...portal, interestedOfferIds: results.map((r) => r.post_id) });
+    // Desk requests: Salesforce's own list in production; JAD+'s log until it is connected (ADR 0011).
+    const deskRequests =
+      portal.source === 'demo'
+        ? await demoDeskRequests(c.env.DB, c.get('auth').userId, portal)
+        : portal.deskRequests;
+    return c.json({ ...portal, deskRequests, interestedOfferIds: results.map((r) => r.post_id) });
   });
 
   owner.post('/offers/:postId/interest', async (c) => {

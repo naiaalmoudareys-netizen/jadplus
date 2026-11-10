@@ -6,9 +6,11 @@
  * Data minimisation: of Salesforce's answer JAD+ keeps only what these screens show. The owner's own identity
  * documents (passport, Emirates ID, visa) are listed by name and file id only, at Naya's decision
  * (10-Nov-2026); the files are fetched on demand and never stored by JAD+. Nationality and desk requests in
- * that answer are dropped here and never reach the app.
+ * that answer are dropped here and never reach the app. Desk requests keep type, status, residence, the desk's
+ * reply and attached files; the owner's free-text details are not passed back.
  */
 import { z } from 'zod';
+import { DESK_REQUEST_TYPES, DESK_STATUSES } from './desk.js';
 
 const num = z.number().nullable().catch(null);
 const str = z.string().max(2000).nullable().catch(null);
@@ -80,6 +82,19 @@ export const salesforceOwnerAnswer = z.object({
     }),
   ),
   documents: list(z.object({ name: str, file: fileId, added: date })),
+  requests: list(
+    z.object({
+      id: z.string().max(18),
+      name: str,
+      type: z.enum(DESK_REQUEST_TYPES).catch('Other'),
+      status: z.enum(DESK_STATUSES).catch('New'),
+      deal: z.string().max(18).nullable().catch(null),
+      unit: str,
+      reply: str,
+      created: z.string().max(40).nullable().catch(null),
+      files: photoIds,
+    }),
+  ),
   updates: list(
     z.object({
       id: z.string().max(64),
@@ -204,6 +219,21 @@ export const ownerPortalResponse = z.object({
           outstanding: z.number(),
         }),
       ),
+    }),
+  ),
+  /** Requests to the JAD+ desk (ADR 0011): status, the desk's reply, and the document once attached. */
+  deskRequests: z.array(
+    z.object({
+      id: z.string(),
+      ref: z.string().nullable(),
+      type: z.enum(DESK_REQUEST_TYPES),
+      status: z.enum(DESK_STATUSES),
+      dealId: z.string().nullable(),
+      unitName: z.string().nullable(),
+      reply: z.string().nullable(),
+      /** ISO date-time. */
+      createdAt: z.string(),
+      fileIds: z.array(z.string()),
     }),
   ),
   /** The owner's own identity documents (passport, Emirates ID, visa): names and file ids only. */
@@ -345,6 +375,17 @@ export function fromSalesforce(
         start: p.start,
         outstanding: p.outstanding ?? 0,
       })),
+    })),
+    deskRequests: raw.requests.map((r) => ({
+      id: r.id,
+      ref: r.name,
+      type: r.type,
+      status: r.status,
+      dealId: r.deal,
+      unitName: r.unit,
+      reply: r.reply,
+      createdAt: r.created ?? `${today}T00:00:00Z`,
+      fileIds: r.files,
     })),
     documents: raw.documents.flatMap((d) =>
       d.file === null ? [] : [{ name: d.name ?? 'Document', fileId: d.file, added: d.added }],

@@ -148,6 +148,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         penalties: [],
       },
     ],
+    deskRequests: [],
     documents: [
       { name: 'Passport', fileId: 'demo-doc-passport', added: day(-330) },
       { name: 'Emirates ID', fileId: 'demo-doc-emirates-id', added: day(-330) },

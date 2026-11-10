@@ -1,6 +1,17 @@
 /** My unit (R1, docs/DESIGN.md): the residence's facts, project and completion, from Salesforce. */
-import type { OwnerPortalAnswer } from '@jadplus/shared';
-import type { ReactNode } from 'react';
+import {
+  DESK_REQUEST_HINTS,
+  DOCUMENT_REQUEST_TYPES,
+  latestDeskRequest,
+  type DeskRequestType,
+  type OwnerDeal,
+  type OwnerPortalAnswer,
+} from '@jadplus/shared';
+import { useState, type ReactNode } from 'react';
+import { ApiError } from '../../src/api/client.js';
+import { deskRequest } from '../../src/api/endpoints.js';
+import { documentRow } from '../../src/portal/deskRows.js';
+import { useSessionController } from '../../src/session/SessionProvider.js';
 import { area, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
 import { Photo } from '../../src/portal/Photo.js';
@@ -37,28 +48,82 @@ function FloorPlan({ fileId, unit }: { fileId: string | null; unit: string }): R
   );
 }
 
-/** The owner's own identity documents held by JAD Global (Naya, 10-Nov-2026: shown in the app). */
-function Documents({ documents }: { documents: OwnerPortalAnswer['documents'] }): ReactNode {
+/**
+ * Documents: the residence's papers (SPA, Reservation Form, statement, NOC, title deed) with "Request" until
+ * the JAD+ desk attaches them (ADR 0011), then the owner's own identity documents (Naya, 10-Nov-2026).
+ */
+function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal }): ReactNode {
   const doc = useOpenDocument();
+  const { reload } = usePortal();
+  const { api } = useSessionController();
+  const [sending, setSending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const request = (type: DeskRequestType) => {
+    setSending(type);
+    setError(null);
+    deskRequest(api, { type, dealId: deal.id })
+      .then(() => reload())
+      .catch((err: unknown) => {
+        setError(err instanceof ApiError ? err.message : 'The request could not be sent. Please try again.');
+      })
+      .finally(() => {
+        setSending(null);
+      });
+  };
   return (
     <>
       <Heading>Documents</Heading>
       <Card>
-        {documents.length === 0 ? <Body muted>No documents on file yet.</Body> : null}
-        {documents.map((d) => (
+        {DOCUMENT_REQUEST_TYPES.map((type) => {
+          const row = documentRow(latestDeskRequest(data.deskRequests, type, deal.id));
+          const action = row.action;
+          return (
+            <LineItem
+              key={type}
+              title={type}
+              detail={DESK_REQUEST_HINTS[type]}
+              amount=""
+              note={
+                sending === type
+                  ? 'Sending…'
+                  : doc.opening !== null && action?.kind === 'open' && doc.opening === action.fileId
+                    ? 'Opening…'
+                    : row.note
+              }
+              {...(action === null
+                ? {}
+                : action.kind === 'open'
+                  ? {
+                      action: 'Open',
+                      onPress: () => {
+                        doc.open(action.fileId, `${type} ${unitTitle(deal)}`);
+                      },
+                    }
+                  : {
+                      action: 'Request',
+                      onPress: () => {
+                        request(type);
+                      },
+                    })}
+            />
+          );
+        })}
+        {data.documents.map((d) => (
           <LineItem
             key={d.fileId}
             title={d.name}
             detail={d.added === null ? null : `Added ${longDate(d.added)}`}
-            amount={doc.opening === d.fileId ? 'Opening…' : ''}
+            amount=""
+            note={doc.opening === d.fileId ? 'Opening…' : null}
             onPress={() => {
               doc.open(d.fileId, d.name);
             }}
           />
         ))}
         <Body muted>
-          Receipts are under Payments. For your SPA or a stamped statement, ask the JAD+ desk.
+          Receipts are under Payments. Requested documents appear here once the JAD+ desk sends them.
         </Body>
+        {error === null ? null : <Notice tone="error">{error}</Notice>}
         {doc.error === null ? null : <Notice tone="error">{doc.error}</Notice>}
       </Card>
     </>
@@ -114,7 +179,7 @@ export default function MyUnit(): ReactNode {
         <Fact label="Your role" value={deal.role} />
       </Card>
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal)} />
-      <Documents documents={data.documents} />
+      <Documents data={data} deal={deal} />
     </Page>
   );
 }

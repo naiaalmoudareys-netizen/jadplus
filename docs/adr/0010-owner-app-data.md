@@ -48,9 +48,9 @@ Salesforce connected only at go-live.
     next document and on sign-out. Only PDFs and images are accepted. Demo documents are a generated
     "SAMPLE DOCUMENT" PDF and a drawn sample floor plan, never served in production.
 11. **SPA and statement of account** are not files in Salesforce: the prototype requested the SPA from the
-    JAD+ desk and received statements from a separate Salesforce PDF push. Both become desk requests (next
-    step), until the PDF push is connected to JAD+.
-12. **Not yet**: desk requests, notification and marketing switches (N4, L1), Arabic.
+    JAD+ desk and received statements from a separate Salesforce PDF push. Both are desk requests (ADR 0011), until the
+    PDF push is connected to JAD+.
+12. **Desk requests**: ADR 0011. **Not yet**: notification and marketing switches (N4, L1), Arabic.
 
 ## Consequences
 

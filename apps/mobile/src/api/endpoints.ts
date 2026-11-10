@@ -12,6 +12,7 @@ import {
   partnerTeamResponse,
   sessionResponse,
   type AcknowledgeEmergencyBody,
+  type DeskRequestBody,
   type EmergencyRaised,
   type MyPlace,
   type OwnerPortalAnswer,
@@ -105,3 +106,7 @@ export const ownerPortal = (api: ApiClient): Promise<OwnerPortalAnswer> =>
 /** N2: tell JAD+ the owner is interested in an exclusive offer. */
 export const interestedInOffer = (api: ApiClient, postId: string): Promise<unknown> =>
   api.post(`/api/owner/offers/${encodeURIComponent(postId)}/interest`, {}, z.unknown());
+
+/** ADR 0011: a request to the JAD+ desk (a document or an account change). */
+export const deskRequest = (api: ApiClient, body: DeskRequestBody): Promise<unknown> =>
+  api.post('/api/owner/desk-requests', body, z.unknown());

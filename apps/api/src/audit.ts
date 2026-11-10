@@ -29,6 +29,7 @@ export const AUDIT_ACTIONS = [
   'on_call_rota_set',
   'notification_failed',
   'offer_interest',
+  'desk_request_created',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

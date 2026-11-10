@@ -84,8 +84,9 @@ export function LineItem(props: {
   amount: string;
   note?: string | null;
   tone?: 'normal' | 'good' | 'bad';
-  /** When set, the row opens something (a receipt, a document) and says "Open". */
+  /** When set, the row opens something (a receipt, a document) and says "Open" (or `action`). */
   onPress?: () => void;
+  action?: string;
 }): ReactNode {
   const tone = props.tone ?? 'normal';
   const row = (
@@ -103,7 +104,9 @@ export function LineItem(props: {
         {props.note ? (
           <Text style={[styles.lineDetail, tone === 'good' && styles.good]}>{props.note}</Text>
         ) : null}
-        {props.onPress === undefined ? null : <Text style={styles.open}>OPEN</Text>}
+        {props.onPress === undefined ? null : (
+          <Text style={styles.open}>{(props.action ?? 'Open').toUpperCase()}</Text>
+        )}
       </View>
     </View>
   );

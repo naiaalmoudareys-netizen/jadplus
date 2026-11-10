@@ -132,7 +132,40 @@ JAD+ needs only these fields. Building and project address tell the technician w
    }
    ```
 
-   JAD+ passes on only images and PDFs from this route. JAD+ also drops the passport/Emirates ID list,
+   Requests to the JAD+ desk (ADR 0011) use the existing `JADPortalApi` `request` action (it checks the deal
+   is this owner's and returns the open request instead of a duplicate). A fourth route, same secret:
+
+   ```js
+   // JAD+ owner app: one request to the JAD+ desk (SPA, NOC, contact change, ...) for one verified email.
+   if (action === 'jadplus-desk' && request.method === 'POST') {
+     const key = request.headers.get('x-portal-key') || '';
+     if (!env.JADPLUS_KEY || key.length !== env.JADPLUS_KEY.length || key !== env.JADPLUS_KEY) {
+       return new Response('forbidden', { status: 403 });
+     }
+     const b = await request.json().catch(() => ({}));
+     const payload = JSON.stringify({
+       email: b.email,
+       deal: b.deal,
+       type: b.type,
+       details: b.details,
+       source: 'App',
+     });
+     const send = async (token) =>
+       fetch(`${env.SF_INSTANCE_URL}/services/apexrest/jadportal/request`, {
+         method: 'POST',
+         headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+         body: payload,
+       });
+     let res = await send(await sfToken(env));
+     if (res.status === 401) {
+       await setMeta(env, { sf_token_at: new Date(0).toISOString() });
+       res = await send(await sfToken(env));
+     }
+     return new Response(res.body, { status: res.status, headers: { 'content-type': 'application/json' } });
+   }
+   ```
+
+   JAD+ passes on only images and PDFs from the file route. JAD+ also drops the passport/Emirates ID list,
    nationality and desk requests that the owner answer contains, so
    they never reach the app. News and offers need the JAD+ Post object and `posts()` from the portal package
    (`steven leads/JAD DOCUMENT/salesforce-build/portal_api`, not deployed yet).
