@@ -94,14 +94,25 @@ export function FittedPhoto(props: {
   );
 }
 
-/** A photo box with a slate veil, the logo, a bronze eyebrow and a title (sign-in, home, my unit). */
-export function Hero(props: { project?: string | null; eyebrow: string; title: string }): ReactNode {
+/**
+ * A photo box with a slate veil, the logo, a bronze eyebrow and a title (sign-in, home, my unit); `corner`
+ * puts something small opposite the logo (the notifications bell on Home).
+ */
+export function Hero(props: {
+  project?: string | null;
+  eyebrow: string;
+  title: string;
+  corner?: ReactNode;
+}): ReactNode {
   const key = projectKey(props.project ?? null);
   return (
     <View style={styles.hero}>
       <FittedPhoto source={key === null ? signinPoster : PROJECT_PHOTOS[key]} />
       <View style={styles.veil}>
-        <Logo onPhoto />
+        <View style={styles.top}>
+          <Logo onPhoto />
+          {props.corner}
+        </View>
         <View style={styles.heroText}>
           <Text style={styles.eyebrow}>{props.eyebrow.toUpperCase()}</Text>
           <Text style={styles.title} accessibilityRole="header">
@@ -130,6 +141,7 @@ const styles = StyleSheet.create({
     // Lighter veil than before, so the fitted photo stays visible behind the title.
     backgroundColor: 'rgba(57,69,81,0.38)',
   },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroText: { gap: space.xs },
   eyebrow: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 2.4, color: colors.bronzeSoft },
   title: { fontFamily: fonts.light, fontSize: 30, letterSpacing: -0.6, color: colors.onNavy },

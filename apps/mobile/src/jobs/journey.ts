@@ -103,3 +103,29 @@ export function quoteStatusLabel(status: Quote['status'], t: Translate): string 
 export function validUntilLabel(quote: Quote, lang: Lang): string {
   return lang.t('journey.quote.validUntil', { date: longDate(dubaiDate(quote.expiresAt), lang.locale) });
 }
+
+const VISIT_STATUS_KEYS: Readonly<
+  Record<'partner' | 'resident', Readonly<Record<Visit['status'], MessageKey>>>
+> = {
+  partner: {
+    booked: 'extras.visit.partner.booked',
+    on_the_way: 'extras.visit.partner.on_the_way',
+    arrived: 'extras.visit.partner.arrived',
+    done: 'extras.visit.partner.done',
+  },
+  resident: {
+    booked: 'extras.visit.resident.booked',
+    on_the_way: 'extras.visit.resident.on_the_way',
+    arrived: 'extras.visit.resident.arrived',
+    done: 'extras.visit.resident.done',
+  },
+};
+
+/** Where the visit stands (A8): "On the way" for the partner, "Technician on the way" for the resident. */
+export function visitStatusLabel(
+  status: Visit['status'],
+  viewer: 'partner' | 'resident',
+  t: Translate,
+): string {
+  return t(VISIT_STATUS_KEYS[viewer][status]);
+}

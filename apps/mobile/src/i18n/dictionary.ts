@@ -7,6 +7,8 @@ import { requestLabels } from './strings/labels-requests.js';
 import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
+import { screensExtras } from './strings/screens-extras.js';
+import { screensInbox } from './strings/screens-inbox.js';
 import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
 import { screensOwner2 } from './strings/screens-owner-2.js';
@@ -25,6 +27,8 @@ export const PARTS = [
   screensRequests,
   screensAccess,
   screensJourney,
+  screensInbox,
+  screensExtras,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

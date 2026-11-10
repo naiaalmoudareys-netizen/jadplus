@@ -17,6 +17,8 @@ export const colors = {
   bronze: '#937831',
   bronzeSoft: '#C9B278',
   mist: '#D2DEE8',
+  /** Unread notifications: a lighter mist. */
+  mistSoft: '#EDF2F6',
   /** Body text (ink) and secondary text. */
   text: '#1B1F26',
   textSecondary: '#4A525C',

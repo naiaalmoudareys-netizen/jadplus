@@ -1,7 +1,7 @@
 /**
  * Home (ADR 0014; Naya, 10-Nov-2026: "redesign the home page"). It answers "is everything fine with my home,
  * and is there anything I need to do?": a greeting on the project photo, what needs attention now (only when
- * something does), one-tap shortcuts, the next payment, the two requests that matter most, construction
+ * something does), the notifications bell (ADR 0019), one-tap shortcuts, the next payment, the two requests that matter most, construction
  * progress, and news & offers to swipe through. Everything else is one tap away in the tabs.
  */
 import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
@@ -25,6 +25,8 @@ import {
   type Shortcut,
 } from '../../src/home/HomeParts.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
+import { InboxBell } from '../../src/inbox/InboxParts.js';
+import { useUnread } from '../../src/inbox/useUnread.js';
 import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
@@ -51,6 +53,7 @@ export default function Home(): ReactNode {
   const loadRequests = useCallback(() => myRequests(api), [api]);
   const requests = useLoad(loadRequests, REFRESH_MS);
   const { reload } = requests;
+  const unread = useUnread(api);
   useFocusEffect(
     useCallback(() => {
       void reload();
@@ -148,6 +151,14 @@ export default function Home(): ReactNode {
           name === null
             ? greeting(now, t)
             : t('owner.home.greetingName', { greeting: greeting(now, t), name })
+        }
+        corner={
+          <InboxBell
+            unread={unread}
+            onPress={() => {
+              router.push('/notifications');
+            }}
+          />
         }
       />
       <Attention items={attention} onPress={openItem} />

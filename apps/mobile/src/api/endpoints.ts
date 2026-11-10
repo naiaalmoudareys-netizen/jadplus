@@ -10,6 +10,12 @@ import {
   requestRaisedResponse,
   servicesResponse,
   preferencesResponse,
+  inboxResponse,
+  type Inbox,
+  type MarkReadBody,
+  type CloseRequestBody,
+  type MakeSafeBody,
+  type NoAccessBody,
   type ConsentBody,
   type Preferences,
   type PreferencesBody,
@@ -144,13 +150,18 @@ export const raiseRequest = (
     requestRaisedResponse,
   );
 
-/** ADR 0013: add a prepared JPEG photo to a request. */
+/** ADR 0013: add a prepared JPEG photo to a request; answers with the new photo's id. */
 export const addRequestPhoto = (
   api: ApiClient,
   requestId: string,
   jpeg: Uint8Array<ArrayBuffer>,
-): Promise<unknown> =>
-  api.upload(`/api/requests/${encodeURIComponent(requestId)}/photos`, jpeg, 'image/jpeg', z.unknown());
+): Promise<{ id: string }> =>
+  api.upload(
+    `/api/requests/${encodeURIComponent(requestId)}/photos`,
+    jpeg,
+    'image/jpeg',
+    z.object({ id: z.string() }),
+  );
 
 const job = (id: string, step: string): string => `/api/partner/jobs/${encodeURIComponent(id)}/${step}`;
 const request = (id: string, step: string): string => `/api/requests/${encodeURIComponent(id)}/${step}`;
@@ -192,3 +203,25 @@ export const changePreferences = (api: ApiClient, body: PreferencesBody): Promis
 
 export const giveConsent = (api: ApiClient, body: ConsentBody): Promise<Preferences> =>
   api.post('/api/me/consents', body, preferencesResponse);
+
+/** ADR 0019: the person's notifications (latest 50) and how many are unread. */
+export const inbox = (api: ApiClient): Promise<Inbox> => api.get('/api/me/inbox', inboxResponse);
+
+export const markInboxRead = (api: ApiClient, body: MarkReadBody): Promise<void> =>
+  api.postNoContent('/api/me/inbox/read', body);
+
+/** A8, partner: the technician is on the way to the booked visit. */
+export const onMyWay = (api: ApiClient, jobId: string): Promise<unknown> =>
+  api.post(job(jobId, 'on-my-way'), {}, z.unknown());
+
+/** A7, partner: no one let the technician in (the door photo is uploaded first with addRequestPhoto). */
+export const noAccess = (api: ApiClient, jobId: string, body: NoAccessBody): Promise<unknown> =>
+  api.post(job(jobId, 'no-access'), body, z.unknown());
+
+/** E8, partner: urgent make-safe work within the owner's limit (the API refuses anything above it). */
+export const makeSafe = (api: ApiClient, jobId: string, body: MakeSafeBody): Promise<unknown> =>
+  api.post(job(jobId, 'make-safe'), body, z.unknown());
+
+/** Owner or tenant: cancel before the work starts, or (owner, E19) "I arranged it myself". */
+export const closeRequest = (api: ApiClient, requestId: string, body: CloseRequestBody): Promise<unknown> =>
+  api.post(request(requestId, 'close'), body, z.unknown());

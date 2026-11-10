@@ -156,7 +156,9 @@ pnpm --filter @jadplus/mobile start   # Expo
   `/api/me/preferences`, `/api/me/consents`. Every screen translated. Emergencies: water leak + AC only
   (ADR 0017, Naya; Dr. Mohanad to see). Request journey (ADR 0018): partner books visit, quotes, finishes with
   photos; owner decides quotes; resident confirms or reopens and rates; clock job expires quotes (14 d) and
-  auto-closes (72 h); reminders wait for providers. API `dev:phone` for phone testing. 388 tests.
+  auto-closes (72 h). API `dev:phone` for phone testing. In-app notifications + reminders, on my way, no access,
+  make-safe limit, cancel / arranged myself (ADR 0019, migration 0016); emergency text without "call 999"
+  (ADR 0020). 414 tests.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

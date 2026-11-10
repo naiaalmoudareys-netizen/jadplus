@@ -5,6 +5,7 @@
  * - who you are (from the JAD Global record; changes go through the JAD+ desk, U2)
  * - language (English, Arabic, French, Russian, Chinese)
  * - notifications and the marketing consent (N4, L1)
+ * - emergencies: the owner's make-safe limit (E8, ADR 0019)
  * - JAD+ desk requests and their status (ADR 0011)
  * - privacy and terms: what was accepted when, the privacy notice, a copy of my data, close my account
  * - sign-in and security: switch view (R5, U7), sign out, sign out everywhere (T3)
@@ -20,6 +21,7 @@ import { deskStatusLabel } from '../../src/portal/deskRows.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
 import { DemoBadge } from '../../src/portal/ui.js';
 import { LanguageRow } from '../../src/profile/LanguagePicker.js';
+import { MakeSafeGroup } from '../../src/profile/MakeSafeGroup.js';
 import { NotificationsGroup } from '../../src/profile/NotificationsGroup.js';
 import { usePreferences } from '../../src/profile/preferencesContext.js';
 import { Group, ProfileHeader, SettingsRow } from '../../src/profile/ProfileParts.js';
@@ -87,6 +89,8 @@ export default function Profile(): ReactNode {
       </Group>
 
       <NotificationsGroup owner={owner} />
+
+      {owner ? <MakeSafeGroup /> : null}
 
       {data === null ? null : (
         <Group title={t('profile.desk')}>
