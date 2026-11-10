@@ -89,6 +89,23 @@ export const partnerJobsResponse = z.object({
 });
 export type PartnerJob = z.infer<typeof partnerJobsResponse>['jobs'][number];
 
+/** GET /api/partner/jobs?view=: open jobs (the queue) or jobs finished in the last 30 days. */
+export const partnerJobsQuery = z.strictObject({ view: z.enum(['open', 'done']).optional() });
+
+/** GET /api/partner/stats?days=: a technician's own numbers, or the whole company's for the partner office. */
+export const partnerStatsQuery = z.strictObject({ days: z.enum(['7', '30', '90']).optional() });
+export const partnerStatsResponse = z.object({
+  days: z.number().int(),
+  scope: z.enum(['technician', 'company']),
+  jobsDone: z.number().int(),
+  /** SLA targets met out of those measured (S4, S5). */
+  onTime: z.object({ met: z.number().int(), total: z.number().int() }),
+  rating: z.object({ average: z.number().nullable(), count: z.number().int() }),
+  /** Return visits after "not done" (A5). */
+  repeatVisits: z.number().int(),
+});
+export type PartnerStats = z.infer<typeof partnerStatsResponse>;
+
 /** GET /api/partner/team (E4, E17). */
 export const partnerTeamResponse = z.object({
   partner: z.object({ id: z.string(), name: z.string(), status: z.string() }).nullable(),

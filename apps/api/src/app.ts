@@ -27,6 +27,7 @@ import { approvalRoutes } from './requests/approval.js';
 import { tenancyRoutes } from './tenancies/routes.js';
 import { partnerFlowRoutes } from './requests/partner-flow.js';
 import { partnerVisitRoutes } from './requests/partner-visit.js';
+import { partnerStatsRoutes } from './partner/stats.js';
 import { residentFlowRoutes } from './requests/resident-flow.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
@@ -70,6 +71,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/partner', partnerRoutes());
   app.route('/api/partner', partnerFlowRoutes());
   app.route('/api/partner', partnerVisitRoutes());
+  app.route('/api/partner', partnerStatsRoutes());
   app.route('/api', inboxRoutes());
   app.route('/api', approvalRoutes());
   app.route('/api', tenancyRoutes(deps));

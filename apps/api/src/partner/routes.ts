@@ -13,6 +13,7 @@ import {
   canTransition,
   dubaiDate,
   requestIdParam,
+  partnerJobsQuery,
   slaMet,
   type VisitSlot,
 } from '@jadplus/shared';
@@ -23,7 +24,7 @@ import { decryptField, newId, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { eventStatement, notificationStatement, requestFacts } from '../requests/store.js';
-import { parseJsonBody, parseParams } from '../validate.js';
+import { parseJsonBody, parseParams, parseQuery } from '../validate.js';
 import {
   LOCATION_COLUMNS,
   LOCATION_JOIN,
@@ -34,6 +35,7 @@ import {
 import { versionGuard, withConflictCheck } from '../requests/concurrency.js';
 
 const MIN = 60_000;
+const DAY = 24 * 60 * MIN;
 
 interface QueueRow extends LocationRow {
   service_name: string | null;
@@ -72,21 +74,35 @@ export function partnerRoutes(): Hono<AppEnv> {
 
   // R3: open jobs, emergencies first, then by the next deadline, with where the unit is. No owner or tenant
   // contact details: all contact goes through messages in JAD+ (ADR 0009).
+  // view=done: the jobs this partner finished in the last 30 days (completed or closed after the work), newest
+  // first, for the technician's "Done" list.
   partner.get('/jobs', async (c) => {
     const { partnerId } = c.get('auth');
+    const { view } = parseQuery(c, partnerJobsQuery);
     const open = [...OPEN_STATUSES];
-    const { results } = await c.env.DB.prepare(
-      `SELECT r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
+    const columns = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
               (SELECT name FROM services WHERE code = r.service_code) AS service_name,
               r.next_due_kind, r.technician_id, r.arrival_window_start, r.arrival_window_end, r.created_at,
               r.preferred_date, r.preferred_slot,
-              ${LOCATION_COLUMNS}
-       FROM requests r ${LOCATION_JOIN}
-       WHERE r.partner_id = ? AND r.status IN (${open.map(() => '?').join(', ')})
-       ORDER BY r.is_emergency DESC, r.next_due_at IS NULL, r.next_due_at, r.created_at`,
-    )
-      .bind(partnerId, ...open)
-      .all<QueueRow>();
+              ${LOCATION_COLUMNS}`;
+    const { results } =
+      view === 'done'
+        ? await c.env.DB.prepare(
+            `SELECT ${columns} FROM requests r ${LOCATION_JOIN}
+             WHERE r.partner_id = ? AND (r.status = 'completed'
+               OR (r.status = 'closed' AND r.close_reason IN ('confirmed', 'auto_closed')))
+               AND r.status_changed_at >= ?
+             ORDER BY r.status_changed_at DESC LIMIT 100`,
+          )
+            .bind(partnerId, c.get('now') - 30 * DAY)
+            .all<QueueRow>()
+        : await c.env.DB.prepare(
+            `SELECT ${columns} FROM requests r ${LOCATION_JOIN}
+             WHERE r.partner_id = ? AND r.status IN (${open.map(() => '?').join(', ')})
+             ORDER BY r.is_emergency DESC, r.next_due_at IS NULL, r.next_due_at, r.created_at`,
+          )
+            .bind(partnerId, ...open)
+            .all<QueueRow>();
     return c.json({
       jobs: results.map((r) => ({
         id: r.id,
