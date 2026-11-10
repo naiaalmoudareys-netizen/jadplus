@@ -12,6 +12,7 @@ export * from './news.js';
 export * from './owners.js';
 export * from './payments.js';
 export * from './portal.js';
+export * from './preferences.js';
 export * from './responses.js';
 export * from './schemas.js';
 export * from './scorecard.js';

@@ -3,26 +3,29 @@ import type { RoleContextView } from '@jadplus/shared';
 import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { ApiError } from '../api/client.js';
+import { useT } from '../i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../session/SessionProvider.js';
 import { Body, Button, Notice } from './kit.js';
 
-export const ROLE_NAMES: Readonly<Record<RoleContextView['role'], string>> = {
-  owner: 'Owner',
-  tenant: 'Tenant',
-  partner: 'Technician',
-  partner_admin: 'Partner office',
-  jad_admin: 'JAD+ Admin',
-  jad_viewer: 'JAD+ staff',
-};
+export interface AccountActions {
+  readonly role: RoleContextView['role'] | null;
+  /** The other views this person can switch to. */
+  readonly others: readonly RoleContextView[];
+  readonly busy: boolean;
+  readonly error: string | null;
+  readonly switchTo: (context: RoleContextView) => void;
+  readonly signOut: (everywhere: boolean) => void;
+}
 
-export function AccountSection(): ReactNode {
+/** The actions, for any screen that offers them (Profile, technicians' Account page). */
+export function useAccountActions(): AccountActions {
   const session = useSession();
   const controller = useSessionController();
   const router = useRouter();
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (session.status !== 'signed_in') return null;
-  const { me } = session;
+  const me = session.status === 'signed_in' ? session.me : null;
 
   const run = async (work: () => Promise<void>) => {
     setBusy(true);
@@ -33,39 +36,59 @@ export function AccountSection(): ReactNode {
       if (router.canDismiss()) router.dismissAll();
       router.replace('/');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(err instanceof ApiError ? err.message : t('common.error'));
     } finally {
       setBusy(false);
     }
   };
 
-  const others = me.contexts.filter((c) => c.role !== me.role || c.partnerId !== me.partnerId);
+  return {
+    role: me?.role ?? null,
+    others: me === null ? [] : me.contexts.filter((c) => c.role !== me.role || c.partnerId !== me.partnerId),
+    busy,
+    error,
+    switchTo: (c) => void run(() => controller.switchTo(c)),
+    signOut: (everywhere) => void run(() => controller.signOut(everywhere)),
+  };
+}
+
+/** The same actions as plain buttons (technicians' and partner offices' Account page). */
+export function AccountSection(): ReactNode {
+  const t = useT();
+  const a = useAccountActions();
+  if (a.role === null) return null;
   return (
     <>
-      <Body muted>Current view: {ROLE_NAMES[me.role]}</Body>
-      {others.map((c) => (
+      <Body muted>{`${t('profile.currentView')}: ${t(`role.${a.role}`)}`}</Body>
+      {a.others.map((c) => (
         <Button
           key={`${c.role}:${c.partnerId ?? ''}`}
-          title={`Switch to ${ROLE_NAMES[c.role]}`}
+          title={t('profile.switchTo', { role: t(`role.${c.role}`) })}
           kind="secondary"
-          busy={busy}
-          onPress={() => void run(() => controller.switchTo(c))}
+          busy={a.busy}
+          onPress={() => {
+            a.switchTo(c);
+          }}
         />
       ))}
       <Button
-        title="Sign out"
+        title={t('profile.signOut')}
         kind="secondary"
-        busy={busy}
-        onPress={() => void run(() => controller.signOut())}
+        busy={a.busy}
+        onPress={() => {
+          a.signOut(false);
+        }}
       />
-      <Body muted>Lost a phone? This signs you out on every device, including this one.</Body>
+      <Body muted>{t('profile.signOutEverywhereNote')}</Body>
       <Button
-        title="Sign out everywhere"
+        title={t('profile.signOutEverywhere')}
         kind="danger"
-        busy={busy}
-        onPress={() => void run(() => controller.signOut(true))}
+        busy={a.busy}
+        onPress={() => {
+          a.signOut(true);
+        }}
       />
-      {error === null ? null : <Notice tone="error">{error}</Notice>}
+      {a.error === null ? null : <Notice tone="error">{a.error}</Notice>}
     </>
   );
 }

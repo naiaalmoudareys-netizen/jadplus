@@ -24,8 +24,9 @@ export default function DeskRequest(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
-  const { type: raw } = useLocalSearchParams<{ type: string }>();
-  const [details, setDetails] = useState('');
+  // `details` may come filled in from Profile ("Request a copy of my data"); the owner can still change it.
+  const { type: raw, details: prefill } = useLocalSearchParams<{ type: string; details?: string }>();
+  const [details, setDetails] = useState(typeof prefill === 'string' ? prefill.slice(0, 1000) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const type = asType(raw);

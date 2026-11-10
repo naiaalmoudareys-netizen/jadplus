@@ -9,6 +9,10 @@ import {
   requestDetailResponse,
   requestRaisedResponse,
   servicesResponse,
+  preferencesResponse,
+  type ConsentBody,
+  type Preferences,
+  type PreferencesBody,
   meResponse,
   partnerJobsResponse,
   partnerTeamResponse,
@@ -142,3 +146,13 @@ export const addRequestPhoto = (
   jpeg: Uint8Array<ArrayBuffer>,
 ): Promise<unknown> =>
   api.upload(`/api/requests/${encodeURIComponent(requestId)}/photos`, jpeg, 'image/jpeg', z.unknown());
+
+/** Profile settings and consents (ADR 0016). */
+export const preferences = (api: ApiClient): Promise<Preferences> =>
+  api.get('/api/me/preferences', preferencesResponse);
+
+export const changePreferences = (api: ApiClient, body: PreferencesBody): Promise<Preferences> =>
+  api.post('/api/me/preferences', body, preferencesResponse);
+
+export const giveConsent = (api: ApiClient, body: ConsentBody): Promise<Preferences> =>
+  api.post('/api/me/consents', body, preferencesResponse);

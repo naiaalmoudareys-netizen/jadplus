@@ -21,6 +21,7 @@ import { deskRoutes } from './portal/desk.js';
 import { portalRoutes } from './portal/routes.js';
 import { residentRoutes } from './requests/resident.js';
 import { PHOTO_UPLOAD_PATH, photoRoutes } from './requests/photos.js';
+import { preferenceRoutes } from './me/preferences.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
 import { securityHeaders } from './security.js';
@@ -57,6 +58,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api', residentRoutes());
   app.route('/api', routineRoutes(deps));
   app.route('/api', photoRoutes());
+  app.route('/api', preferenceRoutes());
   app.route('/api/owner', portalRoutes(deps));
   app.route('/api/owner', deskRoutes(deps));
   app.route('/api/partner', partnerRoutes());

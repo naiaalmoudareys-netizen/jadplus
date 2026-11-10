@@ -32,6 +32,9 @@ export const AUDIT_ACTIONS = [
   'notification_failed',
   'offer_interest',
   'desk_request_created',
+  'preferences_changed',
+  'terms_accepted',
+  'marketing_consent_changed',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

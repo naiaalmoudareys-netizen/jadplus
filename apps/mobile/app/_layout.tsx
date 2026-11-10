@@ -1,4 +1,7 @@
-/** App frame: JAD+ fonts and colours (docs/DESIGN.md), session for every screen, one navigation stack. */
+/**
+ * App frame: JAD+ fonts and colours (docs/DESIGN.md), the language (ADR 0016), the session and the person's
+ * settings for every screen, and one navigation stack.
+ */
 // One import per weight, so only the five weights used are bundled (not the italics).
 import { HankenGrotesk_300Light } from '@expo-google-fonts/hanken-grotesk/300Light';
 import { HankenGrotesk_400Regular } from '@expo-google-fonts/hanken-grotesk/400Regular';
@@ -10,6 +13,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { I18nProvider, useT } from '../src/i18n/I18nProvider.js';
+import { PreferencesProvider } from '../src/profile/PreferencesProvider.js';
 import { SessionProvider } from '../src/session/SessionProvider.js';
 import { Loading } from '../src/ui/kit.js';
 import { colors, fonts } from '../src/ui/theme.js';
@@ -25,29 +30,41 @@ export default function RootLayout(): ReactNode {
   if (!fontsLoaded) return <Loading />;
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <StatusBar style="dark" />
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.navy,
-            headerShadowVisible: false,
-            headerTitleStyle: { fontFamily: fonts.medium, fontSize: 15 },
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="sign-in" options={{ headerShown: false }} />
-          <Stack.Screen name="(resident)" options={{ headerShown: false }} />
-          <Stack.Screen name="partner/index" options={{ title: 'My jobs', headerBackVisible: false }} />
-          <Stack.Screen name="partner/job/[id]" options={{ title: 'Job' }} />
-          <Stack.Screen name="emergency" options={{ title: 'Emergency' }} />
-          <Stack.Screen name="request/[id]" options={{ title: 'Request' }} />
-          <Stack.Screen name="new-request" options={{ title: 'New request' }} />
-          <Stack.Screen name="desk-request" options={{ title: 'JAD+ desk' }} />
-          <Stack.Screen name="settings" options={{ title: 'Account' }} />
-        </Stack>
-      </SessionProvider>
+      <I18nProvider>
+        <SessionProvider>
+          <PreferencesProvider>
+            <StatusBar style="dark" />
+            <Screens />
+          </PreferencesProvider>
+        </SessionProvider>
+      </I18nProvider>
     </SafeAreaProvider>
+  );
+}
+
+function Screens(): ReactNode {
+  const t = useT();
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.navy,
+        headerShadowVisible: false,
+        headerTitleStyle: { fontFamily: fonts.medium, fontSize: 15 },
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
+      <Stack.Screen name="(resident)" options={{ headerShown: false }} />
+      <Stack.Screen name="partner/index" options={{ title: t('title.myJobs'), headerBackVisible: false }} />
+      <Stack.Screen name="partner/job/[id]" options={{ title: t('title.job') }} />
+      <Stack.Screen name="emergency" options={{ title: t('title.emergency') }} />
+      <Stack.Screen name="request/[id]" options={{ title: t('title.request') }} />
+      <Stack.Screen name="new-request" options={{ title: t('title.newRequest') }} />
+      <Stack.Screen name="desk-request" options={{ title: t('title.desk') }} />
+      <Stack.Screen name="settings" options={{ title: t('title.account') }} />
+      <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
+    </Stack>
   );
 }

@@ -7,6 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
 import { PortalProvider } from '../../src/portal/PortalProvider.js';
+import { useT } from '../../src/i18n/I18nProvider.js';
 import { useSession } from '../../src/session/SessionProvider.js';
 import { colors, fonts } from '../../src/ui/theme.js';
 
@@ -21,6 +22,7 @@ const icon =
 
 export default function ResidentTabs(): ReactNode {
   const session = useSession();
+  const t = useT();
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   const owner = session.me.role === 'owner';
   const tabs = (
@@ -37,19 +39,26 @@ export default function ResidentTabs(): ReactNode {
         sceneStyle: { backgroundColor: colors.background },
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: icon('home-outline') }} />
+      <Tabs.Screen name="home" options={{ title: t('tab.home'), tabBarIcon: icon('home-outline') }} />
       <Tabs.Screen
         name="unit"
-        options={{ title: 'My unit', tabBarIcon: icon('business-outline'), href: owner ? '/unit' : null }}
+        options={{ title: t('tab.unit'), tabBarIcon: icon('business-outline'), href: owner ? '/unit' : null }}
       />
       <Tabs.Screen
         name="payments"
-        options={{ title: 'Payments', tabBarIcon: icon('card-outline'), href: owner ? '/payments' : null }}
+        options={{
+          title: t('tab.payments'),
+          tabBarIcon: icon('card-outline'),
+          href: owner ? '/payments' : null,
+        }}
       />
-      <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: icon('construct-outline') }} />
+      <Tabs.Screen
+        name="requests"
+        options={{ title: t('tab.requests'), tabBarIcon: icon('construct-outline') }}
+      />
       {/* Opened from "See all" on Home; not shown in the bar. */}
-      <Tabs.Screen name="news" options={{ title: 'News & offers', href: null }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
+      <Tabs.Screen name="news" options={{ title: t('tab.news'), href: null }} />
+      <Tabs.Screen name="profile" options={{ title: t('tab.profile'), tabBarIcon: icon('person-outline') }} />
     </Tabs>
   );
   // Owner data (Salesforce, or demo) is loaded once for all owner tabs; tenants never request it.
