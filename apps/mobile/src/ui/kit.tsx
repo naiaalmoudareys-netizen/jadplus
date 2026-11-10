@@ -2,7 +2,7 @@
  * Building blocks shared by every screen, in the JAD+ look (docs/DESIGN.md): page, eyebrow, heading, text,
  * field, button, card, notice.
  */
-import type { ReactNode } from 'react';
+import type { ComponentRef, ReactNode, Ref } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,13 +18,29 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { buttonRadius, cardShadow, colors, fonts, radius, space } from './theme.js';
 
-export function Page({ children, scroll = true }: { children: ReactNode; scroll?: boolean }): ReactNode {
+/** What a page's scroll view offers (scrollTo) to scrollTarget.ts. */
+export type ScrollHandle = ComponentRef<typeof ScrollView>;
+
+export function Page({
+  children,
+  scroll = true,
+  scrollRef,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  /** Lets a tab scroll to a section when opened from a link (scrollTarget.ts). */
+  scrollRef?: Ref<ScrollHandle>;
+}): ReactNode {
   return (
     <SafeAreaView style={styles.page} edges={['bottom', 'left', 'right']}>
       <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
           // "handled": a tap on a button works first time even while the keyboard is open.
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
             {children}
           </ScrollView>
         ) : (

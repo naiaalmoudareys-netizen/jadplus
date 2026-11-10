@@ -32,6 +32,7 @@ import { projectKey } from '../../src/brand/projects.js';
 import { RequestRow } from '../../src/requests/RequestRow.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Hero } from '../../src/ui/brand.js';
+import { scrollParams } from '../../src/ui/scrollTarget.js';
 import { useLoad } from '../../src/ui/hooks.js';
 import { Body, Card, Page } from '../../src/ui/kit.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
@@ -77,8 +78,12 @@ export default function Home(): ReactNode {
     label: jobTitle,
     arrival: arrivalLabel,
   });
+  // Tabs remember where they were scrolled; links from Home say where to land (scrollTarget.ts).
+  const openPayments = () => {
+    router.push({ pathname: '/payments', params: scrollParams('top', Date.now()) });
+  };
   const openItem = (item: AttentionItem) => {
-    if ('tab' in item.target) router.push('/payments');
+    if ('tab' in item.target) openPayments();
     else router.push({ pathname: '/request/[id]', params: { id: item.target.requestId } });
   };
 
@@ -104,14 +109,14 @@ export default function Home(): ReactNode {
             label: 'Pay',
             icon: 'card-outline' as const,
             onPress: () => {
-              router.push('/payments');
+              openPayments();
             },
           },
           {
             label: 'Documents',
             icon: 'document-text-outline' as const,
             onPress: () => {
-              router.push('/unit');
+              router.push({ pathname: '/unit', params: scrollParams('documents', Date.now()) });
             },
           },
         ]
@@ -144,7 +149,7 @@ export default function Home(): ReactNode {
         <Pressable
           accessibilityRole="button"
           onPress={() => {
-            router.push('/payments');
+            openPayments();
           }}
         >
           <Card>
@@ -190,7 +195,7 @@ export default function Home(): ReactNode {
       <ConstructionLine
         update={latestUpdate}
         onPress={() => {
-          router.push('/unit');
+          router.push({ pathname: '/unit', params: scrollParams('construction', Date.now()) });
         }}
       />
 

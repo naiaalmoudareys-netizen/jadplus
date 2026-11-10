@@ -10,11 +10,13 @@ import { usePortal } from '../../src/portal/PortalProvider.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { DemoBadge, LineItem, Pill, PortalError, ProgressBar, UnitSwitcher } from '../../src/portal/ui.js';
 import { Body, Button, Card, Eyebrow, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
+import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
 
 export default function Payments(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   const doc = useOpenDocument();
+  const scroll = useScrollTarget();
   if (loading && data === null) return <Loading />;
   if (data === null || error !== null) {
     return (
@@ -36,7 +38,7 @@ export default function Payments(): ReactNode {
   const overdue = s.overdueAmount > 1;
   const penalties = deal.penalties.filter((p) => p.outstanding > 1);
   return (
-    <Page>
+    <Page scrollRef={scroll.ref}>
       <DemoBadge />
       <UnitSwitcher />
       <Eyebrow>{unitTitle(deal)}</Eyebrow>

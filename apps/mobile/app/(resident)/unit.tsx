@@ -8,6 +8,7 @@ import {
   type OwnerPortalAnswer,
 } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { ApiError } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
 import { ConstructionSection } from '../../src/portal/ConstructionSection.js';
@@ -19,7 +20,9 @@ import { Photo } from '../../src/portal/Photo.js';
 import { DemoBadge, Fact, LineItem, PortalError, UnitSwitcher } from '../../src/portal/ui.js';
 import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { Hero } from '../../src/ui/brand.js';
+import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
+import { space } from '../../src/ui/theme.js';
 
 /** The unit's floor plan, shown whole; a real plan can also be opened full size in the phone's viewer. */
 function FloorPlan({ fileId, unit }: { fileId: string | null; unit: string }): ReactNode {
@@ -133,6 +136,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
 
 export default function MyUnit(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
+  const scroll = useScrollTarget();
   if (loading && data === null) return <Loading />;
   if (data === null || error !== null) {
     return (
@@ -151,7 +155,7 @@ export default function MyUnit(): ReactNode {
   }
   const u = deal.unit;
   return (
-    <Page>
+    <Page scrollRef={scroll.ref}>
       <DemoBadge />
       <UnitSwitcher />
       <Hero project={u?.project ?? null} eyebrow={u?.project ?? 'Your residence'} title={unitTitle(deal)} />
@@ -180,8 +184,14 @@ export default function MyUnit(): ReactNode {
         <Fact label="Your role" value={deal.role} />
       </Card>
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal)} />
-      <Documents data={data} deal={deal} />
-      <ConstructionSection project={u?.project ?? null} />
+      <View style={styles.section} onLayout={scroll.onLayout('documents')}>
+        <Documents data={data} deal={deal} />
+      </View>
+      <View style={styles.section} onLayout={scroll.onLayout('construction')}>
+        <ConstructionSection project={u?.project ?? null} />
+      </View>
     </Page>
   );
 }
+
+const styles = StyleSheet.create({ section: { gap: space.md } });
