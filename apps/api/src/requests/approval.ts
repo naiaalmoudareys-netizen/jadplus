@@ -20,7 +20,7 @@ import type { AppEnv } from '../env.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
 import { loadForAction } from './flow.js';
-import { inboxStatements } from './inbox.js';
+import { inboxStatements, partnerInboxStatement } from './inbox.js';
 import { routeService } from './routine.js';
 import { eventStatement } from './store.js';
 import { changeStatements } from './transition.js';
@@ -80,6 +80,7 @@ export function approvalRoutes(): Hono<AppEnv> {
                 toStatus: 'assigned',
               }),
               eventStatement(db, { ...sys, kind: 'assigned', partnerId: partner.id }),
+              partnerInboxStatement(db, { requestId: id, partnerId: partner.id }, 'job_new', now),
             ]),
         ...inboxStatements(db, row, 'request_approved', now),
       ]),

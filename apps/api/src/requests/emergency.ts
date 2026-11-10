@@ -34,6 +34,7 @@ import {
   servicePartners,
 } from './store.js';
 import { ownsUnit } from '../owners/units.js';
+import { partnerInboxStatement } from './inbox.js';
 
 type Ctx = Context<AppEnv>;
 
@@ -166,6 +167,7 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
         template: 'emergency_new_job',
         urgent: true,
       }),
+      partnerInboxStatement(db, { requestId: id, partnerId: partner.id }, 'job_new', now, { urgent: true }),
     );
   }
   if (dispatch.buildingFm) {

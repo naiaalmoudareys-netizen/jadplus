@@ -38,6 +38,7 @@ describe('A8: visit notifications', () => {
       detail: 'Wed 11 Nov · 09:00-12:00 · JAD-AB12CD',
       icon: 'calendar-outline',
       needsYou: false,
+      urgent: false,
     });
   });
 
@@ -104,6 +105,7 @@ describe('A1, R2, U4, U5: tenants and approvals', () => {
       detail: 'Waiting for your approval · JAD-AB12CD',
       icon: 'person-outline',
       needsYou: true,
+      urgent: false,
     });
     expect(inboxText(item({ kind: 'request_declined' }), en).title).toBe('The owner declined your request');
     expect(inboxText(item({ kind: 'request_approved' }), fr).title).toBe(
@@ -127,9 +129,83 @@ describe('A1, R2, U4, U5: tenants and approvals', () => {
   });
 
   it('a tenancy item opens My unit for an owner and Home for a tenant; a request item its request', () => {
-    expect(inboxTarget(tenancy({ kind: 'tenancy_ended' }), true)).toEqual({ tab: 'unit' });
-    expect(inboxTarget(tenancy({ kind: 'tenancy_invited' }), false)).toEqual({ tab: 'home' });
-    expect(inboxTarget(item({ kind: 'approval_needed' }), true)).toEqual({ requestId: 'r1' });
+    expect(inboxTarget(tenancy({ kind: 'tenancy_ended' }), 'owner')).toEqual({ tab: 'unit' });
+    expect(inboxTarget(tenancy({ kind: 'tenancy_invited' }), 'tenant')).toEqual({ tab: 'home' });
+    expect(inboxTarget(item({ kind: 'approval_needed' }), 'owner')).toEqual({ requestId: 'r1' });
+  });
+});
+
+describe('messages on a request (every role)', () => {
+  it('message_received reads "New message" and opens the request for residents, the job for partners', () => {
+    const message = item({ kind: 'message_received' });
+    expect(inboxText(message, en)).toMatchObject({
+      title: 'New message',
+      detail: 'Open it to read and reply · JAD-AB12CD',
+      icon: 'chatbubble-outline',
+      urgent: false,
+    });
+    expect(inboxText(message, ar).title).toBe('رسالة جديدة');
+    expect(inboxTarget(message, 'owner')).toEqual({ requestId: 'r1' });
+    expect(inboxTarget(message, 'tenant')).toEqual({ requestId: 'r1' });
+    expect(inboxTarget(message, 'partner')).toEqual({ jobId: 'r1' });
+  });
+});
+
+describe('ADR 0024: partner notifications, worded for the technician', () => {
+  it('E1/R3: job_new is a new job; an emergency reads "New emergency" in urgent red', () => {
+    expect(inboxText(item({ kind: 'job_new' }), en)).toEqual({
+      title: 'New job',
+      detail: 'Open it to see the details · JAD-AB12CD',
+      icon: 'construct-outline',
+      needsYou: true,
+      urgent: false,
+    });
+    expect(inboxText(item({ kind: 'job_new', data: { urgent: true } }), en)).toEqual({
+      title: 'New emergency',
+      detail: 'Acknowledge it now · JAD-AB12CD',
+      icon: 'warning-outline',
+      needsYou: true,
+      urgent: true,
+    });
+    expect(inboxText(item({ kind: 'job_new', data: { urgent: true } }), fr).title).toBe('Nouvelle urgence');
+  });
+
+  it('E5: job_reminder asks to acknowledge now, always urgent', () => {
+    expect(inboxText(item({ kind: 'job_reminder' }), en)).toMatchObject({
+      title: 'Acknowledge now',
+      urgent: true,
+    });
+  });
+
+  it('E6: job_moved_away says it went to the backup partner and opens nothing', () => {
+    const moved = item({ kind: 'job_moved_away' });
+    expect(inboxText(moved, en)).toMatchObject({ title: 'Moved to the backup partner', urgent: false });
+    expect(inboxTarget(moved, 'partner')).toBeNull();
+    expect(inboxTarget(moved, 'partner_admin')).toBeNull();
+  });
+
+  it('L4, A3, A5, E10, S5: quotes, confirmation, reopening, rating and cancelling', () => {
+    expect(inboxText(item({ kind: 'quote_approved' }), en).title).toBe(
+      'Quote approved: you can book the work',
+    );
+    expect(inboxText(item({ kind: 'quote_declined' }), en).detail).toBe(
+      'You may send one revised quote · JAD-AB12CD',
+    );
+    expect(inboxText(item({ kind: 'work_confirmed' }), en).title).toBe('Work confirmed');
+    expect(inboxText(item({ kind: 'work_reopened' }), en)).toMatchObject({
+      title: 'The resident says it is not done',
+      needsYou: true,
+    });
+    expect(inboxText(item({ kind: 'job_rated', data: { stars: 5 } }), en).title).toBe('Rated 5 ★');
+    expect(inboxText(item({ kind: 'job_rated' }), en).title).toBe('Job rated');
+    expect(inboxText(item({ kind: 'job_cancelled' }), en).title).toBe('Job cancelled');
+    expect(inboxText(item({ kind: 'job_assigned_to_you' }), en).title).toBe('Job assigned to you');
+  });
+
+  it('R3: a partner item opens the job page, for the technician and the partner office', () => {
+    expect(inboxTarget(item({ kind: 'job_new' }), 'partner')).toEqual({ jobId: 'r1' });
+    expect(inboxTarget(item({ kind: 'work_reopened' }), 'partner_admin')).toEqual({ jobId: 'r1' });
+    expect(inboxTarget(item({ kind: 'job_new', requestId: null }), 'partner')).toBeNull();
   });
 });
 

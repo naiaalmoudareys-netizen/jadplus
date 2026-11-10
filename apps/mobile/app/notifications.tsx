@@ -1,7 +1,9 @@
 /**
  * Notifications (ADR 0019): what happened on the person's requests and what is coming up, newest first under
  * Today, Yesterday and Earlier (Dubai dates), written by the app in the person's language. Tapping one marks it
- * read and opens its request (a tenancy item: My unit for owners, Home for tenants); "Mark all as read" clears the dots; pull down to refresh.
+ * read and opens its request (a tenancy item: My unit for owners, Home for tenants; for a technician or the
+ * partner office, the job page, except an emergency moved to the backup partner, which only reads as read);
+ * "Mark all as read" clears the dots; pull down to refresh. Reached from the bell on Home and on Today.
  */
 import type { Inbox, InboxItem } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
@@ -36,7 +38,8 @@ export default function Notifications(): ReactNode {
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if (list.loading && list.data === null) return <Loading />;
 
-  const owner = session.me.role === 'owner';
+  const { role } = session.me;
+  const partner = role === 'partner' || role === 'partner_admin';
   const items = withRead(list.data, read);
   const unread = items.some((i) => !i.read);
   const sections = inboxGroups(items, now).map((g) => ({
@@ -58,8 +61,11 @@ export default function Notifications(): ReactNode {
       setRead((r) => (r === 'all' ? r : new Set(r).add(item.id)));
       markInboxRead(api, { ids: [item.id] }).catch(() => undefined);
     }
-    const target = inboxTarget(item, owner);
-    if ('requestId' in target) router.push({ pathname: '/request/[id]', params: { id: target.requestId } });
+    const target = inboxTarget(item, role);
+    if (target === null) return;
+    if ('jobId' in target) router.push({ pathname: '/partner/job/[id]', params: { id: target.jobId } });
+    else if ('requestId' in target)
+      router.push({ pathname: '/request/[id]', params: { id: target.requestId } });
     else router.push(target.tab === 'unit' ? '/unit' : '/home');
   };
   const markAll = () => {
@@ -85,7 +91,7 @@ export default function Notifications(): ReactNode {
             ) : null}
           </View>
         }
-        ListEmptyComponent={list.error === null ? <InboxEmpty /> : undefined}
+        ListEmptyComponent={list.error === null ? <InboxEmpty partner={partner} /> : undefined}
         renderSectionHeader={({ section }) => (
           <Text style={styles.section}>{section.title.toUpperCase()}</Text>
         )}

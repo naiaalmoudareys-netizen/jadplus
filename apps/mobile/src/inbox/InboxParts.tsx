@@ -8,10 +8,21 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLang } from '../i18n/I18nProvider.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
-import { badgeText, inboxText, inboxTime } from './wording.js';
+import { badgeText, inboxText, inboxTime, type InboxText } from './wording.js';
 
-/** A round bell on the Home photo; a small bronze badge carries the unread count ("9+" above nine). */
-export function InboxBell({ unread, onPress }: { unread: number; onPress: () => void }): ReactNode {
+/**
+ * A round bell with a small bronze badge carrying the unread count ("9+" above nine): light on the Home photo,
+ * navy on a plain header (the technician's Today).
+ */
+export function InboxBell({
+  unread,
+  onPress,
+  onPaper = false,
+}: {
+  unread: number;
+  onPress: () => void;
+  onPaper?: boolean;
+}): ReactNode {
   const { t } = useLang();
   const badge = badgeText(unread);
   return (
@@ -20,9 +31,9 @@ export function InboxBell({ unread, onPress }: { unread: number; onPress: () => 
       accessibilityLabel={badge === null ? t('inbox.bell') : t('inbox.bellUnread', { count: unread })}
       hitSlop={10}
       onPress={onPress}
-      style={({ pressed }) => [styles.bell, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.bell, onPaper && styles.bellOnPaper, pressed && styles.pressed]}
     >
-      <Ionicons name="notifications-outline" size={20} color={colors.onNavy} />
+      <Ionicons name="notifications-outline" size={20} color={onPaper ? colors.navy : colors.onNavy} />
       {badge === null ? null : (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge}</Text>
@@ -54,12 +65,15 @@ export function InboxRow({
       onPress={onPress}
       style={({ pressed }) => [styles.row, !item.read && styles.unreadRow, pressed && styles.pressed]}
     >
-      <View style={[styles.icon, text.needsYou && styles.iconNeedsYou]}>
-        <Ionicons name={text.icon} size={20} color={text.needsYou ? colors.bronze : colors.slate} />
+      <View style={[styles.icon, text.needsYou && styles.iconNeedsYou, text.urgent && styles.iconUrgent]}>
+        <Ionicons name={text.icon} size={20} color={iconColor(text)} />
       </View>
       <View style={styles.text}>
         <View style={styles.titleRow}>
-          <Text style={[styles.title, !item.read && styles.titleUnread]} numberOfLines={1}>
+          <Text
+            style={[styles.title, !item.read && styles.titleUnread, text.urgent && styles.titleUrgent]}
+            numberOfLines={1}
+          >
             {text.title}
           </Text>
           <Text style={styles.time}>{when}</Text>
@@ -73,8 +87,13 @@ export function InboxRow({
   );
 }
 
-/** Nothing to show: a quiet bell and one plain sentence. */
-export function InboxEmpty(): ReactNode {
+function iconColor(text: InboxText): string {
+  if (text.urgent) return colors.urgent;
+  return text.needsYou ? colors.bronze : colors.slate;
+}
+
+/** Nothing to show: a quiet bell and one plain sentence (worded for the partner on a partner account). */
+export function InboxEmpty({ partner = false }: { partner?: boolean }): ReactNode {
   const { t } = useLang();
   return (
     <View style={styles.empty}>
@@ -82,7 +101,7 @@ export function InboxEmpty(): ReactNode {
         <Ionicons name="notifications-off-outline" size={28} color={colors.muted} />
       </View>
       <Text style={styles.emptyTitle}>{t('inbox.emptyTitle')}</Text>
-      <Text style={styles.emptyText}>{t('inbox.emptyText')}</Text>
+      <Text style={styles.emptyText}>{t(partner ? 'inbox.partnerEmptyText' : 'inbox.emptyText')}</Text>
     </View>
   );
 }
@@ -99,6 +118,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(244,240,235,0.45)',
   },
+  bellOnPaper: { backgroundColor: colors.card, borderColor: colors.line },
   badge: {
     position: 'absolute',
     top: -3,
@@ -133,10 +153,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   iconNeedsYou: { backgroundColor: colors.warnSoft },
+  iconUrgent: { backgroundColor: colors.urgentSoft },
   text: { flex: 1, gap: 2 },
   titleRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   title: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.text },
   titleUnread: { fontFamily: fonts.semibold, color: colors.navy },
+  titleUrgent: { color: colors.urgent },
   time: { fontFamily: fonts.regular, fontSize: 12, color: colors.muted, fontVariant: ['tabular-nums'] },
   detail: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bronze },

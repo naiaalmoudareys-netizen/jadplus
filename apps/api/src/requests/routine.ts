@@ -31,7 +31,7 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseJsonBody } from '../validate.js';
 import { place } from './emergency.js';
-import { inboxStatements } from './inbox.js';
+import { inboxStatements, partnerInboxStatement } from './inbox.js';
 import { eventStatement, newRef, servicePartners } from './store.js';
 
 const MIN = 60_000;
@@ -192,6 +192,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
       statements.push(
         eventStatement(db, { ...sys, kind: 'status_changed', fromStatus: 'submitted', toStatus: 'assigned' }),
         eventStatement(db, { ...sys, kind: 'assigned', partnerId: partner.id }),
+        partnerInboxStatement(db, { requestId: id, partnerId: partner.id }, 'job_new', now),
       );
     }
     await db.batch(statements);

@@ -1,7 +1,7 @@
 /**
- * How many notifications are unread, for the bell on Home (ADR 0019). Read again whenever Home comes back into
- * view (e.g. back from the Notifications screen) and every minute while it is shown; nothing runs while Home
- * is hidden. A failed read keeps the last number (the bell is a hint, the screen itself shows errors).
+ * How many notifications are unread, for the bell on Home and on the technician's Today (ADR 0019, 0024). Read
+ * again whenever the screen comes back into view (e.g. back from the Notifications screen) and every minute
+ * while it is shown; nothing runs while it is hidden. A failed read keeps the last number (the bell is a hint, the screen itself shows errors).
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';

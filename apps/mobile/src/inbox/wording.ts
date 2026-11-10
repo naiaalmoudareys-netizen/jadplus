@@ -13,6 +13,7 @@ import {
   dubaiDate,
   type InboxItem,
   type InboxKind,
+  type Role,
 } from '@jadplus/shared';
 import type { MessageKey } from '../i18n/dictionary.js';
 import type { Lang } from '../i18n/lang.js';
@@ -40,7 +41,15 @@ export type InboxIcon =
   | 'thumbs-down-outline'
   | 'key-outline'
   | 'time-outline'
-  | 'log-out-outline';
+  | 'log-out-outline'
+  | 'chatbubble-outline'
+  | 'construct-outline'
+  | 'warning-outline'
+  | 'swap-horizontal-outline'
+  | 'person-add-outline'
+  | 'checkmark-done-outline'
+  | 'refresh-outline'
+  | 'star-outline';
 
 export interface InboxText {
   readonly title: string;
@@ -48,11 +57,18 @@ export interface InboxText {
   readonly icon: InboxIcon;
   /** Something the person is asked to do (approve a quote, confirm the work): drawn in bronze. */
   readonly needsYou: boolean;
+  /** An emergency waiting for the partner (E4, E5): drawn in emergency red, above needsYou. */
+  readonly urgent: boolean;
 }
 
 interface KindLook {
   readonly icon: InboxIcon;
   readonly needsYou: boolean;
+}
+
+/** A new emergency job (E1) or the 15-minute reminder (E5): the technician must acknowledge it now. */
+function isUrgent(item: InboxItem): boolean {
+  return item.kind === 'job_reminder' || (item.kind === 'job_new' && item.data.urgent === true);
 }
 
 const LOOK: Readonly<Record<InboxKind, KindLook>> = {
@@ -75,6 +91,17 @@ const LOOK: Readonly<Record<InboxKind, KindLook>> = {
   tenancy_invited: { icon: 'key-outline', needsYou: true },
   tenancy_ending: { icon: 'time-outline', needsYou: false },
   tenancy_ended: { icon: 'log-out-outline', needsYou: false },
+  message_received: { icon: 'chatbubble-outline', needsYou: false },
+  job_new: { icon: 'construct-outline', needsYou: true },
+  job_reminder: { icon: 'warning-outline', needsYou: true },
+  job_moved_away: { icon: 'swap-horizontal-outline', needsYou: false },
+  job_assigned_to_you: { icon: 'person-add-outline', needsYou: true },
+  quote_approved: { icon: 'thumbs-up-outline', needsYou: true },
+  quote_declined: { icon: 'thumbs-down-outline', needsYou: true },
+  work_confirmed: { icon: 'checkmark-done-outline', needsYou: false },
+  work_reopened: { icon: 'refresh-outline', needsYou: true },
+  job_rated: { icon: 'star-outline', needsYou: false },
+  job_cancelled: { icon: 'close-circle-outline', needsYou: false },
 };
 
 const key = (kind: InboxKind, part: 'title' | 'detail'): MessageKey => `inbox.${kind}.${part}`;
@@ -99,6 +126,7 @@ function values(item: InboxItem, lang: Lang): Record<string, string | number> {
     hours: item.kind === 'no_access' ? (item.data.hours ?? NO_ACCESS_REBOOK_HOURS) : AUTO_CLOSE_HOURS,
     days: QUOTE_VALID_DAYS - Math.round(QUOTE_REMINDER_AFTER / DAY),
     date: longDate(item.data.endsOn ?? null, lang.locale),
+    stars: item.data.stars ?? '',
   };
 }
 
@@ -124,28 +152,50 @@ const DETAIL_WITHOUT_DATE: Partial<Record<InboxKind, MessageKey>> = {
   tenancy_ended: 'inbox.tenancy_ended.detailPlain',
 };
 
+/** The title key: without an amount or a rating, the plain wording; a new emergency job has its own. */
+function titleKey(item: InboxItem, v: Record<string, string | number>, urgent: boolean): MessageKey {
+  if (item.kind === 'job_new' && urgent) return 'inbox.job_new.titleUrgent';
+  if (item.kind === 'job_rated' && v.stars === '') return 'inbox.job_rated.titlePlain';
+  return (v.amount === '' ? TITLE_WITHOUT_AMOUNT[item.kind] : undefined) ?? key(item.kind, 'title');
+}
+
+/** The detail key: tenancy lines without a date use their plain wording; a new emergency job asks to act now. */
+function detailKey(item: InboxItem, v: Record<string, string | number>, urgent: boolean): MessageKey {
+  if (item.kind === 'job_new' && urgent) return 'inbox.job_new.detailUrgent';
+  return (v.date === '' ? DETAIL_WITHOUT_DATE[item.kind] : undefined) ?? key(item.kind, 'detail');
+}
+
 /** Title, detail line ("… · JAD-AB12CD") and icon for one notification. */
 export function inboxText(item: InboxItem, lang: Lang): InboxText {
   const v = values(item, lang);
   const look = LOOK[item.kind];
-  const plainTitle = v.amount === '' ? TITLE_WITHOUT_AMOUNT[item.kind] : undefined;
+  const urgent = isUrgent(item);
   const noWindow = WINDOW_KINDS.has(item.kind) && v.when === '';
-  const plainDetail = v.date === '' ? DETAIL_WITHOUT_DATE[item.kind] : undefined;
-  const sentence = noWindow ? '' : lang.t(plainDetail ?? key(item.kind, 'detail'), v);
+  const sentence = noWindow ? '' : lang.t(detailKey(item, v, urgent), v);
   return {
-    title: lang.t(plainTitle ?? key(item.kind, 'title'), v),
+    title: lang.t(titleKey(item, v, urgent), v),
     detail: [sentence, item.ref ?? ''].filter((x) => x !== '').join(' · '),
-    icon: look.icon,
+    icon: urgent ? 'warning-outline' : look.icon,
     needsYou: look.needsYou,
+    urgent,
   };
 }
 
-/** Where tapping a notification goes: its request, or (a tenancy item) My unit for owners and Home for tenants. */
-export type InboxTarget = { readonly requestId: string } | { readonly tab: 'unit' | 'home' };
+/**
+ * Where tapping a notification goes. Residents: its request, or (a tenancy item) My unit for owners and Home for
+ * tenants. Partners: the job page; an emergency moved to the backup partner is no longer theirs (E6), so it opens
+ * nothing (null) and stays in the list to read.
+ */
+export type InboxTarget =
+  { readonly requestId: string } | { readonly jobId: string } | { readonly tab: 'unit' | 'home' } | null;
 
-export function inboxTarget(item: InboxItem, owner: boolean): InboxTarget {
+export function inboxTarget(item: InboxItem, role: Role): InboxTarget {
+  if (role === 'partner' || role === 'partner_admin') {
+    if (item.kind === 'job_moved_away' || item.requestId === null) return null;
+    return { jobId: item.requestId };
+  }
   if (item.requestId !== null) return { requestId: item.requestId };
-  return { tab: owner ? 'unit' : 'home' };
+  return { tab: role === 'owner' ? 'unit' : 'home' };
 }
 
 export type InboxGroupKey = 'today' | 'yesterday' | 'earlier';

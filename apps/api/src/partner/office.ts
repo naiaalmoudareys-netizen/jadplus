@@ -25,6 +25,7 @@ import { requireRole } from '../auth/middleware.js';
 import { blindIndex, encryptField, newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { partnerInboxStatement } from '../requests/inbox.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 
 type Ctx = Context<AppEnv>;
@@ -166,6 +167,13 @@ export function partnerOfficeRoutes(): Hono<AppEnv> {
         )
         .bind(techId, id),
       audit(c, 'technician_assigned', 'request', id),
+      // ADR 0024: the chosen technician is told (read after the update above, so it is the new one).
+      partnerInboxStatement(
+        db,
+        { requestId: id, partnerId: c.get('auth').partnerId ?? '' },
+        'job_assigned_to_you',
+        c.get('now'),
+      ),
     ]);
     return c.json({ id, technicianId: techId });
   });

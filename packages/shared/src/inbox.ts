@@ -29,6 +29,18 @@ export const INBOX_KINDS = [
   'tenancy_invited', // R2: to the tenant
   'tenancy_ending', // U4: 30 days before the end, to the tenant and the owner
   'tenancy_ended', // U5: access ended; the owner can extend in one tap
+  'message_received', // a new message on a request (residents or the partner, never the writer)
+  // To the partner (ADR 0024): the assigned technician (or the whole team when nobody is assigned) and the office.
+  'job_new', // E1/R3: a new job (urgent for an emergency)
+  'job_reminder', // E5: an emergency not acknowledged after 15 minutes
+  'job_moved_away', // E6: the emergency went to the backup partner
+  'job_assigned_to_you', // the office chose this technician
+  'quote_approved', // L4: the owner approved the quote
+  'quote_declined', // A3: one revised quote may follow
+  'work_confirmed', // E10
+  'work_reopened', // A5: the resident says it is not done
+  'job_rated', // S5
+  'job_cancelled', // the resident cancelled, or the owner arranged it
 ] as const;
 export type InboxKind = (typeof INBOX_KINDS)[number];
 
@@ -55,6 +67,20 @@ export function inboxRecipients(kind: InboxKind, ownerUserId: string, raisedByUs
   return [...new Set([ownerUserId, raisedByUserId])];
 }
 
+/** Kinds sent to the partner company rather than to residents (ADR 0024). */
+export const PARTNER_KINDS: ReadonlySet<InboxKind> = new Set<InboxKind>([
+  'job_new',
+  'job_reminder',
+  'job_moved_away',
+  'job_assigned_to_you',
+  'quote_approved',
+  'quote_declined',
+  'work_confirmed',
+  'work_reopened',
+  'job_rated',
+  'job_cancelled',
+]);
+
 /** The few facts the app needs to write the sentence. No personal data. */
 export const inboxData = z.object({
   windowStart: z.number().int().optional(),
@@ -64,6 +90,9 @@ export const inboxData = z.object({
   /** A tenancy's end date (YYYY-MM-DD) and the days left. */
   endsOn: z.string().optional(),
   days: z.number().int().optional(),
+  /** An emergency job (shown as urgent). */
+  urgent: z.boolean().optional(),
+  stars: z.number().int().optional(),
 });
 export type InboxData = z.infer<typeof inboxData>;
 

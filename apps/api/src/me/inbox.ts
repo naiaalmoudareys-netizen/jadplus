@@ -53,6 +53,9 @@ async function visibleTo(db: D1Database, actor: Actor, row: Row, today: string):
     );
   }
   if (row.owner_user_id === null) return false;
+  // E6: the first partner is told the emergency moved to the backup, although the job is no longer theirs.
+  // The item carries only the reference; the job itself stays out of reach.
+  if (row.kind === 'job_moved_away') return actor.role === 'partner' || actor.role === 'partner_admin';
   return canViewRequest(actor, await requestFacts(db, { ...row, owner_user_id: row.owner_user_id }), today);
 }
 

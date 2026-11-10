@@ -17,6 +17,7 @@ import { auditStatement } from '../audit.js';
 import { newId } from '../crypto.js';
 import type { Logger } from '../logger.js';
 import { isVersionConflict, versionGuard } from '../requests/concurrency.js';
+import { partnerInboxStatement } from '../requests/inbox.js';
 import { eventStatement, notificationStatement, servicePartners } from '../requests/store.js';
 
 const MIN = 60_000;
@@ -115,6 +116,9 @@ export async function runEscalationSweep(db: D1Database, now: number, log: Logge
           template: 'emergency_reminder',
           urgent: true,
         }),
+        partnerInboxStatement(db, { requestId: r.id, partnerId: r.partner_id }, 'job_reminder', now, {
+          urgent: true,
+        }),
       );
     } else if (action === 'move_to_backup' && backup !== null) {
       // nextEscalation only chooses move_to_backup when an active backup exists, so backup is set here.
@@ -130,6 +134,10 @@ export async function runEscalationSweep(db: D1Database, now: number, log: Logge
       statements.push(
         eventStatement(db, { ...sys, kind: 'assigned', partnerId: backup.id }),
         missedAckStatement(db, r.id, r.partner_id, ackDue, now),
+        partnerInboxStatement(db, { requestId: r.id, partnerId: backup.id }, 'job_new', now, {
+          urgent: true,
+        }),
+        partnerInboxStatement(db, { requestId: r.id, partnerId: r.partner_id }, 'job_moved_away', now),
         notificationStatement(db, {
           ...sys,
           to: { kind: 'partner', partnerId: backup.id },

@@ -237,7 +237,7 @@ describe('notifications (ADR 0019)', () => {
     });
     expect(await kinds(w)).toEqual(['quote_received']);
     expect(await kinds(w, w.tenantToken)).toEqual([]);
-    expect(await kinds(w, w.primaryToken)).toEqual([]);
+    expect(await kinds(w, w.primaryToken)).toEqual(['job_new']); // the partner's own item (ADR 0024)
     const before = await inbox(w);
     expect(before.unread).toBe(1);
     expect(

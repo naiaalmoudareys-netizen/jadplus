@@ -1,13 +1,19 @@
 /**
  * Technician and partner office tabs (R3): Today · Jobs · Done · Profile. Today is the partner's start page
- * (/partner); a job opens over the tabs (/partner/job/[id]).
+ * (/partner); a job opens over the tabs (/partner/job/[id]). Today's header carries the notifications bell
+ * (ADR 0024) and its tab shows the unread count, read again whenever the tabs come back into view and every
+ * minute while they are shown.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, useRouter } from 'expo-router';
 import type { ComponentProps, ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useT } from '../../../src/i18n/I18nProvider.js';
-import { useSession } from '../../../src/session/SessionProvider.js';
-import { colors, fonts } from '../../../src/ui/theme.js';
+import { InboxBell } from '../../../src/inbox/InboxParts.js';
+import { useUnread } from '../../../src/inbox/useUnread.js';
+import { badgeText } from '../../../src/inbox/wording.js';
+import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
+import { colors, fonts, space } from '../../../src/ui/theme.js';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -20,8 +26,23 @@ const icon =
 
 export default function PartnerTabs(): ReactNode {
   const session = useSession();
+  const { api } = useSessionController();
+  const router = useRouter();
   const t = useT();
+  const unread = useUnread(api);
   if (session.status !== 'signed_in') return <Redirect href="/" />;
+  const badge = badgeText(unread);
+  const bell = (): ReactNode => (
+    <View style={styles.bell}>
+      <InboxBell
+        unread={unread}
+        onPaper
+        onPress={() => {
+          router.push('/notifications');
+        }}
+      />
+    </View>
+  );
   return (
     <Tabs
       screenOptions={{
@@ -38,7 +59,13 @@ export default function PartnerTabs(): ReactNode {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: t('partner.tab.today'), tabBarIcon: icon('today-outline') }}
+        options={{
+          title: t('partner.tab.today'),
+          tabBarIcon: icon('today-outline'),
+          headerRight: bell,
+          tabBarBadgeStyle: styles.badge,
+          ...(badge === null ? {} : { tabBarBadge: badge }),
+        }}
       />
       <Tabs.Screen
         name="jobs"
@@ -52,3 +79,8 @@ export default function PartnerTabs(): ReactNode {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  bell: { marginHorizontal: space.md },
+  badge: { backgroundColor: colors.bronze, color: colors.onNavy, fontFamily: fonts.bold, fontSize: 10 },
+});

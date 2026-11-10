@@ -19,7 +19,10 @@ import {
   quoteDecisionBody,
   ratingBody,
   requestIdParam,
+  type InboxData,
+  type InboxKind,
 } from '@jadplus/shared';
+import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { auditStatement } from '../audit.js';
 import { requireRole } from '../auth/middleware.js';
@@ -27,9 +30,30 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
-import { loadForAction } from './flow.js';
+import { loadForAction, type FlowRow } from './flow.js';
+import { partnerInboxStatement } from './inbox.js';
 import { eventStatement } from './store.js';
 import { changeStatements } from './transition.js';
+
+/** The partner's notification for this step (ADR 0024), when a partner has the job. */
+function toPartner(
+  c: Context<AppEnv>,
+  row: FlowRow,
+  kind: InboxKind,
+  data: InboxData = {},
+): D1PreparedStatement[] {
+  return row.partner_id === null
+    ? []
+    : [
+        partnerInboxStatement(
+          c.env.DB,
+          { requestId: row.id, partnerId: row.partner_id },
+          kind,
+          c.get('now'),
+          data,
+        ),
+      ];
+}
 
 export function residentFlowRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
@@ -70,6 +94,7 @@ export function residentFlowRoutes(): Hono<AppEnv> {
           kind: 'quote_decided',
           data: { quote: quote.id, decision: body.decision },
         }),
+        ...toPartner(c, row, body.decision === 'approve' ? 'quote_approved' : 'quote_declined'),
       ]),
     );
     return c.json({ id, status: outcome.to });
@@ -81,14 +106,15 @@ export function residentFlowRoutes(): Hono<AppEnv> {
     const { row } = await loadForAction(c, id, body.done ? 'confirm_done' : 'not_done');
     const outcome = confirmation(body.done);
     await withConflictCheck(() =>
-      c.env.DB.batch(
-        changeStatements(c, row, {
+      c.env.DB.batch([
+        ...changeStatements(c, row, {
           to: outcome.to,
           closeReason: outcome.closeReason,
           nextDue: null,
           audit: body.done ? 'work_confirmed' : 'work_reopened',
         }),
-      ),
+        ...toPartner(c, row, body.done ? 'work_confirmed' : 'work_reopened'),
+      ]),
     );
     return c.json({ id, status: outcome.to });
   });
@@ -127,6 +153,7 @@ export function residentFlowRoutes(): Hono<AppEnv> {
         httpRequestId: c.get('requestId'),
         detail: { stars: body.stars },
       }),
+      ...toPartner(c, row, 'job_rated', { stars: body.stars }),
     ]);
     return c.json({ id, stars: body.stars }, 201);
   });
@@ -156,6 +183,7 @@ export function residentFlowRoutes(): Hono<AppEnv> {
             "UPDATE quotes SET status = 'withdrawn', decided_at = ? WHERE request_id = ? AND status = 'pending'",
           )
           .bind(c.get('now'), id),
+        ...toPartner(c, row, 'job_cancelled'),
       ]),
     );
     return c.json({ id, status: cancel ? 'cancelled' : 'closed' });

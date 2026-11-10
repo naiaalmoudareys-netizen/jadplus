@@ -23,6 +23,7 @@ import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
 import { detailExtras } from './flow.js';
+import { partnerInboxStatement } from './inbox.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
@@ -199,12 +200,34 @@ export function residentRoutes(): Hono<AppEnv> {
       const text = clean.text.slice(0, STORED_BODY_MAX);
       const messageId = newId();
       const partnerId = actor.role === 'partner' || actor.role === 'partner_admin' ? actor.partnerId : null;
-      await c.env.DB.prepare(
-        `INSERT INTO request_messages (id, request_id, author_user_id, author_role, author_partner_id, body, masked, at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(messageId, id, actor.userId, actor.role, partnerId, text, clean.masked ? 1 : 0, now)
-        .run();
+      const db = c.env.DB;
+      const raiser = await db
+        .prepare('SELECT raised_by_user_id FROM requests WHERE id = ?')
+        .bind(id)
+        .first<{ raised_by_user_id: string }>();
+      // ADR 0024: everyone else on the request is told there is a new message (never the writer).
+      const residents = [
+        ...new Set([row.owner_user_id, raiser?.raised_by_user_id ?? row.owner_user_id]),
+      ].filter((u) => u !== actor.userId);
+      const toPartner = row.partner_id !== null && partnerId === null;
+      await db.batch([
+        db
+          .prepare(
+            `INSERT INTO request_messages (id, request_id, author_user_id, author_role, author_partner_id, body, masked, at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(messageId, id, actor.userId, actor.role, partnerId, text, clean.masked ? 1 : 0, now),
+        ...residents.map((userId) =>
+          db
+            .prepare(
+              "INSERT INTO inbox (id, user_id, request_id, kind, at) VALUES (?, ?, ?, 'message_received', ?)",
+            )
+            .bind(newId(), userId, id, now),
+        ),
+        ...(toPartner && row.partner_id !== null
+          ? [partnerInboxStatement(db, { requestId: id, partnerId: row.partner_id }, 'message_received', now)]
+          : []),
+      ]);
       const partnerName =
         partnerId === null
           ? null

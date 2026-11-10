@@ -10,6 +10,7 @@ import { screensAccess } from './strings/screens-access.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
+import { screensInboxPartner } from './strings/screens-inbox-partner.js';
 import { screensJob } from './strings/screens-job.js';
 import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
@@ -34,6 +35,7 @@ export const PARTS = [
   screensHelp,
   screensJourney,
   screensInbox,
+  screensInboxPartner,
   screensExtras,
   screensTenancy,
   screensTenancy2,
