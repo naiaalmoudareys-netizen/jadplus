@@ -142,6 +142,10 @@ pnpm --filter @jadplus/mobile start   # Expo
   `GET /api/services`, `POST /api/requests` (owners; partner / JAD+ team / "coming soon"; 4-working-hour
   clock), New request screen. Mr. Omar real-data pilot postponed by Naya. 302 tests.
   Next: tenant requests with owner approval (A1), partner routine steps, Profile switches, console.
+- 10-Nov-2026 (session 3, cont.): request details (ADR 0013, migration 0014): residence always shown,
+  preferred working day + window, up to 3 photos (phone re-encode + API sniff/strip, private R2,
+  `/api/requests/:id/photos`). New Home (ADR 0014): greeting, needs-your-attention, shortcuts, next payment,
+  top 2 requests, construction line, news carousel (+ hidden `news` route for "See all"). 317 tests.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

@@ -3,7 +3,9 @@
  * request id → security headers → body size limit → request context → authentication (deny by default).
  * Routes then declare their roles with requireRole() and check object ownership (C-AZ-1, C-AZ-2).
  */
+import { PHOTO_MAX_BYTES } from '@jadplus/shared';
 import { Hono } from 'hono';
+import { except } from 'hono/combine';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
 import { requestId } from 'hono/request-id';
@@ -18,6 +20,7 @@ import { partnerRoutes } from './partner/routes.js';
 import { deskRoutes } from './portal/desk.js';
 import { portalRoutes } from './portal/routes.js';
 import { residentRoutes } from './requests/resident.js';
+import { PHOTO_UPLOAD_PATH, photoRoutes } from './requests/photos.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
 import { securityHeaders } from './security.js';
@@ -30,11 +33,19 @@ export function createApp(deps: Deps): Hono<AppEnv> {
 
   app.use('*', requestId());
   app.use('*', securityHeaders());
+  // JSON bodies are small; only the photo upload takes a photo-sized body (ADR 0013).
   app.use(
     '/api/*',
+    except(
+      (c) => c.req.method === 'POST' && PHOTO_UPLOAD_PATH.test(c.req.path),
+      bodyLimit({ maxSize: MAX_JSON_BYTES, onError: (c) => c.json({ error: 'Request too large.' }, 413) }),
+    ),
+  );
+  app.post(
+    '/api/requests/:id/photos',
     bodyLimit({
-      maxSize: MAX_JSON_BYTES,
-      onError: (c) => c.json({ error: 'Request too large.' }, 413),
+      maxSize: PHOTO_MAX_BYTES,
+      onError: (c) => c.json({ error: 'Photos can be up to 10 MB.' }, 413),
     }),
   );
   app.use('/api/*', requestContext(deps));
@@ -45,6 +56,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api', requestRoutes(deps));
   app.route('/api', residentRoutes());
   app.route('/api', routineRoutes(deps));
+  app.route('/api', photoRoutes());
   app.route('/api/owner', portalRoutes(deps));
   app.route('/api/owner', deskRoutes(deps));
   app.route('/api/partner', partnerRoutes());

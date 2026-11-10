@@ -15,19 +15,26 @@ describe('service catalogue', () => {
     expect(serviceRouting('inhouse', false)).toBe('jad');
   });
 
-  it('C-VAL-1: a request names exactly one place, a known service and what is needed', () => {
+  it('C-VAL-1: a request names exactly one place, a known service, what is needed and when', () => {
     const unit = 'a0X000000000001AAA';
+    const when = { preferredDate: '2026-11-10', preferredSlot: 'morning' };
     expect(
-      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: 'Tap' }).success,
+      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: 'Tap', ...when })
+        .success,
     ).toBe(true);
-    expect(raiseRequestBody.safeParse({ serviceCode: 'maintenance', description: 'Tap' }).success).toBe(
-      false,
-    );
     expect(
-      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'teleport', description: 'x' }).success,
+      raiseRequestBody.safeParse({ serviceCode: 'maintenance', description: 'Tap', ...when }).success,
     ).toBe(false);
     expect(
-      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: ' ' }).success,
+      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'teleport', description: 'x', ...when })
+        .success,
+    ).toBe(false);
+    expect(
+      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: ' ', ...when })
+        .success,
+    ).toBe(false);
+    expect(
+      raiseRequestBody.safeParse({ sfUnitId: unit, serviceCode: 'maintenance', description: 'Tap' }).success,
     ).toBe(false);
   });
 });

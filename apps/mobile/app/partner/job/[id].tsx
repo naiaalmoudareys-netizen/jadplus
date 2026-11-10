@@ -16,9 +16,11 @@ import {
   jobTitle,
   needsAcknowledgement,
   placeLabel,
+  preferredVisitLabel,
   statusLabel,
 } from '../../../src/jobs/format.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
+import { RequestPhotos } from '../../../src/requests/RequestPhotos.js';
 import { Conversation } from '../../../src/ui/Conversation.js';
 import { useLoad, useNow } from '../../../src/ui/hooks.js';
 import { Body, Button, Heading, Loading, Notice, Page } from '../../../src/ui/kit.js';
@@ -144,6 +146,7 @@ export default function Job(): ReactNode {
         </Text>
       )}
       {arrival === null ? null : <Body>{arrival}</Body>}
+      {preferredVisitLabel(j) === null ? null : <Body muted>{preferredVisitLabel(j)}</Body>}
       <View style={styles.card}>
         <Body>{placeLabel(j.location)}</Body>
         {j.location?.address ? <Body muted>{j.location.address}</Body> : null}
@@ -152,6 +155,7 @@ export default function Job(): ReactNode {
         <Body>{j.description}</Body>
       </View>
       {needsAcknowledgement(j) ? <Acknowledge job={j} /> : null}
+      {detail.data === null ? null : <RequestPhotos requestId={j.id} photos={detail.data.photos} />}
       {detail.data === null ? null : (
         <Conversation
           api={api}

@@ -14,6 +14,22 @@ import { NOW, SF_UNIT, migratedDb } from './db.js';
 export const TEST_INDEX_KEY = btoa('i'.repeat(32));
 export const TEST_DATA_KEY = btoa('d'.repeat(32));
 
+/** A private in-memory stand-in for R2 (put and get only, as the API uses them). */
+function memoryBucket(): R2Bucket {
+  const objects = new Map<string, Uint8Array>();
+  const bucket = {
+    put: (key: string, value: Uint8Array) => {
+      objects.set(key, value);
+      return Promise.resolve({ key });
+    },
+    get: (key: string) => {
+      const value = objects.get(key);
+      return Promise.resolve(value === undefined ? null : { body: new Blob([value]).stream() });
+    },
+  };
+  return bucket as unknown as R2Bucket;
+}
+
 export const NOT_OWNER: OwnerLookup = { found: false, shared: false, person: null, units: [] };
 
 let contacts = 0;
@@ -71,7 +87,7 @@ export function harness(): Harness {
   const sqlite = migratedDb();
   const env: Bindings = {
     DB: d1(sqlite),
-    MEDIA: {} as R2Bucket,
+    MEDIA: memoryBucket(),
     ENVIRONMENT: 'local',
     INDEX_KEY: TEST_INDEX_KEY,
     DATA_KEY: TEST_DATA_KEY,

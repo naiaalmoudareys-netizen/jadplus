@@ -47,6 +47,8 @@ export default function ResidentTabs(): ReactNode {
         options={{ title: 'Payments', tabBarIcon: icon('card-outline'), href: owner ? '/payments' : null }}
       />
       <Tabs.Screen name="requests" options={{ title: 'Requests', tabBarIcon: icon('construct-outline') }} />
+      {/* Opened from "See all" on Home; not shown in the bar. */}
+      <Tabs.Screen name="news" options={{ title: 'News & offers', href: null }} />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
     </Tabs>
   );

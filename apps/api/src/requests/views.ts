@@ -2,7 +2,7 @@
  * How requests are shown to the people allowed to see them (R1-R3, ADR 0009). Shared by the resident, partner
  * and message routes. Nothing here carries a phone number or email: contact happens inside JAD+.
  */
-import type { RequestSummary, UnitLocation } from '@jadplus/shared';
+import type { RequestSummary, UnitLocation, VisitSlot } from '@jadplus/shared';
 
 /**
  * SQL joining a request `r` to where its unit is: the most recent Salesforce copy of that unit (owner_units).
@@ -28,7 +28,7 @@ export function toLocation(row: LocationRow): UnitLocation | null {
 /** Columns for a request summary; needs `r`, LOCATION_JOIN and `LEFT JOIN partners p ON p.id = r.partner_id`. */
 export const SUMMARY_COLUMNS = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, p.name AS partner_name,
   (SELECT name FROM services WHERE code = r.service_code) AS service_name,
-  r.arrival_window_start, r.arrival_window_end, r.created_at, ${LOCATION_COLUMNS}`;
+  r.arrival_window_start, r.arrival_window_end, r.preferred_date, r.preferred_slot, r.created_at, ${LOCATION_COLUMNS}`;
 
 export interface SummaryRow extends LocationRow {
   id: string;
@@ -40,7 +40,19 @@ export interface SummaryRow extends LocationRow {
   partner_name: string | null;
   arrival_window_start: number | null;
   arrival_window_end: number | null;
+  preferred_date: string | null;
+  preferred_slot: VisitSlot | null;
   created_at: number;
+}
+
+/** The owner's preferred visit, when both parts are set. */
+export function toPreferredVisit(r: {
+  preferred_date: string | null;
+  preferred_slot: VisitSlot | null;
+}): { date: string; slot: VisitSlot } | null {
+  return r.preferred_date === null || r.preferred_slot === null
+    ? null
+    : { date: r.preferred_date, slot: r.preferred_slot };
 }
 
 export function toSummary(r: SummaryRow): RequestSummary {
@@ -56,6 +68,7 @@ export function toSummary(r: SummaryRow): RequestSummary {
       r.arrival_window_start === null || r.arrival_window_end === null
         ? null
         : { start: r.arrival_window_start, end: r.arrival_window_end },
+    preferredVisit: toPreferredVisit(r),
     location: toLocation(r),
     createdAt: r.created_at,
   };

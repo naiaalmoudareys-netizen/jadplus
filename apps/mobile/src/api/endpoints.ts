@@ -124,7 +124,7 @@ export const services = async (api: ApiClient): Promise<ServiceView[]> =>
 export const raiseRequest = (
   api: ApiClient,
   place: MyPlace,
-  details: Pick<RaiseRequestBody, 'serviceCode' | 'description'>,
+  details: Pick<RaiseRequestBody, 'serviceCode' | 'description' | 'preferredDate' | 'preferredSlot'>,
 ): Promise<RequestRaised> =>
   api.post(
     '/api/requests',
@@ -134,3 +134,11 @@ export const raiseRequest = (
     },
     requestRaisedResponse,
   );
+
+/** ADR 0013: add a prepared JPEG photo to a request. */
+export const addRequestPhoto = (
+  api: ApiClient,
+  requestId: string,
+  jpeg: Uint8Array<ArrayBuffer>,
+): Promise<unknown> =>
+  api.upload(`/api/requests/${encodeURIComponent(requestId)}/photos`, jpeg, 'image/jpeg', z.unknown());

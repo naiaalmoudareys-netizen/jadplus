@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { ROLES, STATUSES } from './lifecycle.js';
+import { VISIT_SLOT_KEYS } from './visits.js';
 
 const roleContext = z.object({
   role: z.enum(ROLES).exclude(['system']),
@@ -46,6 +47,8 @@ export type UnitLocation = z.infer<typeof location>;
 
 const emergencyType = z.enum([...EMERGENCY_TYPES, ...LIFE_SAFETY_TYPES]);
 const arrivalWindow = z.object({ start: z.number().int(), end: z.number().int() }).nullable();
+/** When the owner would like the visit (ADR 0013). */
+const preferredVisit = z.object({ date: z.string(), slot: z.enum(VISIT_SLOT_KEYS) }).nullable();
 
 /** GET /api/partner/jobs (R3). */
 export const partnerJobsResponse = z.object({
@@ -63,6 +66,7 @@ export const partnerJobsResponse = z.object({
       nextDueKind: z.string().nullable(),
       technicianId: z.string().nullable(),
       arrivalWindow,
+      preferredVisit,
       location: location.nullable(),
       createdAt: z.number().int(),
     }),
@@ -101,6 +105,7 @@ const requestSummary = z.object({
   /** The company handling it, once assigned (residents see the company, never a person's contact). */
   partnerName: z.string().nullable(),
   arrivalWindow,
+  preferredVisit,
   location: location.nullable(),
   createdAt: z.number().int(),
 });
@@ -121,6 +126,8 @@ export type RequestMessage = z.infer<typeof message>;
 /** GET /api/requests/:id — one request with its messages, for everyone allowed to see it (ADR 0009). */
 export const requestDetailResponse = z.object({
   request: requestSummary.extend({ description: z.string() }),
+  /** Photos on the request, shown through GET /api/requests/:id/photos/:photoId. */
+  photos: z.array(z.object({ id: z.string() })),
   messages: z.array(message),
   /** Messages can be sent while the request is open and the person may act on it. */
   canMessage: z.boolean(),

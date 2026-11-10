@@ -3,19 +3,30 @@ import {
   DEFAULT_CALENDAR,
   SERVICES,
   addWorkingMinutes,
+  dubaiDate,
+  preferredDays,
   myRequestsResponse,
   partnerJobsResponse,
   requestRaisedResponse,
   servicesResponse,
 } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
-import { SF_UNIT, migratedDb } from './db.js';
+import { NOW, SF_UNIT, migratedDb } from './db.js';
 import { world, type World } from './emergency-world.js';
 
 const raise = (w: World, json: object, token = w.ownerToken) =>
   w.h.request('/api/requests', { method: 'POST', token, json });
 
-const tap = { sfUnitId: SF_UNIT, serviceCode: 'maintenance', description: 'Kitchen tap is dripping.' };
+/** The first working day offered from the test clock (NOW, Monday 9-Nov-2026). */
+const DAY = preferredDays(dubaiDate(NOW), DEFAULT_CALENDAR)[0] ?? '';
+
+const tap = {
+  sfUnitId: SF_UNIT,
+  serviceCode: 'maintenance',
+  description: 'Kitchen tap is dripping.',
+  preferredDate: DAY,
+  preferredSlot: 'morning',
+};
 
 describe('service catalogue (S1, S2)', () => {
   it('S1/S2: 12 services; a partner service without a partner is "coming soon"; in-house goes to JAD+', async () => {
@@ -38,6 +49,17 @@ describe('service catalogue (S1, S2)', () => {
 });
 
 describe('raising a routine request (R1, S3, S4)', () => {
+  it('ADR 0013: the preferred day must be an offered working day; the request keeps day and window', async () => {
+    const w = await world();
+    expect((await raise(w, { ...tap, preferredDate: '2026-11-14' })).status).toBe(400); // a Saturday
+    expect((await raise(w, { ...tap, preferredSlot: 'midnight' })).status).toBe(400);
+    expect((await raise(w, tap)).status).toBe(201);
+    const { requests } = myRequestsResponse.parse(
+      await (await w.h.request('/api/requests', { token: w.ownerToken })).json(),
+    );
+    expect(requests[0]?.preferredVisit).toEqual({ date: DAY, slot: 'morning' });
+  });
+
   it('S3/S4: maintenance goes straight to the primary partner with the 4-working-hour response clock', async () => {
     const w = await world();
     const res = await raise(w, tap);

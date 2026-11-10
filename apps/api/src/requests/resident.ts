@@ -44,7 +44,7 @@ const STORED_BODY_MAX = 1200;
 
 const NOT_FOUND = 'Not found.';
 
-interface DetailRow extends SummaryRow {
+export interface DetailRow extends SummaryRow {
   description: string;
   owner_user_id: string;
   tenancy_id: string | null;
@@ -52,7 +52,7 @@ interface DetailRow extends SummaryRow {
 }
 
 /** The request if the signed-in person may see it; otherwise "not found" (unknown and not-yours look alike). */
-async function visibleRequest(c: Ctx, id: string): Promise<DetailRow> {
+export async function visibleRequest(c: Ctx, id: string): Promise<DetailRow> {
   const db = c.env.DB;
   const row = await db
     .prepare(
@@ -67,7 +67,7 @@ async function visibleRequest(c: Ctx, id: string): Promise<DetailRow> {
   return row;
 }
 
-async function canMessage(c: Ctx, row: DetailRow): Promise<boolean> {
+export async function canMessage(c: Ctx, row: DetailRow): Promise<boolean> {
   return (
     OPEN_STATUSES.has(row.status) &&
     canActOnRequest(c.get('auth'), await requestFacts(c.env.DB, row), dubaiDate(c.get('now')))
@@ -164,8 +164,14 @@ export function residentRoutes(): Hono<AppEnv> {
         .bind(id)
         .all<MessageRow>();
       const viewer = c.get('auth').userId;
+      const photos = await c.env.DB.prepare(
+        "SELECT id FROM attachments WHERE request_id = ? AND purpose = 'request_photo' ORDER BY uploaded_at",
+      )
+        .bind(id)
+        .all<{ id: string }>();
       return c.json({
         request: { ...toSummary(row), description: row.description },
+        photos: photos.results,
         messages: results.map((m) => toMessage(m, viewer)),
         canMessage: await canMessage(c, row),
       });

@@ -1,6 +1,7 @@
 /** How jobs are described on the partner screens (R3: "clock and next action due"). */
 import {
   EMERGENCY_TYPE_LABELS,
+  VISIT_SLOTS,
   dubaiClock,
   type PartnerJob,
   type RequestSummary,
@@ -88,4 +89,21 @@ export function needsAcknowledgement(job: PartnerJob): boolean {
 export function arrivalLabel(job: Pick<PartnerJob, 'arrivalWindow'>): string | null {
   if (job.arrivalWindow === null) return null;
   return `Arriving ${dubaiClock(job.arrivalWindow.start)}-${dubaiClock(job.arrivalWindow.end)}`;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "Tue 10 Nov" from a Dubai date (YYYY-MM-DD). */
+export function dayLabel(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  return `${WEEKDAYS[d.getUTCDay()] ?? ''} ${String(d.getUTCDate())} ${MONTHS[d.getUTCMonth()] ?? ''}`;
+}
+
+/** "Preferred: Tue 10 Nov · Morning (9:00 - 12:00)", or null when none was given (ADR 0013). */
+export function preferredVisitLabel(job: Pick<PartnerJob, 'preferredVisit'>): string | null {
+  const v = job.preferredVisit;
+  if (v === null) return null;
+  const slot = VISIT_SLOTS.find((s) => s.key === v.slot);
+  return `Preferred: ${dayLabel(v.date)} · ${slot === undefined ? v.slot : `${slot.label} (${slot.hours})`}`;
 }

@@ -18,6 +18,7 @@ const job = (over: Partial<PartnerJob> = {}): PartnerJob => ({
   nextDueKind: 'emergency_ack',
   technicianId: null,
   arrivalWindow: null,
+  preferredVisit: null,
   location: null,
   createdAt: NOW - 3 * MIN,
   ...over,

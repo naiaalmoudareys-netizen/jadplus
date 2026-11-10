@@ -31,7 +31,14 @@ export function newRef(): string {
 }
 
 export type EventKind =
-  'created' | 'status_changed' | 'assigned' | 'acknowledged' | 'reminder_sent' | 'escalated' | 'note';
+  | 'created'
+  | 'status_changed'
+  | 'assigned'
+  | 'acknowledged'
+  | 'reminder_sent'
+  | 'escalated'
+  | 'attachment_added'
+  | 'note';
 
 export interface EventInput {
   readonly requestId: string;

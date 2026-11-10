@@ -6,7 +6,14 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { requestDetail } from '../../src/api/endpoints.js';
-import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../../src/jobs/format.js';
+import {
+  arrivalLabel,
+  jobTitle,
+  placeLabel,
+  preferredVisitLabel,
+  residentStatusLabel,
+} from '../../src/jobs/format.js';
+import { RequestPhotos } from '../../src/requests/RequestPhotos.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Conversation } from '../../src/ui/Conversation.js';
 import { useLoad } from '../../src/ui/hooks.js';
@@ -31,7 +38,8 @@ export default function RequestPage(): ReactNode {
       </Page>
     );
   }
-  const { request, messages, canMessage } = detail.data;
+  const { request, messages, canMessage, photos } = detail.data;
+  const preferred = preferredVisitLabel(request);
   const arrival = arrivalLabel(request);
   return (
     <Page>
@@ -43,10 +51,12 @@ export default function RequestPage(): ReactNode {
         <Body>{residentStatusLabel(request.status)}</Body>
         {request.partnerName === null ? null : <Body muted>Handled by {request.partnerName}</Body>}
         {arrival === null ? null : <Body>{arrival}</Body>}
+        {arrival === null && preferred !== null ? <Body muted>{preferred}</Body> : null}
       </View>
       <View style={styles.card}>
         <Body>{request.description}</Body>
       </View>
+      <RequestPhotos requestId={request.id} photos={photos} />
       <Conversation
         api={api}
         requestId={request.id}

@@ -5,6 +5,7 @@
  * "coming soon" and cannot be requested (S2: no promise). In-house services go to the JAD+ team.
  */
 import { z } from 'zod';
+import { VISIT_SLOT_KEYS } from './visits.js';
 
 export const SERVICE_GROUPS = ['Property care', 'Investment services', 'Lifestyle'] as const;
 export type ServiceGroup = (typeof SERVICE_GROUPS)[number];
@@ -132,6 +133,9 @@ export const raiseRequestBody = z
       .optional(),
     serviceCode: z.enum(SERVICE_CODES),
     description: z.string().trim().min(1).max(2000),
+    /** A working day from preferredDays() (checked by the API) and a time window (ADR 0013). */
+    preferredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    preferredSlot: z.enum(VISIT_SLOT_KEYS),
   })
   .refine((b) => (b.tenancyId === undefined) !== (b.sfUnitId === undefined), {
     message: 'Give either the tenancy or the unit.',

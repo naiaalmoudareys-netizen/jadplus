@@ -1,96 +1,225 @@
 /**
- * Home for owners and tenants (R1, R2, U6, docs/DESIGN.md): project photo, the emergency button, the next
- * payment (owners), and news & offers at the end (owners). Requests have their own tab (Naya, 10-Nov-2026).
+ * Home (ADR 0014; Naya, 10-Nov-2026: "redesign the home page"). It answers "is everything fine with my home,
+ * and is there anything I need to do?": a greeting on the project photo, what needs attention now (only when
+ * something does), one-tap shortcuts, the next payment, the two requests that matter most, construction
+ * progress, and news & offers to swipe through. Everything else is one tap away in the tabs.
  */
-import { dubaiDate, planSummary } from '@jadplus/shared';
-import { Redirect, useRouter } from 'expo-router';
+import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import { myPlaces } from '../../src/api/endpoints.js';
+import { myPlaces, myRequests } from '../../src/api/endpoints.js';
+import {
+  attentionItems,
+  greeting,
+  openCount,
+  topRequests,
+  type AttentionItem,
+} from '../../src/home/attention.js';
+import {
+  Attention,
+  ConstructionLine,
+  NewsCarousel,
+  SectionTitle,
+  Shortcuts,
+  type Shortcut,
+} from '../../src/home/HomeParts.js';
+import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
-import { NewsSection } from '../../src/portal/NewsSection.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
-import { DemoBadge } from '../../src/portal/ui.js';
+import { DemoBadge, ProgressBar } from '../../src/portal/ui.js';
+import { projectKey } from '../../src/brand/projects.js';
+import { RequestRow } from '../../src/requests/RequestRow.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Hero } from '../../src/ui/brand.js';
 import { useLoad } from '../../src/ui/hooks.js';
-import { Body, Button, Card, Page } from '../../src/ui/kit.js';
-import { colors, fonts } from '../../src/ui/theme.js';
+import { Body, Card, Page } from '../../src/ui/kit.js';
+import { colors, fonts, space } from '../../src/ui/theme.js';
 
-/** Owners only: next payment (or overdue). */
-function OwnerSummary(): ReactNode {
-  const portal = usePortalOptional();
-  const router = useRouter();
-  const data = portal?.data ?? null;
-  if (data === null) return null;
-  const today = dubaiDate(Date.now());
-  const deal = data.deals[portal?.dealIndex ?? 0] ?? data.deals[0];
-  if (deal === undefined) return null;
-  const s = planSummary(deal.instalments, deal.price, today);
-  const overdue = s.overdueAmount > 1;
-  const nextDue = overdue ? null : (s.next?.instalment.due ?? null);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        router.push('/payments');
-      }}
-    >
-      <Card>
-        <Text style={styles.kpiLabel}>{overdue ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
-        <Text style={[styles.kpi, overdue && styles.overdue]}>
-          {overdue ? aed(s.overdueAmount) : s.next === null ? 'Nothing due' : aed(s.next.state.balance)}
-        </Text>
-        <Body muted>
-          {unitTitle(deal)}
-          {nextDue === null ? '' : ` · ${longDate(nextDue)}`}
-        </Body>
-      </Card>
-    </Pressable>
-  );
-}
-
-/** News & offers only where owner data is loaded (owners). */
-function NewsIfOwner(): ReactNode {
-  return usePortalOptional() === null ? null : <NewsSection />;
-}
-
-/** The demo label only exists where owner data is loaded. */
-function DemoBadgeIfOwner(): ReactNode {
-  return usePortalOptional() === null ? null : <DemoBadge />;
-}
+const REFRESH_MS = 30_000;
 
 export default function Home(): ReactNode {
   const session = useSession();
   const { api } = useSessionController();
   const router = useRouter();
+  const portal = usePortalOptional();
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
   const places = useLoad(loadPlaces);
-  const home = places.data?.[0]?.location ?? null;
+  const loadRequests = useCallback(() => myRequests(api), [api]);
+  const requests = useLoad(loadRequests, REFRESH_MS);
+  const { reload } = requests;
+  useFocusEffect(
+    useCallback(() => {
+      void reload();
+    }, [reload]),
+  );
   if (session.status !== 'signed_in') return <Redirect href="/" />;
+
+  const now = Date.now();
+  const owner = session.me.role === 'owner';
+  const data = portal?.data ?? null;
+  const home = places.data?.[0]?.location ?? null;
+  const deal = data?.deals[portal?.dealIndex ?? 0] ?? data?.deals[0];
+  const plan = deal === undefined ? null : planSummary(deal.instalments, deal.price, dubaiDate(now));
+  const overdue = plan !== null && plan.overdueAmount > 1;
+  const nextDue = plan === null || overdue ? null : (plan.next?.instalment.due ?? null);
+  const all: RequestSummary[] = requests.data ?? [];
+  const project = deal?.unit?.project ?? home?.project ?? null;
+  const latestUpdate =
+    data?.updates.find(
+      (u) => projectKey(u.project) !== null && projectKey(u.project) === projectKey(project),
+    ) ?? null;
+
+  const attention = attentionItems({
+    requests: all,
+    overdue: overdue ? { amount: aed(plan.overdueAmount) } : null,
+    now,
+    label: jobTitle,
+    arrival: arrivalLabel,
+  });
+  const openItem = (item: AttentionItem) => {
+    if ('tab' in item.target) router.push('/payments');
+    else router.push({ pathname: '/request/[id]', params: { id: item.target.requestId } });
+  };
+
+  const shortcuts: Shortcut[] = [
+    {
+      label: 'Emergency',
+      icon: 'warning-outline',
+      urgent: true,
+      onPress: () => {
+        router.push('/emergency');
+      },
+    },
+    ...(owner
+      ? [
+          {
+            label: 'Request',
+            icon: 'add-circle-outline' as const,
+            onPress: () => {
+              router.push('/new-request');
+            },
+          },
+          {
+            label: 'Pay',
+            icon: 'card-outline' as const,
+            onPress: () => {
+              router.push('/payments');
+            },
+          },
+          {
+            label: 'Documents',
+            icon: 'document-text-outline' as const,
+            onPress: () => {
+              router.push('/unit');
+            },
+          },
+        ]
+      : [
+          {
+            label: 'Requests',
+            icon: 'list-outline' as const,
+            onPress: () => {
+              router.push('/requests');
+            },
+          },
+        ]),
+  ];
+
+  const name = data?.person.firstName ?? null;
+  const top = topRequests(all);
+  const open = openCount(all);
   return (
     <Page>
-      <DemoBadgeIfOwner />
+      {portal === null ? null : <DemoBadge />}
       <Hero
-        project={home?.project ?? null}
-        eyebrow={home?.project ?? 'JAD Global'}
-        title={home === null ? 'Welcome' : home.unitName}
+        project={project}
+        eyebrow={deal === undefined ? (home?.project ?? 'JAD Global') : unitTitle(deal)}
+        title={name === null ? greeting(now) : `${greeting(now)}, ${name}`}
       />
-      <Button
-        title="Report an emergency"
-        kind="danger"
+      <Attention items={attention} onPress={openItem} />
+      <Shortcuts items={shortcuts} />
+
+      {plan === null || deal === undefined ? null : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            router.push('/payments');
+          }}
+        >
+          <Card>
+            <Text style={styles.label}>{overdue ? 'OVERDUE' : 'NEXT PAYMENT'}</Text>
+            <Text style={[styles.amount, overdue && styles.urgent]}>
+              {overdue
+                ? aed(plan.overdueAmount)
+                : plan.next === null
+                  ? 'Nothing due'
+                  : aed(plan.next.state.balance)}
+            </Text>
+            {nextDue === null ? null : <Body muted>{`Due ${longDate(nextDue)}`}</Body>}
+            <ProgressBar percent={plan.percentPaid} />
+            <Text style={styles.small}>{`${String(Math.round(plan.percentPaid))}% of your plan paid`}</Text>
+          </Card>
+        </Pressable>
+      )}
+
+      <SectionTitle
+        title="Active requests"
+        {...(open > 0
+          ? {
+              action: {
+                label: `See all (${String(open)})`,
+                onPress: () => {
+                  router.push('/requests');
+                },
+              },
+            }
+          : {})}
+      />
+      {top.length === 0 ? <Body muted>Nothing in progress. Everything is in order.</Body> : null}
+      {top.map((r) => (
+        <RequestRow
+          key={r.id}
+          r={r}
+          onPress={() => {
+            router.push({ pathname: '/request/[id]', params: { id: r.id } });
+          }}
+        />
+      ))}
+
+      <ConstructionLine
+        update={latestUpdate}
         onPress={() => {
-          router.push('/emergency');
+          router.push('/unit');
         }}
       />
-      <OwnerSummary />
-      <NewsIfOwner />
+
+      {data === null || data.posts.length === 0 ? null : (
+        <>
+          <SectionTitle
+            title="News & offers"
+            action={{
+              label: 'See all',
+              onPress: () => {
+                router.push('/news');
+              },
+            }}
+          />
+          <NewsCarousel
+            posts={data.posts}
+            onOpen={() => {
+              router.push('/news');
+            }}
+          />
+        </>
+      )}
     </Page>
   );
 }
 
 const styles = StyleSheet.create({
-  kpiLabel: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.muted },
-  kpi: { fontFamily: fonts.light, fontSize: 26, color: colors.navy, fontVariant: ['tabular-nums'] },
-  overdue: { color: colors.urgent },
+  label: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.muted },
+  amount: { fontFamily: fonts.light, fontSize: 28, color: colors.navy, fontVariant: ['tabular-nums'] },
+  urgent: { color: colors.urgent },
+  small: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted, marginTop: space.xs },
 });

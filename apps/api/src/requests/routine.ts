@@ -15,6 +15,7 @@ import {
   addWorkingMinutes,
   choosePartner,
   dubaiDate,
+  preferredDays,
   raiseRequestBody,
   serviceRouting,
   type ServiceDelivery,
@@ -74,7 +75,12 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     const db = c.env.DB;
     const now = c.get('now');
     const actor = c.get('auth');
-    const where = await place(c, deps, body, dubaiDate(now));
+    const today = dubaiDate(now);
+    const where = await place(c, deps, body, today);
+    // ADR 0013: the preferred day must be one of the working days offered.
+    if (!preferredDays(today, DEFAULT_CALENDAR).includes(body.preferredDate)) {
+      throw new ApiError(400, 'Choose a working day within the next two weeks.');
+    }
 
     const service = await db
       .prepare('SELECT code, name, grp, delivery, blurb FROM services WHERE code = ? AND listed = 1')
@@ -97,8 +103,8 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
         .prepare(
           `INSERT INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, tenancy_id, raised_by_user_id,
              raised_by_role, description, is_emergency, status, partner_id, next_due_at, next_due_kind,
-             created_at, updated_at, status_changed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'owner', ?, 0, ?, ?, ?, 'routine_response', ?, ?, ?)`,
+             preferred_date, preferred_slot, created_at, updated_at, status_changed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'owner', ?, 0, ?, ?, ?, 'routine_response', ?, ?, ?, ?, ?)`,
         )
         .bind(
           id,
@@ -112,6 +118,8 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           partner === null ? 'submitted' : 'assigned',
           partner?.id ?? null,
           due,
+          body.preferredDate,
+          body.preferredSlot,
           now,
           now,
           now,

@@ -14,6 +14,7 @@ import {
   dubaiDate,
   requestIdParam,
   slaMet,
+  type VisitSlot,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { auditStatement } from '../audit.js';
@@ -23,13 +24,21 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { eventStatement, notificationStatement, requestFacts } from '../requests/store.js';
 import { parseJsonBody, parseParams } from '../validate.js';
-import { LOCATION_COLUMNS, LOCATION_JOIN, toLocation, type LocationRow } from '../requests/views.js';
+import {
+  LOCATION_COLUMNS,
+  LOCATION_JOIN,
+  toLocation,
+  toPreferredVisit,
+  type LocationRow,
+} from '../requests/views.js';
 import { versionGuard, withConflictCheck } from '../requests/concurrency.js';
 
 const MIN = 60_000;
 
 interface QueueRow extends LocationRow {
   service_name: string | null;
+  preferred_date: string | null;
+  preferred_slot: VisitSlot | null;
   id: string;
   ref: string;
   is_emergency: number;
@@ -70,6 +79,7 @@ export function partnerRoutes(): Hono<AppEnv> {
       `SELECT r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
               (SELECT name FROM services WHERE code = r.service_code) AS service_name,
               r.next_due_kind, r.technician_id, r.arrival_window_start, r.arrival_window_end, r.created_at,
+              r.preferred_date, r.preferred_slot,
               ${LOCATION_COLUMNS}
        FROM requests r ${LOCATION_JOIN}
        WHERE r.partner_id = ? AND r.status IN (${open.map(() => '?').join(', ')})
@@ -93,6 +103,7 @@ export function partnerRoutes(): Hono<AppEnv> {
           r.arrival_window_start === null
             ? null
             : { start: r.arrival_window_start, end: r.arrival_window_end },
+        preferredVisit: toPreferredVisit(r),
         location: toLocation(r),
         createdAt: r.created_at,
       })),

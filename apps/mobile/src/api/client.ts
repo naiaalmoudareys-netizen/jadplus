@@ -47,6 +47,13 @@ export interface ApiClient {
   post<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
   /** For calls answered with "204 No Content". */
   postNoContent(path: string, body?: unknown): Promise<void>;
+  /** Sends a file (e.g. a photo) as the raw request body with its type. */
+  upload<S extends z.ZodType>(
+    path: string,
+    bytes: Uint8Array<ArrayBuffer>,
+    type: string,
+    schema: S,
+  ): Promise<z.output<S>>;
   /** A file the API serves only to the signed-in person (images and PDFs only), as bytes. */
   download(path: string): Promise<{ bytes: Uint8Array; type: string }>;
   /** An image the API serves only to the signed-in person: address plus the session header. */
@@ -54,17 +61,27 @@ export interface ApiClient {
 }
 
 export function createApiClient(o: ApiClientOptions): ApiClient {
-  async function send(method: 'GET' | 'POST', path: string, body: unknown): Promise<Response> {
+  async function send(
+    method: 'GET' | 'POST',
+    path: string,
+    body: unknown,
+    raw?: { bytes: Uint8Array<ArrayBuffer>; type: string },
+  ): Promise<Response> {
     const headers: Record<string, string> = { accept: 'application/json' };
     const credential = o.token();
     if (credential !== null) headers.authorization = `Bearer ${credential}`;
-    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (raw !== undefined) headers['content-type'] = raw.type;
+    else if (body !== undefined) headers['content-type'] = 'application/json';
     let res: Response;
     try {
       res = await o.fetch(`${o.baseUrl}${path}`, {
         method,
         headers,
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...(raw !== undefined
+          ? { body: raw.bytes }
+          : body === undefined
+            ? {}
+            : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(o.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
     } catch {
@@ -92,6 +109,8 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
     postNoContent: async (path, body) => {
       await send('POST', path, body);
     },
+    upload: async (path, bytes, type, schema) =>
+      read(await send('POST', path, undefined, { bytes, type }), schema),
     download: async (path) => {
       const res = await send('GET', path, undefined);
       const type = (res.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
