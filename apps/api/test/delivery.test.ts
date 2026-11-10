@@ -203,15 +203,14 @@ describe('who receives on-call and building alerts (E3, E6, E7, E12)', () => {
     ]);
   });
 
-  it('E3/E12: building management has no contact in JAD+ yet, so its alert is flagged at once', async () => {
+  it('E12: building management has no contact in JAD+ yet, so its alert is flagged at once', async () => {
     const w = await world();
     await w.h.addUser({ email: 'demo@jadplus.ae', roles: ['jad_admin'] });
-    await raise(w, { ...leak, type: 'gas_smell' });
+    await raise(w, { ...leak, faultSource: 'building' });
     const p = providers();
     await deliver(w, p.senders);
     expect(rows(w, "SELECT failure FROM notifications WHERE recipient_kind = 'building_fm'")).toEqual([
       { failure: 'no_building_contact' },
     ]);
-    expect(p.sent.some((m) => m.subject.startsWith('JAD+ LIFE SAFETY'))).toBe(true);
   });
 });

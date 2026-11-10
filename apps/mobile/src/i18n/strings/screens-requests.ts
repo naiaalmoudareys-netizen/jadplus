@@ -46,9 +46,6 @@ export const screensRequests = words({
     'req.msg.send': 'Send',
     'req.msg.you': 'You',
     'req.msg.masked': 'Phone numbers and emails were removed. Please keep all contact in JAD+.',
-    'req.emergency.callServices': 'Call emergency services',
-    'req.emergency.call': 'Call {number} · {label}',
-    'req.emergency.alertFailed': 'JAD+ could not be alerted. Please call the numbers above.',
     'req.emergency.sent': 'Emergency sent',
     'req.emergency.reference': 'Reference {ref}',
     'req.emergency.confirmation':
@@ -102,9 +99,6 @@ export const screensRequests = words({
     'req.msg.send': 'إرسال',
     'req.msg.you': 'أنت',
     'req.msg.masked': 'تمت إزالة أرقام الهواتف وعناوين البريد الإلكتروني. يرجى إبقاء كل التواصل عبر JAD+.',
-    'req.emergency.callServices': 'الاتصال بخدمات الطوارئ',
-    'req.emergency.call': 'اتصل بـ {number} · {label}',
-    'req.emergency.alertFailed': 'تعذّر إبلاغ JAD+. يرجى الاتصال بالأرقام أعلاه.',
     'req.emergency.sent': 'تم إرسال البلاغ الطارئ',
     'req.emergency.reference': 'المرجع {ref}',
     'req.emergency.confirmation':
@@ -161,9 +155,6 @@ export const screensRequests = words({
     'req.msg.you': 'Vous',
     'req.msg.masked':
       'Les numéros de téléphone et les e-mails ont été supprimés. Merci de garder tous les échanges dans JAD+.',
-    'req.emergency.callServices': "Appeler les services d'urgence",
-    'req.emergency.call': 'Appeler le {number} · {label}',
-    'req.emergency.alertFailed': "JAD+ n'a pas pu être alerté. Veuillez appeler les numéros ci-dessus.",
     'req.emergency.sent': 'Urgence envoyée',
     'req.emergency.reference': 'Référence {ref}',
     'req.emergency.confirmation':
@@ -219,9 +210,6 @@ export const screensRequests = words({
     'req.msg.you': 'Вы',
     'req.msg.masked':
       'Номера телефонов и адреса электронной почты удалены. Пожалуйста, ведите всё общение в JAD+.',
-    'req.emergency.callServices': 'Вызов экстренных служб',
-    'req.emergency.call': 'Позвонить {number} · {label}',
-    'req.emergency.alertFailed': 'Не удалось оповестить JAD+. Пожалуйста, позвоните по номерам выше.',
     'req.emergency.sent': 'Сообщение об аварии отправлено',
     'req.emergency.reference': 'Номер {ref}',
     'req.emergency.confirmation':
@@ -275,9 +263,6 @@ export const screensRequests = words({
     'req.msg.send': '发送',
     'req.msg.you': '您',
     'req.msg.masked': '电话号码和电子邮箱已被删除。请通过 JAD+ 进行所有联系。',
-    'req.emergency.callServices': '拨打紧急服务电话',
-    'req.emergency.call': '拨打 {number} · {label}',
-    'req.emergency.alertFailed': '未能通知 JAD+。请拨打上方号码。',
     'req.emergency.sent': '紧急情况已发送',
     'req.emergency.reference': '编号 {ref}',
     'req.emergency.confirmation': '您的紧急情况已发送至{provider}。如有任何人身处危险，请拨打 999。',

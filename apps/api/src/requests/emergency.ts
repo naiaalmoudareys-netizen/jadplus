@@ -1,8 +1,7 @@
 /**
- * Raising an emergency (BUILD_SPEC E1, E2, E3, E12, E14, L3; plan p.13 steps 1-2).
+ * Raising an emergency (BUILD_SPEC E1, E2, E12, E14, L3; plan p.13 steps 1-2).
  *
- * - Fire, smoke, gas or injury (E3): no technician. The app shows only the emergency numbers; building FM
- *   and on-call are alerted.
+ * - Only a water leak or an AC failure can be reported (ADR 0017); fire, smoke, gas and injury are for 999.
  * - Water from shared parts or a neighbour (E12): the partner makes the unit safe AND building FM is told.
  *   Sprinklers/fire system: building FM only.
  * - AC failure counts as an emergency only from May to October (E14).
@@ -12,12 +11,10 @@
  */
 import {
   EMERGENCY_ACK_MINUTES,
-  EMERGENCY_NUMBERS,
   choosePartner,
   dispatchFor,
   dubaiDate,
   emergencyConfirmationText,
-  isLifeSafety,
   isTenancyCurrent,
   qualifiesAsEmergency,
   type RaiseEmergencyBody,
@@ -40,14 +37,11 @@ import { ownsUnit } from '../owners/units.js';
 
 type Ctx = Context<AppEnv>;
 
-export type RaiseResult =
-  | { readonly requestId: string; readonly ref: string; readonly confirmation: string }
-  | {
-      readonly requestId: string;
-      readonly ref: string;
-      readonly lifeSafety: true;
-      readonly numbers: typeof EMERGENCY_NUMBERS;
-    };
+export interface RaiseResult {
+  readonly requestId: string;
+  readonly ref: string;
+  readonly confirmation: string;
+}
 
 const NOT_FOUND = 'Not found.';
 
@@ -92,17 +86,16 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
   const today = dubaiDate(now);
   const where = await place(c, deps, body, today);
 
-  const lifeSafety = isLifeSafety(body.type);
-  if (!isLifeSafety(body.type) && !qualifiesAsEmergency(body.type, Number(today.slice(5, 7)))) {
+  if (!qualifiesAsEmergency(body.type, Number(today.slice(5, 7)))) {
     throw new ApiError(422, 'From November to April an AC failure is handled as a routine request.', {
       body: { code: 'not_emergency' },
     });
   }
 
-  const dispatch = lifeSafety ? { partner: false, buildingFm: true } : dispatchFor(body.faultSource);
+  const dispatch = dispatchFor(body.faultSource);
   const { primary, backup } = await servicePartners(db, MAINTENANCE);
   const partner = dispatch.partner ? choosePartner(primary, backup) : null;
-  const onCall = lifeSafety || (dispatch.partner && partner === null);
+  const onCall = dispatch.partner && partner === null;
 
   const id = newId();
   const ref = newRef();
@@ -129,7 +122,7 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
         body.faultSource,
         partner === null ? 'submitted' : 'assigned',
         partner?.id ?? null,
-        onCall && !lifeSafety ? 'on_call' : 'none',
+        onCall ? 'on_call' : 'none',
         partner === null ? null : now + EMERGENCY_ACK_MINUTES * 60_000,
         partner === null ? null : 'emergency_ack',
         now,
@@ -181,7 +174,7 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
         requestId: id,
         at: now,
         to: { kind: 'building_fm' },
-        template: lifeSafety ? 'emergency_life_safety' : 'emergency_new_job',
+        template: 'emergency_new_job',
         urgent: true,
       }),
     );
@@ -192,7 +185,7 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
         requestId: id,
         at: now,
         to: { kind: 'on_call' },
-        template: lifeSafety ? 'emergency_life_safety' : 'emergency_on_call',
+        template: 'emergency_on_call',
         urgent: true,
       }),
     );
@@ -223,7 +216,6 @@ export async function raiseEmergency(c: Ctx, deps: Deps, body: RaiseEmergencyBod
   );
   await db.batch(statements);
 
-  if (lifeSafety) return { requestId: id, ref, lifeSafety: true, numbers: EMERGENCY_NUMBERS };
   const provider =
     partner?.name ?? (dispatch.partner ? 'the JAD+ on-call team' : 'the building management team');
   return { requestId: id, ref, confirmation: emergencyConfirmationText(provider) };

@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { CLIENTS } from './auth.js';
 import { MESSAGE_MAX_LENGTH } from './conversation.js';
-import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
+import { RAISABLE_EMERGENCY_TYPES } from './emergency.js';
 import { ROLES } from './lifecycle.js';
 import { isMonday } from './oncall.js';
 import { normalisePhone, type SignInIdentifier } from './owners.js';
@@ -76,14 +76,14 @@ export const sfIdSchema = z
   .refine((s) => s.length === 15 || s.length === 18, 'Not a valid unit reference.');
 
 /**
- * POST /api/emergencies — raise an emergency (E1-E3, E12, E14). A tenant names their tenancy; an owner names
+ * POST /api/emergencies — raise an emergency (E1, E2, E12, E14; ADR 0017: water leak or AC failure only). A tenant names their tenancy; an owner names
  * the unit. Exactly one of the two is given.
  */
 export const raiseEmergencyBody = z
   .strictObject({
     tenancyId: idSchema.optional(),
     sfUnitId: sfIdSchema.optional(),
-    type: z.enum([...EMERGENCY_TYPES, ...LIFE_SAFETY_TYPES]),
+    type: z.enum(RAISABLE_EMERGENCY_TYPES),
     faultSource: z.enum(['unit', 'building', 'neighbour', 'fire_system']).default('unit'),
     description: z.string().trim().min(1).max(2000),
   })

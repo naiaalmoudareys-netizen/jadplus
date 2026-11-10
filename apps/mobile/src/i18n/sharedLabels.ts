@@ -83,11 +83,6 @@ export function emergencyTypeLabel(type: EmergencyType | LifeSafetyType, t: Tran
   return t(EMERGENCY_KEYS[type]);
 }
 
-/** "Police" for 999 (E3); the number itself is never translated. */
-export function emergencyNumberLabel(number: '999' | '997' | '998', t: Translate): string {
-  return t(`emergency.number.${number}`);
-}
-
 const ARRIVAL_KEYS: readonly MessageKey[] = ['arrival.within1h', 'arrival.in1to2h', 'arrival.in2to4h'];
 
 /** E4: the label of arrivalChoices(now)[index] ("Within 1 hour"); `fallback` past the known choices. */

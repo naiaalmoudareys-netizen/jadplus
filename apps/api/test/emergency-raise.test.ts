@@ -1,5 +1,4 @@
-/** Raising an emergency: E1, E3, E12, E14, L3, S2, S3, S7, C-AZ-2. */
-import { EMERGENCY_NUMBERS } from '@jadplus/shared';
+/** Raising an emergency: E1, E12, E14, ADR 0017, L3, S2, S3, S7, C-AZ-2. */
 import { describe, expect, it } from 'vitest';
 import { SF_UNIT } from './db.js';
 import { leak, raise, rows, world } from './emergency-world.js';
@@ -71,25 +70,20 @@ describe('raising an emergency', () => {
     ]);
   });
 
-  it('E3: fire, smoke, gas or injury shows only the emergency numbers; no technician is sent', async () => {
+  it('ADR 0017: only a water leak or an AC failure can be reported; anything else is refused', async () => {
     const w = await world();
-    const res = await raise(w, { ...leak, type: 'gas_smell' });
-    expect(res.status).toBe(201);
-    const body = await res.json<Record<string, unknown>>();
-    expect(body).toMatchObject({ lifeSafety: true, numbers: EMERGENCY_NUMBERS });
-    expect(body).not.toHaveProperty('confirmation');
-    expect(rows(w, 'SELECT status, partner_id FROM requests')).toEqual([
-      { status: 'submitted', partner_id: null },
-    ]);
-    expect(
-      rows(
-        w,
-        "SELECT recipient_kind, template FROM notifications WHERE recipient_kind <> 'user' ORDER BY recipient_kind",
-      ),
-    ).toEqual([
-      { recipient_kind: 'building_fm', template: 'emergency_life_safety' },
-      { recipient_kind: 'on_call', template: 'emergency_life_safety' },
-    ]);
+    for (const type of [
+      'gas_smell',
+      'fire',
+      'smoke',
+      'injury',
+      'lockout',
+      'no_power',
+      'door_window_wont_lock',
+    ]) {
+      expect((await raise(w, { ...leak, type })).status, type).toBe(400);
+    }
+    expect(rows(w, 'SELECT count(*) AS n FROM requests')).toEqual([{ n: 0 }]);
   });
 
   it('E14: AC failure is an emergency from May to October only', async () => {
@@ -140,7 +134,7 @@ describe('raising an emergency', () => {
     const w = await world();
     const res = await raise(
       w,
-      { sfUnitId: SF_UNIT, type: 'lockout', description: 'Locked out.' },
+      { sfUnitId: SF_UNIT, type: 'water_leak', description: 'Water under the sink.' },
       w.ownerToken,
     );
     expect(res.status).toBe(201);
@@ -156,7 +150,7 @@ describe('raising an emergency', () => {
     const w = await world();
     const notMine = await raise(
       w,
-      { sfUnitId: 'a0X000000000999AAA', type: 'lockout', description: 'x' },
+      { sfUnitId: 'a0X000000000999AAA', type: 'water_leak', description: 'x' },
       w.ownerToken,
     );
     expect(notMine.status).toBe(404);
@@ -171,6 +165,6 @@ describe('raising an emergency', () => {
     const w = await world();
     expect((await raise(w, { ...leak, sfUnitId: SF_UNIT })).status).toBe(400);
     expect((await raise(w, { ...leak, type: 'noise' })).status).toBe(400);
-    expect((await raise(w, { type: 'lockout', description: 'x' })).status).toBe(400);
+    expect((await raise(w, { type: 'water_leak', description: 'x' })).status).toBe(400);
   });
 });

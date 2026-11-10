@@ -167,7 +167,7 @@ describe('scorecard flags (S6)', () => {
   it('S6: two missed emergencies in 90 days flag the partner; a safety breach flags at once', async () => {
     const w = await goodWorld();
     await raise(w, leak);
-    await raise(w, { ...leak, type: 'lockout' });
+    await raise(w, leak);
     const ids = rows(w, 'SELECT id FROM requests') as { id: string }[];
     ids.forEach(({ id }, i) => {
       w.h.sqlite

@@ -13,20 +13,22 @@ export const EMERGENCY_TYPES = [
 ] as const;
 export type EmergencyType = (typeof EMERGENCY_TYPES)[number];
 
-/** Life-safety situations go to emergency services first; no technician is sent (E3). */
+/**
+ * What owners and tenants can report as an emergency in JAD+ (Naya, 10-Nov-2026: "our emergencies are water
+ * leak and AC not working"; ADR 0017). The other types stay above so older requests keep their meaning.
+ */
+export const RAISABLE_EMERGENCY_TYPES = [
+  'water_leak',
+  'ac_failure',
+] as const satisfies readonly EmergencyType[];
+export type RaisableEmergencyType = (typeof RAISABLE_EMERGENCY_TYPES)[number];
+
+/**
+ * Life-safety situations (E3). No longer reported through JAD+ (ADR 0017: the app is not an emergency service;
+ * the terms and the L3 text point to 999); kept so older requests keep their meaning.
+ */
 export const LIFE_SAFETY_TYPES = ['fire', 'smoke', 'gas_smell', 'injury'] as const;
 export type LifeSafetyType = (typeof LIFE_SAFETY_TYPES)[number];
-
-/** E3: fire, smoke, gas or injury — emergency services first, no technician. */
-export function isLifeSafety(type: EmergencyType | LifeSafetyType): type is LifeSafetyType {
-  return (LIFE_SAFETY_TYPES as readonly string[]).includes(type);
-}
-
-export const EMERGENCY_NUMBERS = [
-  { number: '999', label: 'Police' },
-  { number: '997', label: 'Civil Defence' },
-  { number: '998', label: 'Ambulance' },
-] as const;
 
 /** Escalation timings in minutes (E4-E6, decision 3). */
 export const EMERGENCY_ACK_MINUTES = 15;

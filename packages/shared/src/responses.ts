@@ -137,16 +137,12 @@ export type RequestDetail = z.infer<typeof requestDetailResponse>;
 /** POST /api/requests/:id/messages. */
 export const messagePostedResponse = z.object({ message, masked: z.boolean() });
 
-/** POST /api/emergencies (E1, E3, L3): the exact confirmation text, or only the emergency numbers. */
-export const emergencyRaisedResponse = z.union([
-  z.object({ requestId: z.string(), ref: z.string(), confirmation: z.string() }),
-  z.object({
-    requestId: z.string(),
-    ref: z.string(),
-    lifeSafety: z.literal(true),
-    numbers: z.array(z.object({ number: z.string(), label: z.string() })),
-  }),
-]);
+/** POST /api/emergencies (E1, L3): the exact confirmation text. */
+export const emergencyRaisedResponse = z.object({
+  requestId: z.string(),
+  ref: z.string(),
+  confirmation: z.string(),
+});
 export type EmergencyRaised = z.infer<typeof emergencyRaisedResponse>;
 
 /** Error answers: a plain message, sometimes a code (e.g. "not_emergency"). */

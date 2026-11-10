@@ -5,7 +5,6 @@
 import {
   DESK_REQUEST_HINTS,
   DESK_REQUEST_TYPES,
-  EMERGENCY_NUMBERS,
   EMERGENCY_TYPE_LABELS,
   SERVICES,
   SERVICE_GROUPS,
@@ -20,7 +19,6 @@ import {
   arrivalChoiceLabel,
   deskHint,
   deskTypeLabel,
-  emergencyNumberLabel,
   emergencyTypeLabel,
   instalmentLabel,
   serviceBlurb,
@@ -51,11 +49,10 @@ describe('shared labels in English match packages/shared', () => {
     }
   });
 
-  it('E2/E3: emergency kinds and numbers', () => {
+  it('E2: emergency kinds (older requests keep their label)', () => {
     for (const [type, label] of Object.entries(EMERGENCY_TYPE_LABELS)) {
       expect(emergencyTypeLabel(type as keyof typeof EMERGENCY_TYPE_LABELS, en)).toBe(label);
     }
-    for (const n of EMERGENCY_NUMBERS) expect(emergencyNumberLabel(n.number, en)).toBe(n.label);
   });
 
   it('E4: arrival windows a technician picks', () => {
@@ -99,7 +96,6 @@ describe('shared labels in other languages', () => {
     expect(serviceName('new-service', 'New Service', ar)).toBe('New Service');
     expect(deskTypeLabel('SPA', zh)).toBe('买卖协议（SPA）');
     expect(visitSlotText({ key: 'morning', hours: '9:00 - 12:00' }, zh)).toBe('上午（9:00 - 12:00）');
-    expect(emergencyNumberLabel('997', ru)).toBe('Гражданская оборона');
   });
 
   it('ADR 0016: day counts fit every number', () => {

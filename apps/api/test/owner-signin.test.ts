@@ -22,7 +22,7 @@ function emergency(h: Harness, token: string, sfUnitId = SF_UNIT): Promise<Respo
   return h.request('/api/emergencies', {
     method: 'POST',
     token,
-    json: { sfUnitId, type: 'lockout', description: 'Locked out.' },
+    json: { sfUnitId, type: 'water_leak', description: 'Water under the sink.' },
   });
 }
 
