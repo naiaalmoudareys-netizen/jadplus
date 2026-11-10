@@ -40,8 +40,17 @@ Salesforce connected only at go-live.
    fees as tidy two-sided rows, news as calm cards (photo, "TYPE · DATE", title, summary; tap for the full text;
    owners' price with the list price crossed out), and every owner tab says when it could not load, with
    "Try again".
-10. **Not yet**: receipts and SPA as PDFs (the file route is ready), the floor plan image, notification and
-    marketing switches (N4, L1), Arabic.
+10. **Documents (Naya, 10-Nov-2026: owners see their own identity documents too).** My unit shows the floor plan
+    (whole, on a plain background) and the owner's passport / Emirates ID / visa copies held by JAD Global;
+    Payments makes each receipt open. Salesforce's answer lists them by name and file id only; the files come
+    through the owner file route (Salesforce checks they are this owner's). On the phone a file is written to a
+    private JAD+ folder in temporary storage, shown in the system viewer, and that folder is emptied before the
+    next document and on sign-out. Only PDFs and images are accepted. Demo documents are a generated
+    "SAMPLE DOCUMENT" PDF and a drawn sample floor plan, never served in production.
+11. **SPA and statement of account** are not files in Salesforce: the prototype requested the SPA from the
+    JAD+ desk and received statements from a separate Salesforce PDF push. Both become desk requests (next
+    step), until the PDF push is connected to JAD+.
+12. **Not yet**: desk requests, notification and marketing switches (N4, L1), Arabic.
 
 ## Consequences
 

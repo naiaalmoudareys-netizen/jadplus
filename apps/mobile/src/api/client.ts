@@ -23,6 +23,15 @@ export class ApiError extends Error {
 export const OFFLINE_MESSAGE = 'Cannot reach JAD+. Check your connection and try again.';
 const UNEXPECTED_MESSAGE = 'Something went wrong. Please try again.';
 
+/** The only file types the app accepts from the API. */
+export const DOWNLOAD_TYPES: ReadonlySet<string> = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
+
 export interface ApiClientOptions {
   readonly baseUrl: string;
   readonly fetch: typeof fetch;
@@ -38,6 +47,8 @@ export interface ApiClient {
   post<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
   /** For calls answered with "204 No Content". */
   postNoContent(path: string, body?: unknown): Promise<void>;
+  /** A file the API serves only to the signed-in person (images and PDFs only), as bytes. */
+  download(path: string): Promise<{ bytes: Uint8Array; type: string }>;
   /** An image the API serves only to the signed-in person: address plus the session header. */
   authorizedImage(path: string): { uri: string; headers: Record<string, string> };
 }
@@ -80,6 +91,12 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
     post: async (path, body, schema) => read(await send('POST', path, body), schema),
     postNoContent: async (path, body) => {
       await send('POST', path, body);
+    },
+    download: async (path) => {
+      const res = await send('GET', path, undefined);
+      const type = (res.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+      if (!DOWNLOAD_TYPES.has(type)) throw new ApiError(res.status, UNEXPECTED_MESSAGE);
+      return { bytes: new Uint8Array(await res.arrayBuffer()), type };
     },
     authorizedImage: (path) => {
       const credential = o.token();

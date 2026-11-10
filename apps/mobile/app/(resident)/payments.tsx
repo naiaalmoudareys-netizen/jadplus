@@ -7,12 +7,14 @@ import type { ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
+import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { DemoBadge, LineItem, Pill, PortalError, ProgressBar, UnitSwitcher } from '../../src/portal/ui.js';
 import { Body, Button, Card, Eyebrow, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
 
 export default function Payments(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
+  const doc = useOpenDocument();
   if (loading && data === null) return <Loading />;
   if (data === null || error !== null) {
     return (
@@ -131,9 +133,17 @@ export default function Payments(): ReactNode {
                 title={r.for ?? 'Payment'}
                 detail={[r.name, r.method].filter((x) => x !== null).join(' · ')}
                 amount={aed(r.amount)}
-                note={r.paidOn === null ? null : longDate(r.paidOn)}
+                note={doc.opening === r.fileId ? 'Opening…' : r.paidOn === null ? null : longDate(r.paidOn)}
+                {...(r.fileId === null
+                  ? {}
+                  : {
+                      onPress: () => {
+                        if (r.fileId !== null) doc.open(r.fileId, `Receipt ${r.name}`);
+                      },
+                    })}
               />
             ))}
+            {doc.error === null ? null : <Notice tone="error">{doc.error}</Notice>}
           </Card>
         </>
       )}

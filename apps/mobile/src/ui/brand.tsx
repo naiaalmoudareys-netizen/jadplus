@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import logoCream from '../../assets/brand/logo/jadplus-cream.png';
 import logoInk from '../../assets/brand/logo/jadplus-ink.png';
+import samplePlan from '../../assets/brand/demo/floor-plan.png';
 import signinPoster from '../../assets/brand/media/signin-poster.jpg';
 // Wide versions cut to the building (made from the portrait originals with ImageMagick, sky and road trimmed),
 // so the building fills the box instead of shrinking to a thumbnail (Naya, 10-Nov-2026).
@@ -24,8 +25,9 @@ export function projectPhoto(project: string | null): number | null {
   return key === null ? null : PROJECT_PHOTOS[key];
 }
 
-/** Demo photo ids ("demo-photo-j188") point at the bundled project photos. */
+/** Demo ids point at bundled images: "demo-photo-j188" a project photo, "demo-plan-…" the sample floor plan. */
 export function demoPhoto(id: string): number | null {
+  if (id.startsWith('demo-plan-')) return samplePlan;
   return id.startsWith('demo-photo-') ? projectPhoto(id.slice('demo-photo-'.length)) : null;
 }
 
@@ -54,8 +56,19 @@ export const PHOTO_BOX_ASPECT = 16 / 10;
 export function FittedPhoto(props: {
   source: ImageSourcePropType;
   label?: string;
-  mode?: 'fill' | 'fit';
+  /** fill: cover the box; fit: whole photo over a blurred copy; plain: whole image on paper (plans). */
+  mode?: 'fill' | 'fit' | 'plain';
 }): ReactNode {
+  if (props.mode === 'plain') {
+    return (
+      <Image
+        source={props.source}
+        style={[StyleSheet.absoluteFill, styles.plain]}
+        resizeMode="contain"
+        accessibilityLabel={props.label}
+      />
+    );
+  }
   if (props.mode !== 'fit') {
     return (
       <Image
@@ -101,6 +114,7 @@ export function Hero(props: { project?: string | null; eyebrow: string; title: s
 }
 
 const styles = StyleSheet.create({
+  plain: { backgroundColor: colors.card },
   logo: { width: 134, height: 23 },
   hero: { height: HERO_HEIGHT, borderRadius: radius, overflow: 'hidden', backgroundColor: colors.slate },
   veil: {

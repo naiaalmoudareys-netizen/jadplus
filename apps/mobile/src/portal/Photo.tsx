@@ -10,7 +10,13 @@ import { useSessionController } from '../session/SessionProvider.js';
 import { FittedPhoto, PHOTO_BOX_ASPECT, demoPhoto, projectPhoto } from '../ui/brand.js';
 import { colors, radius } from '../ui/theme.js';
 
-export function Photo(props: { id: string | null; project: string | null; label: string }): ReactNode {
+export function Photo(props: {
+  id: string | null;
+  project: string | null;
+  label: string;
+  /** Drawings such as floor plans: always shown whole on a plain background. */
+  plain?: boolean;
+}): ReactNode {
   const { api } = useSessionController();
   const local = props.id === null ? projectPhoto(props.project) : demoPhoto(props.id);
   const source =
@@ -19,7 +25,11 @@ export function Photo(props: { id: string | null; project: string | null; label:
   if (source === null) return null;
   return (
     <View style={styles.frame}>
-      <FittedPhoto source={source} label={props.label} mode={local === null ? 'fit' : 'fill'} />
+      <FittedPhoto
+        source={source}
+        label={props.label}
+        mode={props.plain === true ? 'plain' : local === null ? 'fit' : 'fill'}
+      />
     </View>
   );
 }

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiError, OFFLINE_MESSAGE, createApiClient } from '../src/api/client.js';
 import { identifierBody } from '../src/api/endpoints.js';
 import { apiBaseUrl } from '../src/config.js';
+import { fileName } from '../src/portal/filename.js';
 import { SessionController, type TokenStore } from '../src/session/session.js';
 
 const TOKEN = 'a'.repeat(43);
@@ -187,5 +188,33 @@ describe('session', () => {
     await expect(offline.c.signOut()).rejects.toBeInstanceOf(ApiError);
     expect(offline.store.value).toBeNull();
     expect(offline.c.state.status).toBe('signed_out');
+  });
+});
+
+describe('documents (ADR 0010)', () => {
+  it('C-SES-1: a document is fetched with the session, and only PDFs and images are accepted', async () => {
+    const api = fakeApi({
+      'GET /api/owner/files/demo-doc-passport': () =>
+        new Response('%PDF-1.4', { headers: { 'content-type': 'application/pdf' } }),
+      'GET /api/owner/files/evil': () =>
+        new Response('<script>', { headers: { 'content-type': 'text/html' } }),
+    });
+    const client = createApiClient({
+      baseUrl: 'https://api.example.test',
+      fetch: api.fetch,
+      token: () => TOKEN,
+      onUnauthorized: () => undefined,
+    });
+    const file = await client.download('/api/owner/files/demo-doc-passport');
+    expect(file.type).toBe('application/pdf');
+    expect(new TextDecoder().decode(file.bytes)).toBe('%PDF-1.4');
+    expect(api.calls[0]?.auth).toBe(`Bearer ${TOKEN}`);
+    await expect(client.download('/api/owner/files/evil')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('saved documents get a safe name, never one taken from the server', () => {
+    expect(fileName('Receipt DEMO-R-1001', 'application/pdf')).toBe('Receipt-DEMO-R-1001.pdf');
+    expect(fileName('../../etc/passwd', 'image/jpeg')).toBe('etc-passwd.jpg');
+    expect(fileName('', 'text/html')).toBe('document.bin');
   });
 });

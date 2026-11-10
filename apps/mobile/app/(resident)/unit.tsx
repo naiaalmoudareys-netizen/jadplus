@@ -1,10 +1,69 @@
 /** My unit (R1, docs/DESIGN.md): the residence's facts, project and completion, from Salesforce. */
+import type { OwnerPortalAnswer } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { area, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
-import { DemoBadge, Fact, PortalError, UnitSwitcher } from '../../src/portal/ui.js';
+import { Photo } from '../../src/portal/Photo.js';
+import { DemoBadge, Fact, LineItem, PortalError, UnitSwitcher } from '../../src/portal/ui.js';
+import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { Hero } from '../../src/ui/brand.js';
-import { Body, Card, Loading, Notice, Page } from '../../src/ui/kit.js';
+import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
+
+/** The unit's floor plan, shown whole; a real plan can also be opened full size in the phone's viewer. */
+function FloorPlan({ fileId, unit }: { fileId: string | null; unit: string }): ReactNode {
+  const doc = useOpenDocument();
+  return (
+    <>
+      <Heading>Floor plan</Heading>
+      {fileId === null ? (
+        <Body muted>The floor plan for this residence will be added soon.</Body>
+      ) : (
+        <Card>
+          <Photo id={fileId} project={null} label={`Floor plan of ${unit}`} plain />
+          {fileId.startsWith('demo-') ? null : (
+            <Button
+              title="Open full size"
+              kind="secondary"
+              busy={doc.opening === fileId}
+              onPress={() => {
+                doc.open(fileId, `Floor plan ${unit}`);
+              }}
+            />
+          )}
+          {doc.error === null ? null : <Notice tone="error">{doc.error}</Notice>}
+        </Card>
+      )}
+    </>
+  );
+}
+
+/** The owner's own identity documents held by JAD Global (Naya, 10-Nov-2026: shown in the app). */
+function Documents({ documents }: { documents: OwnerPortalAnswer['documents'] }): ReactNode {
+  const doc = useOpenDocument();
+  return (
+    <>
+      <Heading>Documents</Heading>
+      <Card>
+        {documents.length === 0 ? <Body muted>No documents on file yet.</Body> : null}
+        {documents.map((d) => (
+          <LineItem
+            key={d.fileId}
+            title={d.name}
+            detail={d.added === null ? null : `Added ${longDate(d.added)}`}
+            amount={doc.opening === d.fileId ? 'Opening…' : ''}
+            onPress={() => {
+              doc.open(d.fileId, d.name);
+            }}
+          />
+        ))}
+        <Body muted>
+          Receipts are under Payments. For your SPA or a stamped statement, ask the JAD+ desk.
+        </Body>
+        {doc.error === null ? null : <Notice tone="error">{doc.error}</Notice>}
+      </Card>
+    </>
+  );
+}
 
 export default function MyUnit(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
@@ -54,6 +113,8 @@ export default function MyUnit(): ReactNode {
         <Fact label="Status" value={deal.stage} />
         <Fact label="Your role" value={deal.role} />
       </Card>
+      <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal)} />
+      <Documents documents={data.documents} />
     </Page>
   );
 }

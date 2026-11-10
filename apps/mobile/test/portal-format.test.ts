@@ -29,6 +29,7 @@ const deal = (unit: Partial<NonNullable<OwnerDeal['unit']>> | null): OwnerDeal =
           project: null,
           completion: null,
           address: null,
+          planFileId: null,
           ...unit,
         },
   instalments: [],

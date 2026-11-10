@@ -84,9 +84,11 @@ export function LineItem(props: {
   amount: string;
   note?: string | null;
   tone?: 'normal' | 'good' | 'bad';
+  /** When set, the row opens something (a receipt, a document) and says "Open". */
+  onPress?: () => void;
 }): ReactNode {
   const tone = props.tone ?? 'normal';
-  return (
+  const row = (
     <View
       style={styles.line}
       accessible
@@ -101,8 +103,19 @@ export function LineItem(props: {
         {props.note ? (
           <Text style={[styles.lineDetail, tone === 'good' && styles.good]}>{props.note}</Text>
         ) : null}
+        {props.onPress === undefined ? null : <Text style={styles.open}>OPEN</Text>}
       </View>
     </View>
+  );
+  if (props.onPress === undefined) return row;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={props.onPress}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      {row}
+    </Pressable>
   );
 }
 
@@ -177,6 +190,8 @@ const styles = StyleSheet.create({
   good: { color: colors.ok },
   bad: { color: colors.urgent },
   errorBox: { gap: space.md },
+  open: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.slate },
+  pressed: { opacity: 0.6 },
   factLabel: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.muted },
   factValue: {
     fontFamily: fonts.regular,

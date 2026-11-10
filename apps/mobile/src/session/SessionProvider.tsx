@@ -2,6 +2,7 @@
 import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 import { createApiClient } from '../api/client.js';
 import { apiBaseUrl } from '../config.js';
+import { clearDocuments } from '../portal/documents.js';
 import { secureTokenStore } from './secure-token-store.js';
 import { SessionController, type SessionState } from './session.js';
 
@@ -19,6 +20,14 @@ export function SessionProvider({ children }: { children: ReactNode }): ReactNod
   useEffect(() => {
     void controller.restore();
   }, [controller]);
+  // Documents opened in the viewer (e.g. a passport copy) are removed from the phone on sign-out.
+  useEffect(
+    () =>
+      controller.subscribe((state) => {
+        if (state.status === 'signed_out') clearDocuments();
+      }),
+    [controller],
+  );
   return <SessionContext value={controller}>{children}</SessionContext>;
 }
 

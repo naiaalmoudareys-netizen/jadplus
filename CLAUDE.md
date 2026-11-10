@@ -126,6 +126,12 @@ pnpm --filter @jadplus/mobile start   # Expo
   (N1-N3, "I'm interested" → migration 0011 `offer_interests`), Progress, Profile. `GET /api/owner/portal`:
   Salesforce `JADPortalApi.owner` via finance-worker route `jadplus-owner` in production only; demo owner
   elsewhere (app shows "DEMO DATA"). 276 tests. Not yet: PDFs (receipts, SPA), floor plan, photos, N4/L1 switches.
+- 10-Nov-2026 (session 3, cont.): photo fixes (wide project crops in `assets/brand/projects/wide/`); owner
+  documents (ADR 0010 §10-11, Naya: show identity documents too): floor plan, passport/Emirates ID copies,
+  receipt PDFs via `/api/owner/files/:id` (demo: generated SAMPLE PDF + drawn sample plan), opened in the
+  system viewer from a private temp folder cleared on sign-out. 284 tests. Naya: desk requests stay in
+  Salesforce (JAD_Plus_Request__c), like the prototype. Owner view order: documents (done) → desk requests →
+  Profile switches (N4, L1), then the console.
 - Waiting on Naya (all before go-live, not now): providers (SMS/voice, Graph email, WhatsApp); Salesforce
   deploy (`integrations/salesforce/README.md`, sandbox first); Apple/Google/Expo company accounts; review
   ADRs 0002-0009. Claude's `git push` sometimes needs Naya to run it.

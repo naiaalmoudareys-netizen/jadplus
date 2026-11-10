@@ -17,15 +17,29 @@ import { decryptField, newId, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseParams } from '../validate.js';
+import { samplePdf } from './sample-pdf.js';
 import { ownerFile } from './source.js';
 
 type Ctx = Context<AppEnv>;
 
 const postParam = z.strictObject({ postId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) });
 /** Salesforce file version ids only (068…, 15 or 18 characters). */
-const fileParam = z.strictObject({
-  fileId: z.string().refine((id) => isFileId(id) && id.startsWith('068')),
-});
+/** Salesforce file version ids (068…), or demo file ids outside production. */
+const fileParam = z.strictObject({ fileId: z.string().refine(isFileId) });
+
+/** Demo documents (receipts, passport copy) are a generated "SAMPLE" PDF, outside production only. */
+function demoDocument(c: Ctx, fileId: string): Response {
+  if (c.env.ENVIRONMENT === 'production' || !fileId.startsWith('demo-doc-'))
+    throw new ApiError(404, 'Not found.');
+  const title = fileId.slice('demo-doc-'.length).replace(/-/g, ' ').toUpperCase();
+  return new Response(samplePdf(title), {
+    headers: {
+      'content-type': 'application/pdf',
+      'content-disposition': 'inline',
+      'cache-control': 'private, no-store',
+    },
+  });
+}
 
 const UNAVAILABLE = 'We could not load your details right now. Please try again shortly.';
 
@@ -101,6 +115,7 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
   // Photos (and later PDFs) of the owner's updates and offers, only if Salesforce says this owner may see them.
   owner.get('/files/:fileId', async (c) => {
     const { fileId } = parseParams(c, fileParam);
+    if (fileId.startsWith('demo-')) return demoDocument(c, fileId);
     const email = await ownerEmail(c);
     let file;
     try {
@@ -114,8 +129,8 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
       headers: {
         'content-type': file.type,
         'content-disposition': 'inline',
-        // Personal to this owner: the phone may keep it for an hour, shared caches never.
-        'cache-control': 'private, max-age=3600',
+        // Personal to this owner: never kept by caches (the security headers enforce no-store too).
+        'cache-control': 'private, no-store',
       },
     });
   });

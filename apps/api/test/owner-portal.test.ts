@@ -10,6 +10,7 @@ import {
   ownerPortalSource,
   salesforcePortal,
 } from '../src/portal/source.js';
+import { samplePdf } from '../src/portal/sample-pdf.js';
 import { NOW } from './db.js';
 import { EMAILS, world } from './emergency-world.js';
 
@@ -174,5 +175,44 @@ describe('owner photos and files (ADR 0010)', () => {
     expect(await ownerFile(production(200, 'text/html').env, EMAILS.owner, FILE)).toBeNull();
     expect(await ownerFile(production(404, 'application/json').env, EMAILS.owner, FILE)).toBeNull();
     await expect(ownerFile(production(500, 'text/plain').env, EMAILS.owner, FILE)).rejects.toThrow(/500/);
+  });
+});
+
+describe('owner documents (ADR 0010)', () => {
+  it('R1: the owner portal lists identity documents, floor plans and receipt files', async () => {
+    const w = await world();
+    const portal = ownerPortalResponse.parse(
+      await (await w.h.request('/api/owner/portal', { token: w.ownerToken })).json(),
+    );
+    expect(portal.documents.map((d) => d.name)).toEqual(['Passport', 'Emirates ID']);
+    expect(portal.deals[0]?.unit?.planFileId).toBe('demo-plan-j188');
+    expect(portal.deals[0]?.receipts[0]?.fileId).toMatch(/^demo-doc-receipt-/);
+  });
+
+  it('demo documents open as a "SAMPLE" PDF, and never in production', async () => {
+    const w = await world();
+    const res = await w.h.request('/api/owner/files/demo-doc-passport', { token: w.ownerToken });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('application/pdf');
+    // Never stored by caches (the API's security headers enforce no-store on every answer).
+    expect(res.headers.get('cache-control')).toContain('no-store');
+    const text = new TextDecoder().decode(await res.arrayBuffer());
+    expect(text.startsWith('%PDF-1.4')).toBe(true);
+    expect(text).toContain('(PASSPORT)');
+    (w.h.env as { ENVIRONMENT: string }).ENVIRONMENT = 'production';
+    expect((await w.h.request('/api/owner/files/demo-doc-passport', { token: w.ownerToken })).status).toBe(
+      404,
+    );
+  });
+
+  it('the sample PDF has a correct cross-reference table', () => {
+    const pdf = new TextDecoder().decode(samplePdf('RECEIPT'));
+    const xref = Number(/startxref\n(\d+)/.exec(pdf)?.[1]);
+    expect(pdf.slice(xref, xref + 4)).toBe('xref');
+    const offsets = [...pdf.slice(xref).matchAll(/^(\d{10}) 00000 n $/gm)].map((m) => Number(m[1]));
+    offsets.forEach((offset, i) => {
+      const label = `${String(i + 1)} 0 obj`;
+      expect(pdf.slice(offset, offset + label.length)).toBe(label);
+    });
   });
 });

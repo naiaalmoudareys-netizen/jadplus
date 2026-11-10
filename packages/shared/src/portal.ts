@@ -3,8 +3,10 @@
  * receipts, construction updates and news. Salesforce is the system of record (JADPortalApi.owner through the
  * finance worker); JAD+ passes it through to the owner and stores none of it.
  *
- * Data minimisation: of Salesforce's answer JAD+ keeps only what these screens show. Passport/Emirates ID
- * documents, nationality and desk requests in that answer are dropped here and never reach the app.
+ * Data minimisation: of Salesforce's answer JAD+ keeps only what these screens show. The owner's own identity
+ * documents (passport, Emirates ID, visa) are listed by name and file id only, at Naya's decision
+ * (10-Nov-2026); the files are fetched on demand and never stored by JAD+. Nationality and desk requests in
+ * that answer are dropped here and never reach the app.
  */
 import { z } from 'zod';
 
@@ -24,13 +26,20 @@ const photoIds = z
   .catch([])
   .transform((ids) => ids.filter((id): id is string => typeof id === 'string' && isFileId(id)));
 
-/** A Salesforce file version id (068…, 15 or 18 characters), or a demo photo id ("demo-photo-…"). */
+/** A Salesforce file version id (068…, 15 or 18 characters), or a demo file id ("demo-photo-…", "demo-doc-…"). */
 export function isFileId(id: string): boolean {
   const salesforce = /^068[A-Za-z0-9]+$/.test(id) && (id.length === 15 || id.length === 18);
-  return salesforce || /^demo-photo-[a-z0-9]{1,20}$/.test(id);
+  return salesforce || /^demo-(photo|doc|plan)-[a-z0-9-]{1,30}$/.test(id);
 }
 
 /** The parts of JADPortalApi.owner's answer JAD+ reads. Unknown fields are ignored (not passed on). */
+/** One file id, or null when missing or not a real file id. */
+const fileId = z
+  .string()
+  .nullable()
+  .catch(null)
+  .transform((id) => (id !== null && isFileId(id) ? id : null));
+
 export const salesforceOwnerAnswer = z.object({
   person: z.object({ name: str, first_name: str, email: str, mobile: str }).nullable().catch(null),
   deals: list(
@@ -58,15 +67,19 @@ export const salesforceOwnerAnswer = z.object({
           project: str,
           completion: str,
           address: str,
+          plan: fileId,
         })
         .nullable()
         .catch(null),
       instalments: list(z.object({ name: str, seq: num, amount: num, paid: num, due: date, desc: str })),
       charges: list(z.object({ name: str, amount: num, paid: num, due: date })),
-      receipts: list(z.object({ id: str, name: str, for: str, amount: num, paid_on: date, method: str })),
+      receipts: list(
+        z.object({ id: str, name: str, for: str, amount: num, paid_on: date, method: str, file: fileId }),
+      ),
       penalties: list(z.object({ name: str, for: str, start: date, amount: num, outstanding: num })),
     }),
   ),
+  documents: list(z.object({ name: str, file: fileId, added: date })),
   updates: list(
     z.object({
       id: z.string().max(64),
@@ -130,6 +143,8 @@ const unitFacts = z.object({
   project: z.string().nullable(),
   completion: z.string().nullable(),
   address: z.string().nullable(),
+  /** Floor plan image, through GET /api/owner/files/:id. */
+  planFileId: z.string().nullable(),
 });
 
 const money = z.object({
@@ -177,6 +192,8 @@ export const ownerPortalResponse = z.object({
           amount: z.number(),
           paidOn: z.string().nullable(),
           method: z.string().nullable(),
+          /** The receipt PDF, when JAD Global has attached it. */
+          fileId: z.string().nullable(),
         }),
       ),
       penalties: z.array(
@@ -189,6 +206,8 @@ export const ownerPortalResponse = z.object({
       ),
     }),
   ),
+  /** The owner's own identity documents (passport, Emirates ID, visa): names and file ids only. */
+  documents: z.array(z.object({ name: z.string(), fileId: z.string(), added: z.string().nullable() })),
   updates: z.array(
     z.object({
       id: z.string(),
@@ -293,6 +312,7 @@ export function fromSalesforce(
               project: d.unit.project,
               completion: d.unit.completion,
               address: d.unit.address,
+              planFileId: d.unit.plan,
             },
       instalments: d.instalments.map((i, k) => ({
         name: i.name ?? `Instalment ${k + 1}`,
@@ -317,6 +337,7 @@ export function fromSalesforce(
           amount: r.amount ?? 0,
           paidOn: r.paid_on,
           method: r.method,
+          fileId: r.file,
         })),
       penalties: d.penalties.map((p) => ({
         name: p.name ?? 'Late payment fee',
@@ -325,6 +346,9 @@ export function fromSalesforce(
         outstanding: p.outstanding ?? 0,
       })),
     })),
+    documents: raw.documents.flatMap((d) =>
+      d.file === null ? [] : [{ name: d.name ?? 'Document', fileId: d.file, added: d.added }],
+    ),
     updates: raw.updates.map((u) => ({
       id: u.id,
       title: u.title ?? 'Construction update',

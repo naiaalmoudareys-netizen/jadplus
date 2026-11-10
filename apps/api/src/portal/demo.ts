@@ -32,6 +32,7 @@ function receipts(instalments: ReturnType<typeof plan>, prefix: string) {
       amount: i.paid,
       paidOn: i.due,
       method: 'Bank Transfer',
+      fileId: `demo-doc-receipt-${prefix.toLowerCase()}-${String(k + 1)}`,
     }));
 }
 
@@ -75,6 +76,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
     project: null,
     completion: null,
     address: null,
+    planFileId: null,
     ...over,
   });
   return {
@@ -108,6 +110,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
           project: 'J188',
           completion: '30-06-2028',
           address: 'Al Jaddaf, Dubai',
+          planFileId: 'demo-plan-j188',
         }),
         instalments: j188,
         charges: [{ name: 'DLD Registration Fee', amount: 98_000, paid: 98_000, due: day(-320) }],
@@ -137,12 +140,17 @@ export function demoOwnerPortal(now: number): OwnerPortal {
           project: 'JAD 288',
           completion: '31-03-2028',
           address: 'Jumeirah Garden City, Dubai',
+          planFileId: 'demo-plan-jad288',
         }),
         instalments: jad288,
         charges: [{ name: 'DLD Registration Fee', amount: 55_200, paid: 55_200, due: day(-60) }],
         receipts: receipts(jad288, 'DEMORCPTB'),
         penalties: [],
       },
+    ],
+    documents: [
+      { name: 'Passport', fileId: 'demo-doc-passport', added: day(-330) },
+      { name: 'Emirates ID', fileId: 'demo-doc-emirates-id', added: day(-330) },
     ],
     updates: [
       {
