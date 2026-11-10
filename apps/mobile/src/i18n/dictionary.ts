@@ -10,6 +10,7 @@ import { screensAccess } from './strings/screens-access.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
+import { screensJob } from './strings/screens-job.js';
 import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
 import { screensOwner2 } from './strings/screens-owner-2.js';
@@ -37,6 +38,7 @@ export const PARTS = [
   screensTenancy,
   screensTenancy2,
   screensPartner,
+  screensJob,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

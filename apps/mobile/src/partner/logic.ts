@@ -75,14 +75,6 @@ export function nextStep(
 }
 
 /**
- * "I'm on my way" and "Start work" are done with one tap on the "Next step" button itself, so the page does
- * not show them a second time below. The other steps need a form further down; null for those.
- */
-export function oneTapAction(step: NextStep | null): Extract<JobAction, 'on_my_way' | 'start_work'> | null {
-  return step === 'on_my_way' || step === 'start_work' ? step : null;
-}
-
-/**
  * A maps search for the unit's building (no coordinates exist): Apple Maps on iPhone, Google Maps elsewhere.
  * Only the building, project and address are sent, never the unit number. Null when nothing is known.
  */

@@ -4,7 +4,6 @@
  * (packages/shared arrivalChoices / arrivalWindowAllowed).
  */
 import { arrivalChoices, type PartnerJob } from '@jadplus/shared';
-import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { errorText } from '../api/client.js';
@@ -12,7 +11,7 @@ import { acknowledge } from '../api/endpoints.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { arrivalChoiceLabel } from '../i18n/sharedLabels.js';
 import { useSessionController } from '../session/SessionProvider.js';
-import { Body, Button, Heading, Loading, Notice } from '../ui/kit.js';
+import { Body, Button, Loading, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
 import { useTechnicians } from './team.js';
 
@@ -29,9 +28,8 @@ function Choice(props: { label: string; selected: boolean; onPress: () => void }
   );
 }
 
-export function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
+export function Acknowledge({ job, onDone }: { job: PartnerJob; onDone: () => void }): ReactNode {
   const { api } = useSessionController();
-  const router = useRouter();
   const t = useT();
   const { team, technicians, technicianId, choose } = useTechnicians();
   const [windowIndex, setWindowIndex] = useState(0);
@@ -51,7 +49,7 @@ export function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
         arrivalWindowStart: window.start,
         arrivalWindowEnd: window.end,
       });
-      router.back();
+      onDone();
     } catch (err) {
       setError(errorText(err, t));
     } finally {
@@ -62,7 +60,6 @@ export function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
   if (team.loading && team.data === null) return <Loading />;
   return (
     <View style={styles.section}>
-      <Heading>{t('access.acknowledge')}</Heading>
       <Body>{t('access.whoIsGoing')}</Body>
       {technicians.map((tech) => (
         <Choice
@@ -99,7 +96,7 @@ export function Acknowledge({ job }: { job: PartnerJob }): ReactNode {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: space.sm, marginTop: space.md },
+  section: { gap: space.sm },
   choice: {
     backgroundColor: colors.card,
     borderRadius: radius,

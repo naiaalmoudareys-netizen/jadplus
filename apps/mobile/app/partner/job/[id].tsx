@@ -1,36 +1,30 @@
 /**
- * One job (R3): what it is and its clock, one clear "Next step" (acknowledge a new emergency first, E4; then
- * the journey of ADR 0018), where the unit is with "Open in Maps" and the resident's preferred time, then the
- * other steps (book the visit, quote, make safe, start, finish with photos, no access), photos and messages
- * with the resident and JAD+, which stay inside the app (ADR 0009).
+ * One job for the technician (R3; Naya, 10-Nov-2026 "make the job page simpler"): what it is with its clock and
+ * a progress tracker; when and where (with "Open in Maps"); then folded sections for the problem, the messages
+ * with the resident and JAD+ (ADR 0009: all contact inside the app), the quote and make-safe work and the
+ * finished-work photos; and a bar at the bottom with one big button for the next step (acknowledge a new
+ * emergency first, E4; then the journey of ADR 0018) and "More" for the other steps.
  */
 import type { PartnerJob } from '@jadplus/shared';
 import { Redirect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, type ReactNode } from 'react';
-import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { ScrollView, StyleSheet } from 'react-native';
 import { partnerJobs, requestDetail } from '../../../src/api/endpoints.js';
-import { Acknowledge } from '../../../src/jobs/Acknowledge.js';
-import {
-  arrivalLabel,
-  dueLabel,
-  isOverdue,
-  jobStatusLabel,
-  jobTitle,
-  needsAcknowledgement,
-} from '../../../src/jobs/format.js';
-import { JobJourney } from '../../../src/jobs/JobJourney.js';
-import { JobPlace } from '../../../src/jobs/JobPlace.js';
-import { NextStep } from '../../../src/jobs/NextStep.js';
+import { JobBar } from '../../../src/jobs/JobBar.js';
+import { JobForms } from '../../../src/jobs/JobForms.js';
+import { JobHeader } from '../../../src/jobs/JobHeader.js';
+import { JobSections } from '../../../src/jobs/JobSections.js';
+import { JobVisit } from '../../../src/jobs/JobVisit.js';
 import { useT } from '../../../src/i18n/I18nProvider.js';
-import { nextStep, oneTapAction } from '../../../src/partner/logic.js';
+import { nextStep } from '../../../src/partner/logic.js';
+import { jobProgress, moreActions, type JobForm, type JobStep } from '../../../src/partner/progress.js';
 import { useSession, useSessionController } from '../../../src/session/SessionProvider.js';
-import { RequestPhotos } from '../../../src/requests/RequestPhotos.js';
-import { Conversation } from '../../../src/ui/Conversation.js';
 import { useLoad, useNow } from '../../../src/ui/hooks.js';
-import { Body, Heading, Loading, Notice, Page, type ScrollHandle } from '../../../src/ui/kit.js';
-import { cardShadow, colors, fonts, radius, space } from '../../../src/ui/theme.js';
+import { Loading, Notice, Page } from '../../../src/ui/kit.js';
+import { space } from '../../../src/ui/theme.js';
 
-type Section = 'acknowledge' | 'journey';
+/** How long "Visit booked." and the other confirmations stay in the bottom bar. */
+const CONFIRMATION_MS = 5_000;
 
 export default function Job(): ReactNode {
   const session = useSession();
@@ -47,18 +41,24 @@ export default function Job(): ReactNode {
   // The request with its journey and messages; refreshed every 30 seconds until push alerts exist.
   const loadDetail = useCallback(() => requestDetail(api, id), [api, id]);
   const detail = useLoad(loadDetail, 30_000);
-  const scroll = useRef<ScrollHandle | null>(null);
-  const offsets = useRef(new Map<Section, number>());
-  const changed = () => {
+  const [form, setForm] = useState<JobForm | null>(null);
+  const [confirmed, setConfirmed] = useState<JobStep | null>(null);
+
+  useEffect(() => {
+    if (confirmed === null) return undefined;
+    const timer = setTimeout(() => {
+      setConfirmed(null);
+    }, CONFIRMATION_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [confirmed]);
+
+  const done = (step: JobStep) => {
+    setForm(null);
+    setConfirmed(step);
     void job.reload();
     void detail.reload();
-  };
-  const placed = (section: Section) => (e: LayoutChangeEvent) => {
-    offsets.current.set(section, e.nativeEvent.layout.y);
-  };
-  const goTo = (section: Section) => {
-    const y = offsets.current.get(section);
-    if (y !== undefined) scroll.current?.scrollTo({ y: Math.max(0, y - space.md), animated: true });
   };
 
   if (session.status !== 'signed_in') return <Redirect href="/" />;
@@ -72,53 +72,41 @@ export default function Job(): ReactNode {
   }
   const j = job.data;
   const d = detail.data;
-  const due = dueLabel(j, now, t);
-  const arrival = arrivalLabel(j, t);
-  const step = nextStep(j, d?.actions ?? [], (d?.visit ?? null) !== null);
+  const actions = d?.actions ?? [];
+  const primary = nextStep(j, actions, (d?.visit ?? null) !== null);
   return (
-    <Page scrollRef={scroll}>
-      <Heading>{jobTitle(j, t)}</Heading>
-      <Body muted>
-        {j.ref} · {jobStatusLabel(j, t)}
-      </Body>
-      {due === null ? null : (
-        <Text style={[styles.due, isOverdue(j, now) && styles.urgent]} accessibilityLiveRegion="polite">
-          {due}
-        </Text>
-      )}
-      {arrival === null ? null : <Body>{arrival}</Body>}
-      {step === null ? null : (
-        <NextStep
-          step={step}
-          jobId={j.id}
-          onGo={() => {
-            goTo(step === 'acknowledge' ? 'acknowledge' : 'journey');
+    <Page scroll={false}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <JobHeader job={j} progress={jobProgress(j, d)} now={now} />
+        <JobVisit job={j} visit={d?.visit ?? null} now={now} />
+        <JobSections
+          job={j}
+          detail={d}
+          onMessageSent={() => {
+            void detail.reload();
           }}
-          onDone={changed}
         />
-      )}
-      <JobPlace job={j} />
-      <View style={styles.card}>
-        <Body>{j.description}</Body>
-      </View>
-      {needsAcknowledgement(j) ? (
-        <View onLayout={placed('acknowledge')}>
-          <Acknowledge job={j} />
-        </View>
-      ) : null}
-      {d === null ? null : <RequestPhotos requestId={j.id} photos={d.photos} />}
-      {d === null ? null : (
-        <View onLayout={placed('journey')}>
-          <JobJourney detail={d} onChanged={changed} shownAbove={oneTapAction(step)} />
-        </View>
-      )}
-      {d === null ? null : (
-        <Conversation
-          api={api}
-          requestId={j.id}
-          messages={d.messages}
-          canMessage={d.canMessage}
-          onSent={() => void detail.reload()}
+        {detail.error === null ? null : <Notice tone="error">{detail.error}</Notice>}
+      </ScrollView>
+      <JobBar
+        jobId={j.id}
+        detail={d}
+        primary={primary}
+        more={moreActions(actions, primary)}
+        confirmed={confirmed}
+        onForm={setForm}
+        onDone={done}
+      />
+      {form === null ? null : (
+        <JobForms
+          form={form}
+          job={j}
+          detail={d}
+          onClose={() => {
+            setForm(null);
+          }}
+          onSwitch={setForm}
+          onDone={done}
         />
       )}
     </Page>
@@ -126,13 +114,5 @@ export default function Job(): ReactNode {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius,
-    padding: space.md,
-    gap: space.xs,
-    ...cardShadow,
-  },
-  due: { fontSize: 20, fontFamily: fonts.semibold, color: colors.text },
-  urgent: { color: colors.urgent },
+  content: { padding: space.lg, gap: space.md },
 });

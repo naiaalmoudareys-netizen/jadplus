@@ -1,23 +1,22 @@
 /**
- * Starting the work, and marking it done (E10; ADR 0018) with photos of the finished work and an optional
+ * Marking the work done (E10; ADR 0018) with photos of the finished work and an optional
  * note to the resident. The photos are uploaded first (the API takes them while the work is in progress);
  * a photo already uploaded is not sent again if "Work done" has to be tapped a second time.
  */
-import { MAX_REQUEST_PHOTOS, type JobAction } from '@jadplus/shared';
+import { MAX_REQUEST_PHOTOS } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { addRequestPhoto, startWork, workDone } from '../api/endpoints.js';
+import { addRequestPhoto, workDone } from '../api/endpoints.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { PhotoAdder } from '../requests/PhotoAdder.js';
 import { pickPhoto, preparePhoto, type PickedPhoto } from '../requests/photoPicker.js';
 import { useSessionController } from '../session/SessionProvider.js';
-import { Body, Button, Eyebrow, Field, Notice } from '../ui/kit.js';
+import { Body, Button, Field, Notice } from '../ui/kit.js';
 import { useAction } from '../ui/useAction.js';
 import { space } from '../ui/theme.js';
 
 export function FinishWork(props: {
   jobId: string;
-  actions: readonly JobAction[];
   /** Finished-work photos already on the request. */
   photosSent: number;
   onDone: () => void;
@@ -45,22 +44,8 @@ export function FinishWork(props: {
     await workDone(api, props.jobId, text === '' ? {} : { note: text });
   };
 
-  if (props.actions.includes('start_work')) {
-    return (
-      <View style={styles.box}>
-        <Button
-          title={t('journey.work.start')}
-          busy={action.busy}
-          onPress={() => void action.run(() => startWork(api, props.jobId), props.onDone)}
-        />
-        {action.error === null ? null : <Notice tone="error">{action.error}</Notice>}
-      </View>
-    );
-  }
-  if (!props.actions.includes('work_done')) return null;
   return (
     <View style={styles.box}>
-      <Eyebrow>{t('journey.work.finish')}</Eyebrow>
       {max === 0 ? null : <Body muted>{t('journey.work.photosHint', { max })}</Body>}
       <PhotoAdder
         photos={photos}

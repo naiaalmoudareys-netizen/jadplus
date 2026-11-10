@@ -1,12 +1,12 @@
 /**
- * The partner on the day of the visit (ADR 0019): "I'm on my way" tells the resident (A8); "No one at the door"
+ * The partner on the day of the visit (ADR 0019): "No one at the door"
  * records a visit where nobody let the technician in (A7), with a photo of the closed door taken first. It is
  * not held against the partner, who must book a new visit within 24 hours.
  */
 import { NO_ACCESS_REBOOK_HOURS } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { addRequestPhoto, noAccess, onMyWay } from '../api/endpoints.js';
+import { addRequestPhoto, noAccess } from '../api/endpoints.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { PhotoAdder } from '../requests/PhotoAdder.js';
 import { pickPhoto, preparePhoto, type PickedPhoto } from '../requests/photoPicker.js';
@@ -14,23 +14,6 @@ import { useSessionController } from '../session/SessionProvider.js';
 import { Body, Button, Notice } from '../ui/kit.js';
 import { useAction } from '../ui/useAction.js';
 import { space } from '../ui/theme.js';
-
-export function OnMyWay(props: { jobId: string; onDone: () => void }): ReactNode {
-  const { api } = useSessionController();
-  const t = useT();
-  const action = useAction();
-  return (
-    <View style={styles.box}>
-      <Button
-        title={t('extras.onMyWay')}
-        busy={action.busy}
-        onPress={() => void action.run(() => onMyWay(api, props.jobId), props.onDone)}
-      />
-      <Body muted>{t('extras.onMyWayNote')}</Body>
-      {action.error === null ? null : <Notice tone="error">{action.error}</Notice>}
-    </View>
-  );
-}
 
 /** The door photo, then "Record no access". A photo already uploaded is not sent again on a second try. */
 export function NoAccess(props: { jobId: string; onDone: () => void }): ReactNode {

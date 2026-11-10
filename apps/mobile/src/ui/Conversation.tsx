@@ -32,6 +32,8 @@ export function Conversation(props: {
   messages: readonly RequestMessage[];
   canMessage: boolean;
   onSent: () => void;
+  /** Inside a section that already says "Messages" (the technician's job page): no heading of its own. */
+  bare?: boolean;
 }): ReactNode {
   const t = useT();
   const [draft, setDraft] = useState('');
@@ -59,8 +61,8 @@ export function Conversation(props: {
   };
 
   return (
-    <View style={styles.section}>
-      <Heading>{t('req.msg.title')}</Heading>
+    <View style={[styles.section, props.bare !== true && styles.spaced]}>
+      {props.bare === true ? null : <Heading>{t('req.msg.title')}</Heading>}
       {props.messages.length === 0 ? <Body muted>{t('req.msg.none')}</Body> : null}
       {props.messages.map((m) => (
         <Bubble key={m.id} m={m} />
@@ -88,7 +90,8 @@ export function Conversation(props: {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: space.sm, marginTop: space.md },
+  section: { gap: space.sm },
+  spaced: { marginTop: space.md },
   bubble: { borderRadius: radius, padding: space.md, gap: space.xs, maxWidth: '90%' },
   mine: { backgroundColor: colors.navy, alignSelf: 'flex-end' },
   theirs: { backgroundColor: colors.card, alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.line },

@@ -17,7 +17,6 @@ export const screensExtras = words({
     'extras.visit.resident.done': 'Visit done',
     'extras.onMyWay': "I'm on my way",
     'extras.onMyWayNote': 'The resident is told you are on the way.',
-    'extras.back': 'Back',
     'extras.noAccess.open': 'No one at the door',
     'extras.noAccess.explain':
       'Take a photo of the closed door, then record it. It is not held against you, but a new visit must be booked within {hours} hours.',
@@ -61,7 +60,6 @@ export const screensExtras = words({
     'extras.visit.resident.done': 'تمت الزيارة',
     'extras.onMyWay': 'أنا في الطريق',
     'extras.onMyWayNote': 'سيتم إبلاغ الساكن بأنك في الطريق.',
-    'extras.back': 'رجوع',
     'extras.noAccess.open': 'لا أحد عند الباب',
     'extras.noAccess.explain':
       'التقط صورة للباب المغلق ثم سجّلها. لن يُحتسب ذلك ضدك، لكن يجب حجز زيارة جديدة خلال {hours} ساعة.',
@@ -102,7 +100,6 @@ export const screensExtras = words({
     'extras.visit.resident.done': 'Visite effectuée',
     'extras.onMyWay': 'Je suis en route',
     'extras.onMyWayNote': 'Le résident est prévenu que vous êtes en route.',
-    'extras.back': 'Retour',
     'extras.noAccess.open': 'Personne à la porte',
     'extras.noAccess.explain':
       'Prenez une photo de la porte fermée, puis enregistrez-la. Cela ne vous est pas reproché, mais une nouvelle visite doit être réservée sous {hours} heures.',
@@ -145,7 +142,6 @@ export const screensExtras = words({
     'extras.visit.resident.done': 'Визит завершён',
     'extras.onMyWay': 'Я в пути',
     'extras.onMyWayNote': 'Жильцу сообщат, что вы в пути.',
-    'extras.back': 'Назад',
     'extras.noAccess.open': 'Дверь никто не открыл',
     'extras.noAccess.explain':
       'Сфотографируйте закрытую дверь и отметьте это. Это не ставится вам в вину, но новый визит нужно назначить в течение {hours} ч.',
@@ -188,7 +184,6 @@ export const screensExtras = words({
     'extras.visit.resident.done': '上门已完成',
     'extras.onMyWay': '我在路上',
     'extras.onMyWayNote': '住户会收到您在路上的通知。',
-    'extras.back': '返回',
     'extras.noAccess.open': '无人开门',
     'extras.noAccess.explain':
       '请拍下关闭的门的照片，然后记录。这不会算作您的过失，但必须在 {hours} 小时内重新预约上门。',

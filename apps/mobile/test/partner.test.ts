@@ -1,15 +1,7 @@
 /** The technician's tabs and job page (R3, S5, S8): today's visits, queue groups, next step, maps, numbers. */
 import type { PartnerJob } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
-import {
-  groupJobs,
-  mapsLink,
-  nextStep,
-  onTimePercent,
-  oneTapAction,
-  ratingText,
-  todayJobs,
-} from '../src/partner/logic.js';
+import { groupJobs, mapsLink, nextStep, onTimePercent, ratingText, todayJobs } from '../src/partner/logic.js';
 
 const HOUR = 3_600_000;
 const NOW = Date.UTC(2026, 10, 10, 6, 0, 0); // 10:00 Dubai, Tue 10 Nov 2026
@@ -108,14 +100,6 @@ describe('R3: next step on a job', () => {
 
   it('nothing while a quote waits for the owner (L4)', () => {
     expect(nextStep({ ...routine, status: 'quote_sent' }, [], true)).toBeNull();
-  });
-
-  it('A8: "I\'m on my way" and "Start work" are done on the Next step button, not shown twice', () => {
-    expect(oneTapAction('on_my_way')).toBe('on_my_way');
-    expect(oneTapAction('start_work')).toBe('start_work');
-    expect(oneTapAction('book_visit')).toBeNull();
-    expect(oneTapAction('acknowledge')).toBeNull();
-    expect(oneTapAction(null)).toBeNull();
   });
 });
 
