@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9",
-    "eslint": "9",
+    "eslint": "10",
     "eslint-plugin-security": "4.2.1",
     "prettier": "3.9.10",
     "typescript": "5.9.3",
