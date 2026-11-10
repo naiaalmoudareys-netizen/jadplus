@@ -1,15 +1,17 @@
 /**
  * Home for owners and tenants (R1, R2, U6, docs/DESIGN.md): project photo, the emergency button, then for
- * owners the next payment and the latest news (3) with the offer count, and everyone's requests with status.
+ * owners the next payment, everyone's requests with status, and for owners news & offers at the end
+ * (Naya, 10-Nov-2026: moved here from their own tab).
  * Routine requests and approvals come in phase B.
  */
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { dubaiDate, newsFeed, offerCount, planSummary, type RequestSummary } from '@jadplus/shared';
+import { dubaiDate, planSummary, type RequestSummary } from '@jadplus/shared';
 import { myPlaces, myRequests } from '../../src/api/endpoints.js';
 import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
+import { NewsSection } from '../../src/portal/NewsSection.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
 import { DemoBadge } from '../../src/portal/ui.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
@@ -39,7 +41,7 @@ function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => void }):
   );
 }
 
-/** Owners only: next payment (or overdue) and the latest news with the offer count. */
+/** Owners only: next payment (or overdue). */
 function OwnerSummary(): ReactNode {
   const portal = usePortalOptional();
   const router = useRouter();
@@ -48,8 +50,6 @@ function OwnerSummary(): ReactNode {
   const today = dubaiDate(Date.now());
   const deal = data.deals[portal?.dealIndex ?? 0] ?? data.deals[0];
   const s = deal === undefined ? null : planSummary(deal.instalments, deal.price, today);
-  const latest = newsFeed(data.posts, 'all', today).slice(0, 3);
-  const offers = offerCount(data.posts, today);
   const nextDue = s === null || s.overdueAmount > 1 ? null : (s.next?.instalment.due ?? null);
   return (
     <>
@@ -76,29 +76,13 @@ function OwnerSummary(): ReactNode {
           </Card>
         </Pressable>
       )}
-      {latest.length === 0 ? null : (
-        <>
-          <Heading>
-            {offers > 0 ? `News · ${String(offers)} owners' offer${offers === 1 ? '' : 's'}` : 'News'}
-          </Heading>
-          {latest.map((p) => (
-            <Pressable
-              key={p.id}
-              accessibilityRole="button"
-              onPress={() => {
-                router.push('/news');
-              }}
-            >
-              <Card>
-                <Text style={styles.title}>{p.title}</Text>
-                <Body muted>{longDate(p.date)}</Body>
-              </Card>
-            </Pressable>
-          ))}
-        </>
-      )}
     </>
   );
+}
+
+/** News & offers only where owner data is loaded (owners). */
+function NewsIfOwner(): ReactNode {
+  return usePortalOptional() === null ? null : <NewsSection />;
 }
 
 /** The demo label only exists where owner data is loaded. */
@@ -151,6 +135,7 @@ export default function Home(): ReactNode {
           }}
         />
       ))}
+      <NewsIfOwner />
     </Page>
   );
 }

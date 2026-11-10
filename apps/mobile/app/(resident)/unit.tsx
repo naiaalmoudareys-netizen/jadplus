@@ -10,6 +10,7 @@ import {
 import { useState, type ReactNode } from 'react';
 import { ApiError } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
+import { ConstructionSection } from '../../src/portal/ConstructionSection.js';
 import { documentRow } from '../../src/portal/deskRows.js';
 import { useSessionController } from '../../src/session/SessionProvider.js';
 import { area, longDate, unitTitle } from '../../src/portal/format.js';
@@ -180,6 +181,7 @@ export default function MyUnit(): ReactNode {
       </Card>
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal)} />
       <Documents data={data} deal={deal} />
+      <ConstructionSection project={u?.project ?? null} />
     </Page>
   );
 }

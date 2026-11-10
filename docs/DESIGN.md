@@ -63,8 +63,9 @@ full-bleed architecture photos under a slate veil.
 
 ## Owner app screens (same order and content as the prototype)
 
-Tabs: **Home · My unit · Payments · Services · News · Progress · Profile** (unit switcher when an owner has
-more than one unit; hidden on Home, News, Profile, Services).
+Tabs (changed by Naya, 10-Nov-2026): **Home · My unit · Payments · Profile**. News & offers sit at the end of
+Home; construction progress at the end of My unit; Services joins with routine requests (phase B). Unit
+switcher when an owner has more than one unit (My unit, Payments).
 
 | Screen   | Shows (from Salesforce through the finance-worker proxy unless noted)                                                  | Spec     |
 | -------- | ---------------------------------------------------------------------------------------------------------------------- | -------- |

@@ -7,15 +7,15 @@
 import { dubaiDate, isOffer, newsFeed, offerCount, type NewsFilter, type OwnerPost } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ApiError } from '../../src/api/client.js';
-import { interestedInOffer } from '../../src/api/endpoints.js';
-import { aed, area, longDate } from '../../src/portal/format.js';
-import { Photo } from '../../src/portal/Photo.js';
-import { usePortal } from '../../src/portal/PortalProvider.js';
-import { DemoBadge, Fact, PortalError } from '../../src/portal/ui.js';
-import { useSessionController } from '../../src/session/SessionProvider.js';
-import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
-import { buttonRadius, colors, fonts, space } from '../../src/ui/theme.js';
+import { ApiError } from '../api/client.js';
+import { interestedInOffer } from '../api/endpoints.js';
+import { aed, area, longDate } from './format.js';
+import { Photo } from './Photo.js';
+import { usePortal } from './PortalProvider.js';
+import { Fact } from './ui.js';
+import { useSessionController } from '../session/SessionProvider.js';
+import { Body, Button, Card, Heading, Notice } from '../ui/kit.js';
+import { buttonRadius, colors, fonts, space } from '../ui/theme.js';
 
 function Prices({ price, offerPrice }: { price: number | null; offerPrice: number | null }): ReactNode {
   if (offerPrice === null) return null;
@@ -120,17 +120,11 @@ function PostCard(props: { post: OwnerPost; interested: boolean; onInterested: (
   );
 }
 
-export default function News(): ReactNode {
-  const { data, error, loading, reload } = usePortal();
+/** News & offers, at the end of Home (Naya, 10-Nov-2026). */
+export function NewsSection(): ReactNode {
+  const { data, reload } = usePortal();
   const [filter, setFilter] = useState<NewsFilter>('all');
-  if (loading && data === null) return <Loading />;
-  if (data === null || error !== null) {
-    return (
-      <Page>
-        <PortalError />
-      </Page>
-    );
-  }
+  if (data === null) return null;
   const today = dubaiDate(Date.now());
   const feed = newsFeed(data.posts, filter, today);
   const offers = offerCount(data.posts, today);
@@ -140,8 +134,7 @@ export default function News(): ReactNode {
     { key: 'offers', label: `Offers ${String(offers)}` },
   ];
   return (
-    <Page>
-      <DemoBadge />
+    <>
       <Heading>News & offers</Heading>
       <View style={styles.filters} accessibilityRole="tablist">
         {filters.map((f) => (
@@ -169,7 +162,7 @@ export default function News(): ReactNode {
           onInterested={() => void reload()}
         />
       ))}
-    </Page>
+    </>
   );
 }
 

@@ -30,7 +30,8 @@ Salesforce connected only at go-live.
 6. **"I'm interested" (N2)** is recorded in JAD+ (migration 0011 `offer_interests`, audited, once per owner and
    offer) and only for an offer that owner can see today. Creating the Salesforce lead for sales follows when
    Salesforce is connected; the console will list open interests. Nothing is reserved or paid in the app.
-7. **Tabs**: owners get Home · My unit · Payments · News · Progress · Profile; tenants get Home · Profile (the
+7. **Tabs** (changed by Naya, 10-Nov-2026): owners get Home · My unit · Payments · Profile, with news &
+   offers at the end of Home and construction progress (for that unit's project) at the end of My unit; tenants get Home · Profile (the
    unit's payments and owner news are the owner's). Services joins with phase B (routine requests). Owners
    with more than one unit switch units at the top of My unit and Payments.
 8. **Photos** (construction updates, offers) come through `GET /api/owner/files/:id`: owner only, Salesforce

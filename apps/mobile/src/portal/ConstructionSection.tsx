@@ -1,16 +1,17 @@
 /**
- * Construction progress (O1, docs/DESIGN.md): JAD Global's published updates for the owner's projects, with
- * their photos (several swipe sideways), stage and % complete.
+ * Construction progress (O1, docs/DESIGN.md): JAD Global's published updates for the unit's project, with
+ * their photos (several swipe sideways), stage and % complete. Shown at the end of My unit.
  */
 import type { ConstructionUpdate } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
-import { longDate } from '../../src/portal/format.js';
-import { Photo } from '../../src/portal/Photo.js';
-import { usePortal } from '../../src/portal/PortalProvider.js';
-import { DemoBadge, PortalError, ProgressBar } from '../../src/portal/ui.js';
-import { Body, Card, Heading, Loading, Page } from '../../src/ui/kit.js';
-import { colors, fonts, space } from '../../src/ui/theme.js';
+import { longDate } from './format.js';
+import { Photo } from './Photo.js';
+import { usePortal } from './PortalProvider.js';
+import { projectKey } from '../brand/projects.js';
+import { ProgressBar } from './ui.js';
+import { Body, Card, Heading } from '../ui/kit.js';
+import { colors, fonts, space } from '../ui/theme.js';
 
 function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
   const { width } = useWindowDimensions();
@@ -30,22 +31,22 @@ function Photos({ update }: { update: ConstructionUpdate }): ReactNode {
   );
 }
 
-export default function Progress(): ReactNode {
-  const { data, error, loading } = usePortal();
-  if (loading && data === null) return <Loading />;
-  if (data === null || error !== null) {
-    return (
-      <Page>
-        <PortalError />
-      </Page>
-    );
-  }
+/** Updates for one project (matched like the brand photos, so "JAD 288" and "J288" are the same project). */
+function forProject(updates: readonly ConstructionUpdate[], project: string | null): ConstructionUpdate[] {
+  const key = projectKey(project);
+  return key === null ? [...updates] : updates.filter((u) => projectKey(u.project) === key);
+}
+
+/** Construction progress for the unit's project, at the end of My unit (Naya, 10-Nov-2026). */
+export function ConstructionSection({ project }: { project: string | null }): ReactNode {
+  const { data } = usePortal();
+  if (data === null) return null;
+  const updates = forProject(data.updates, project);
   return (
-    <Page>
-      <DemoBadge />
+    <>
       <Heading>Construction</Heading>
-      {data.updates.length === 0 ? <Body muted>No construction updates yet.</Body> : null}
-      {data.updates.map((u) => (
+      {updates.length === 0 ? <Body muted>No construction updates yet.</Body> : null}
+      {updates.map((u) => (
         <Card key={u.id}>
           <Photos update={u} />
           <Text style={styles.eyebrow}>
@@ -67,7 +68,7 @@ export default function Progress(): ReactNode {
           {u.handover === null ? null : <Body muted>{`Expected handover ${longDate(u.handover)}`}</Body>}
         </Card>
       ))}
-    </Page>
+    </>
   );
 }
 

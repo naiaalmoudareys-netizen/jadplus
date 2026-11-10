@@ -1,6 +1,7 @@
 /**
- * Owner and tenant tabs (docs/DESIGN.md): Home · My unit · Payments · News · Progress · Profile for owners;
- * Home · Profile for tenants (their unit's payments and news belong to the owner). Services join in phase B.
+ * Owner and tenant tabs: Home · My unit · Payments · Profile for owners (news & offers at the end of Home,
+ * construction at the end of My unit: Naya, 10-Nov-2026); Home · Profile for tenants (the unit's payments
+ * and owner news are the owner's). Services join in phase B.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, Tabs } from 'expo-router';
@@ -44,18 +45,6 @@ export default function ResidentTabs(): ReactNode {
       <Tabs.Screen
         name="payments"
         options={{ title: 'Payments', tabBarIcon: icon('card-outline'), href: owner ? '/payments' : null }}
-      />
-      <Tabs.Screen
-        name="news"
-        options={{ title: 'News', tabBarIcon: icon('newspaper-outline'), href: owner ? '/news' : null }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{
-          title: 'Progress',
-          tabBarIcon: icon('construct-outline'),
-          href: owner ? '/progress' : null,
-        }}
       />
       <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: icon('person-outline') }} />
     </Tabs>
