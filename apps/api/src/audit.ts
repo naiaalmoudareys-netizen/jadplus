@@ -59,6 +59,9 @@ export const AUDIT_ACTIONS = [
   'tenancy_extended',
   'tenancy_ended_by_owner',
   'tenancy_expired',
+  'technician_added',
+  'technician_removed',
+  'technician_assigned',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

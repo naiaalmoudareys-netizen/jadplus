@@ -28,6 +28,8 @@ import { tenancyRoutes } from './tenancies/routes.js';
 import { partnerFlowRoutes } from './requests/partner-flow.js';
 import { partnerVisitRoutes } from './requests/partner-visit.js';
 import { partnerStatsRoutes } from './partner/stats.js';
+import { partnerOfficeRoutes } from './partner/office.js';
+import { adminConsoleRoutes } from './admin/console.js';
 import { residentFlowRoutes } from './requests/resident-flow.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
@@ -72,11 +74,13 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/partner', partnerFlowRoutes());
   app.route('/api/partner', partnerVisitRoutes());
   app.route('/api/partner', partnerStatsRoutes());
+  app.route('/api/partner', partnerOfficeRoutes());
   app.route('/api', inboxRoutes());
   app.route('/api', approvalRoutes());
   app.route('/api', tenancyRoutes(deps));
   app.route('/api', residentFlowRoutes());
   app.route('/api/admin', adminRoutes());
+  app.route('/api/admin', adminConsoleRoutes());
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
 

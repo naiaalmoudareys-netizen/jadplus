@@ -46,10 +46,15 @@ const requestId = `demo-req-${run}`;
 const sql = [
   await user('demo-tech', 'demo@jadplus.ae', 'Sami Demo'),
   await user('demo-owner', 'layla.haddad@example.com', 'Layla Haddad'),
+  // The web console (ADR 0023): a JAD+ Admin and the demo partner's office manager, local only.
+  await user('demo-admin', 'admin.demo@jadplus.ae', 'Admin Demo'),
+  await user('demo-office', 'office.demo@jadplus.ae', 'Office Demo'),
   `INSERT OR IGNORE INTO partners (id, name, created_at, updated_at) VALUES ('demo-partner', 'Demo Fixers LLC', ${now}, ${now});`,
   `INSERT OR IGNORE INTO user_roles (id, user_id, role, partner_id, granted_at) VALUES
     ('demo-grant-tech', 'demo-tech', 'partner', 'demo-partner', ${now}),
-    ('demo-grant-owner', 'demo-owner', 'owner', NULL, ${now});`,
+    ('demo-grant-owner', 'demo-owner', 'owner', NULL, ${now}),
+    ('demo-grant-admin', 'demo-admin', 'jad_admin', NULL, ${now}),
+    ('demo-grant-office', 'demo-office', 'partner_admin', 'demo-partner', ${now});`,
   `INSERT OR IGNORE INTO technicians (id, partner_id, user_id, created_at) VALUES ('demo-tech-1', 'demo-partner', 'demo-tech', ${now});`,
   `INSERT OR IGNORE INTO service_partners (id, service_code, partner_id, rank, started_at) VALUES ('demo-sp', 'maintenance', 'demo-partner', 'primary', ${now});`,
   `INSERT OR IGNORE INTO partner_documents (id, partner_id, kind, r2_key, expires_on, uploaded_at, uploaded_by) VALUES

@@ -1,6 +1,7 @@
 export * from './access.js';
 export * from './auth.js';
 export * from './calendar.js';
+export * from './console.js';
 export * from './conversation.js';
 export * from './desk.js';
 export * from './emergency.js';
