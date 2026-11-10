@@ -21,7 +21,7 @@ import { usePortalOptional } from '../../src/portal/PortalProvider.js';
 import { DemoBadge } from '../../src/portal/ui.js';
 import { LanguageRow } from '../../src/profile/LanguagePicker.js';
 import { NotificationsGroup } from '../../src/profile/NotificationsGroup.js';
-import { usePreferences } from '../../src/profile/PreferencesProvider.js';
+import { usePreferences } from '../../src/profile/preferencesContext.js';
 import { Group, ProfileHeader, SettingsRow } from '../../src/profile/ProfileParts.js';
 import { useAccountActions } from '../../src/ui/AccountSection.js';
 import { Notice, Page } from '../../src/ui/kit.js';

@@ -15,7 +15,7 @@ import { useSessionController } from '../session/SessionProvider.js';
 import { Button, Eyebrow, Heading, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
 import { LanguageRow } from './LanguagePicker.js';
-import { usePreferences } from './PreferencesProvider.js';
+import { usePreferences } from './preferencesContext.js';
 
 export function TermsGate(): ReactNode {
   const { t } = useI18n();

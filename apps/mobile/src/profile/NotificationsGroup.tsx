@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { useT } from '../i18n/I18nProvider.js';
 import { Notice } from '../ui/kit.js';
 import { Group, SwitchRow } from './ProfileParts.js';
-import { usePreferences } from './PreferencesProvider.js';
+import { usePreferences } from './preferencesContext.js';
 
 export function NotificationsGroup({ owner }: { owner: boolean }): ReactNode {
   const t = useT();

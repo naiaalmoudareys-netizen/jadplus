@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useI18n } from '../i18n/I18nProvider.js';
 import { LANGUAGE_INFO } from '../i18n/languages.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
-import { usePreferences } from './PreferencesProvider.js';
+import { usePreferences } from './preferencesContext.js';
 import { SettingsRow } from './ProfileParts.js';
 
 export function LanguageRow({ bare = false }: { bare?: boolean }): ReactNode {

@@ -8,20 +8,12 @@
  *   emergency; the terms are asked again next time.
  */
 import type { ConsentBody, Preferences, PreferencesBody } from '@jadplus/shared';
-import { createContext, use, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { changePreferences, giveConsent, preferences } from '../api/endpoints.js';
 import { useI18n } from '../i18n/I18nProvider.js';
 import { useSession, useSessionController } from '../session/SessionProvider.js';
+import { PreferencesContext, type PreferencesState } from './preferencesContext.js';
 import { TermsGate } from './TermsGate.js';
-
-export interface PreferencesState {
-  readonly prefs: Preferences | null;
-  /** Saves a change; throws when it cannot be saved (the screen says so). */
-  readonly change: (body: PreferencesBody) => Promise<void>;
-  readonly consent: (body: ConsentBody) => Promise<void>;
-}
-
-const PreferencesContext = createContext<PreferencesState | null>(null);
 
 export function PreferencesProvider({ children }: { children: ReactNode }): ReactNode {
   const session = useSession();
@@ -78,10 +70,4 @@ export function PreferencesProvider({ children }: { children: ReactNode }): Reac
       {signedIn !== null && prefs !== null && !prefs.termsCurrent ? <TermsGate /> : null}
     </PreferencesContext>
   );
-}
-
-export function usePreferences(): PreferencesState {
-  const state = use(PreferencesContext);
-  if (state === null) throw new Error('usePreferences must be used inside PreferencesProvider');
-  return state;
 }
