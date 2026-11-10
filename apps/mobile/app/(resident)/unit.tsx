@@ -2,20 +2,25 @@
 import type { ReactNode } from 'react';
 import { area, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
-import { DemoBadge, Fact, UnitSwitcher } from '../../src/portal/ui.js';
+import { DemoBadge, Fact, PortalError, UnitSwitcher } from '../../src/portal/ui.js';
 import { Hero } from '../../src/ui/brand.js';
 import { Body, Card, Loading, Notice, Page } from '../../src/ui/kit.js';
 
 export default function MyUnit(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   if (loading && data === null) return <Loading />;
-  const deal = data?.deals[dealIndex] ?? data?.deals[0];
+  if (data === null || error !== null) {
+    return (
+      <Page>
+        <PortalError />
+      </Page>
+    );
+  }
+  const deal = data.deals[dealIndex] ?? data.deals[0];
   if (deal === undefined) {
     return (
       <Page>
-        <Notice tone={error === null ? 'info' : 'error'}>
-          {error ?? 'No residence found on your account.'}
-        </Notice>
+        <Notice>No residence found on your account.</Notice>
       </Page>
     );
   }
@@ -24,7 +29,12 @@ export default function MyUnit(): ReactNode {
     <Page>
       <DemoBadge />
       <UnitSwitcher />
-      <Hero project={u?.project ?? null} eyebrow={u?.project ?? 'Your residence'} title={unitTitle(deal)} />
+      <Hero
+        project={u?.project ?? null}
+        eyebrow={u?.project ?? 'Your residence'}
+        title={unitTitle(deal)}
+        shape="portrait"
+      />
       {u === null ? (
         <Body muted>The unit details are not available yet. Please contact the JAD+ desk.</Body>
       ) : (

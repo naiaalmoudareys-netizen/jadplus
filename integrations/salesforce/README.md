@@ -106,7 +106,34 @@ JAD+ needs only these fields. Building and project address tell the technician w
    }
    ```
 
-   JAD+ drops the passport/Emirates ID list, nationality and desk requests that this answer also contains, so
+   Construction and offer photos (and later receipt PDFs) use the existing `JADPortalApi` `file` action, which
+   returns a file only if it belongs to this owner's deals, updates or offers. A third route, same secret:
+
+   ```js
+   // JAD+ owner app: one file (photo or PDF) that Salesforce confirms this owner may see.
+   if (action === 'jadplus-file' && request.method === 'GET') {
+     const key = request.headers.get('x-portal-key') || '';
+     if (!env.JADPLUS_KEY || key.length !== env.JADPLUS_KEY.length || key !== env.JADPLUS_KEY) {
+       return new Response('forbidden', { status: 403 });
+     }
+     const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+     const id = url.searchParams.get('id') || '';
+     if (!/^[^@\s]{1,64}@[^@\s]{1,100}\.[^@\s]{2,20}$/.test(email) || !/^068[A-Za-z0-9]{12,15}$/.test(id)) {
+       return new Response('not found', { status: 404 });
+     }
+     const target = `${env.SF_INSTANCE_URL}/services/apexrest/jadportal/file?${new URLSearchParams({ email, id })}`;
+     let res = await fetch(target, { headers: { authorization: `Bearer ${await sfToken(env)}` } });
+     if (res.status === 401) {
+       await setMeta(env, { sf_token_at: new Date(0).toISOString() });
+       res = await fetch(target, { headers: { authorization: `Bearer ${await sfToken(env)}` } });
+     }
+     const type = res.headers.get('content-type') || 'application/octet-stream';
+     return new Response(res.body, { status: res.status, headers: { 'content-type': type } });
+   }
+   ```
+
+   JAD+ passes on only images and PDFs from this route. JAD+ also drops the passport/Emirates ID list,
+   nationality and desk requests that the owner answer contains, so
    they never reach the app. News and offers need the JAD+ Post object and `posts()` from the portal package
    (`steven leads/JAD DOCUMENT/salesforce-build/portal_api`, not deployed yet).
 

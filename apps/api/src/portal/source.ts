@@ -37,3 +37,43 @@ export const demoPortal: OwnerPortalSource = (_env, _email, now) => Promise.reso
 /** Production reads Salesforce; local and preview show demo data (CLAUDE.md: preview is demo data only). */
 export const ownerPortalSource: OwnerPortalSource = (env, email, now) =>
   env.ENVIRONMENT === 'production' ? salesforcePortal(env, email, now) : demoPortal(env, email, now);
+
+/** The finance worker's internal address for one of the owner's files (photo, receipt PDF). */
+export const FILE_URL = 'https://portal.internal/jadplus-file';
+
+/** File types JAD+ passes to the app; anything else is refused. */
+export const ALLOWED_FILE_TYPES: ReadonlySet<string> = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+]);
+
+/**
+ * One file for one owner (construction photos, offer photos, later receipts). Salesforce checks the file
+ * belongs to something this owner may see (JADPortalApi.allowedFile). Production only; elsewhere there are no
+ * real files (demo photos are bundled in the app), so null.
+ */
+export async function ownerFile(
+  env: Bindings,
+  email: string,
+  fileId: string,
+): Promise<{ body: ReadableStream; type: string } | null> {
+  if (env.ENVIRONMENT !== 'production') return null;
+  if (env.FIN === undefined || env.PORTAL_KEY === undefined || env.PORTAL_KEY === '') {
+    throw new Error('The Salesforce link (FIN, PORTAL_KEY) is not configured');
+  }
+  const url = new URL(FILE_URL);
+  url.searchParams.set('email', email);
+  url.searchParams.set('id', fileId);
+  const res = await env.FIN.fetch(url.toString(), {
+    headers: { 'x-portal-key': env.PORTAL_KEY },
+    signal: AbortSignal.timeout(DIRECTORY_TIMEOUT_MS),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Salesforce file answered ${res.status}`);
+  const type = (res.headers.get('content-type') ?? '').split(';')[0]?.trim().toLowerCase() ?? '';
+  if (!ALLOWED_FILE_TYPES.has(type) || res.body === null) return null;
+  return { body: res.body, type };
+}

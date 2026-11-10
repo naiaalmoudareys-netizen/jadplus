@@ -6,7 +6,7 @@
  *
  * The data is looked up by the owner's own verified email, never by anything the app sends (C-AZ-2).
  */
-import { dubaiDate, isOffer, postVisible, type OwnerPortal } from '@jadplus/shared';
+import { dubaiDate, isFileId, isOffer, postVisible, type OwnerPortal } from '@jadplus/shared';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -17,10 +17,15 @@ import { decryptField, newId, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseParams } from '../validate.js';
+import { ownerFile } from './source.js';
 
 type Ctx = Context<AppEnv>;
 
 const postParam = z.strictObject({ postId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) });
+/** Salesforce file version ids only (068…, 15 or 18 characters). */
+const fileParam = z.strictObject({
+  fileId: z.string().refine((id) => isFileId(id) && id.startsWith('068')),
+});
 
 const UNAVAILABLE = 'We could not load your details right now. Please try again shortly.';
 
@@ -91,6 +96,28 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
       }),
     ]);
     return c.json({ id, alreadyInterested: false }, 201);
+  });
+
+  // Photos (and later PDFs) of the owner's updates and offers, only if Salesforce says this owner may see them.
+  owner.get('/files/:fileId', async (c) => {
+    const { fileId } = parseParams(c, fileParam);
+    const email = await ownerEmail(c);
+    let file;
+    try {
+      file = await ownerFile(c.env, email, fileId);
+    } catch (err) {
+      c.get('log').log('warn', 'Owner file could not be loaded', { err });
+      throw new ApiError(503, UNAVAILABLE);
+    }
+    if (file === null) throw new ApiError(404, 'Not found.');
+    return new Response(file.body, {
+      headers: {
+        'content-type': file.type,
+        'content-disposition': 'inline',
+        // Personal to this owner: the phone may keep it for an hour, shared caches never.
+        'cache-control': 'private, max-age=3600',
+      },
+    });
   });
 
   return owner;

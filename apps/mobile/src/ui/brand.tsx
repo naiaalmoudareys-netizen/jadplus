@@ -16,6 +16,17 @@ const PROJECT_PHOTOS: Readonly<Record<ProjectKey, number>> = {
   '171gh': photo171,
 };
 
+/** The bundled photo of a project, or null when it has none. */
+export function projectPhoto(project: string | null): number | null {
+  const key = projectKey(project);
+  return key === null ? null : PROJECT_PHOTOS[key];
+}
+
+/** Demo photo ids ("demo-photo-j188") point at the bundled project photos. */
+export function demoPhoto(id: string): number | null {
+  return id.startsWith('demo-photo-') ? projectPhoto(id.slice('demo-photo-'.length)) : null;
+}
+
 /** The JAD+ wordmark (268 x 46), ink on light backgrounds, cream on photos. */
 export function Logo({ onPhoto = false }: { onPhoto?: boolean }): ReactNode {
   return (
@@ -28,11 +39,23 @@ export function Logo({ onPhoto = false }: { onPhoto?: boolean }): ReactNode {
   );
 }
 
-/** A photo band with a slate veil, the logo, a bronze eyebrow and a title (sign-in, owner home). */
-export function Hero(props: { project?: string | null; eyebrow: string; title: string }): ReactNode {
+/**
+ * Frame shapes for photos. Project photos are tall towers, so the taller frames show the whole building
+ * instead of a cropped strip (Naya, 10-Nov-2026: "too zoomed in").
+ */
+export const PHOTO_SHAPES = { banner: 16 / 10, landscape: 4 / 3, portrait: 3 / 4 } as const;
+export type PhotoShape = keyof typeof PHOTO_SHAPES;
+
+/** A photo with a slate veil, the logo, a bronze eyebrow and a title (sign-in, owner home, my unit). */
+export function Hero(props: {
+  project?: string | null;
+  eyebrow: string;
+  title: string;
+  shape?: PhotoShape;
+}): ReactNode {
   const key = projectKey(props.project ?? null);
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, { aspectRatio: PHOTO_SHAPES[props.shape ?? 'banner'] }]}>
       <Image
         source={key === null ? signinPoster : PROJECT_PHOTOS[key]}
         style={StyleSheet.absoluteFill}
@@ -54,7 +77,7 @@ export function Hero(props: { project?: string | null; eyebrow: string; title: s
 
 const styles = StyleSheet.create({
   logo: { width: 134, height: 23 },
-  hero: { minHeight: 220, borderRadius: radius, overflow: 'hidden' },
+  hero: { minHeight: 200, borderRadius: radius, overflow: 'hidden' },
   veil: {
     flex: 1,
     justifyContent: 'space-between',

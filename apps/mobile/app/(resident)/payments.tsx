@@ -7,20 +7,25 @@ import type { ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortal } from '../../src/portal/PortalProvider.js';
-import { DemoBadge, Fact, Pill, ProgressBar, UnitSwitcher } from '../../src/portal/ui.js';
+import { DemoBadge, LineItem, Pill, PortalError, ProgressBar, UnitSwitcher } from '../../src/portal/ui.js';
 import { Body, Button, Card, Eyebrow, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { colors, fonts, space } from '../../src/ui/theme.js';
 
 export default function Payments(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   if (loading && data === null) return <Loading />;
-  const deal = data?.deals[dealIndex] ?? data?.deals[0];
-  if (data === null || deal === undefined) {
+  if (data === null || error !== null) {
     return (
       <Page>
-        <Notice tone={error === null ? 'info' : 'error'}>
-          {error ?? 'No payment plan found on your account.'}
-        </Notice>
+        <PortalError />
+      </Page>
+    );
+  }
+  const deal = data.deals[dealIndex] ?? data.deals[0];
+  if (deal === undefined) {
+    return (
+      <Page>
+        <Notice>No payment plan found on your account.</Notice>
       </Page>
     );
   }
@@ -83,7 +88,13 @@ export default function Payments(): ReactNode {
           <Heading>Late payment fees</Heading>
           <Card>
             {penalties.map((p) => (
-              <Fact key={p.name} label={p.for ?? p.name} value={aed(p.outstanding)} />
+              <LineItem
+                key={p.name}
+                title={p.for ?? p.name}
+                detail={p.start === null ? null : `Since ${longDate(p.start)}`}
+                amount={aed(p.outstanding)}
+                tone="bad"
+              />
             ))}
           </Card>
         </>
@@ -93,15 +104,19 @@ export default function Payments(): ReactNode {
         <>
           <Heading>Fees</Heading>
           <Card>
-            {deal.charges.map((c) => (
-              <Fact
-                key={c.name}
-                label={c.name}
-                value={
-                  c.amount - c.paid <= 1 ? `${aed(c.amount)} · Paid` : `${aed(c.amount - c.paid)} to pay`
-                }
-              />
-            ))}
+            {deal.charges.map((c) => {
+              const paid = c.amount - c.paid <= 1;
+              return (
+                <LineItem
+                  key={c.name}
+                  title={c.name}
+                  detail={c.due === null ? null : longDate(c.due)}
+                  amount={aed(paid ? c.amount : c.amount - c.paid)}
+                  note={paid ? 'Paid' : 'To pay'}
+                  tone={paid ? 'good' : 'normal'}
+                />
+              );
+            })}
           </Card>
         </>
       )}
@@ -111,10 +126,12 @@ export default function Payments(): ReactNode {
           <Heading>Receipts</Heading>
           <Card>
             {deal.receipts.map((r) => (
-              <Fact
+              <LineItem
                 key={r.id}
-                label={`${r.name}${r.for === null ? '' : ` · ${r.for}`}`}
-                value={`${aed(r.amount)}${r.paidOn === null ? '' : ` · ${longDate(r.paidOn)}`}`}
+                title={r.for ?? 'Payment'}
+                detail={[r.name, r.method].filter((x) => x !== null).join(' · ')}
+                amount={aed(r.amount)}
+                note={r.paidOn === null ? null : longDate(r.paidOn)}
               />
             ))}
           </Card>

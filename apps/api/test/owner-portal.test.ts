@@ -2,7 +2,14 @@
 import { ownerPortalResponse } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import type { Bindings } from '../src/env.js';
-import { OWNER_URL, demoPortal, ownerPortalSource, salesforcePortal } from '../src/portal/source.js';
+import {
+  FILE_URL,
+  OWNER_URL,
+  demoPortal,
+  ownerFile,
+  ownerPortalSource,
+  salesforcePortal,
+} from '../src/portal/source.js';
 import { NOW } from './db.js';
 import { EMAILS, world } from './emergency-world.js';
 
@@ -127,5 +134,45 @@ describe('where owner data comes from (ADR 0010)', () => {
     expect(t.calls).toEqual([`${OWNER_URL}?email=${encodeURIComponent(EMAILS.owner)}`]);
     expect(portal.source).toBe('salesforce');
     expect(JSON.stringify(portal)).not.toMatch(/Passport|nationality|Sample/);
+  });
+});
+
+describe('owner photos and files (ADR 0010)', () => {
+  const FILE = '068000000000001AAA';
+
+  it('C-AZ-1/C-VAL-1: owners only, Salesforce file ids only; no real files outside production', async () => {
+    const w = await world();
+    expect((await w.h.request(`/api/owner/files/${FILE}`, { token: w.ownerToken })).status).toBe(404);
+    expect((await w.h.request('/api/owner/files/..%2Fsecret', { token: w.ownerToken })).status).toBe(404);
+    expect((await w.h.request(`/api/owner/files/${FILE}`, { token: w.tenantToken })).status).toBe(403);
+  });
+
+  const production = (status: number, type: string) => {
+    const calls: string[] = [];
+    const fin = {
+      fetch: (input: string) => {
+        calls.push(input);
+        return Promise.resolve(new Response('bytes', { status, headers: { 'content-type': type } }));
+      },
+    } as unknown as Fetcher;
+    const env: Bindings = {
+      DB: {} as D1Database,
+      MEDIA: {} as R2Bucket,
+      ENVIRONMENT: 'production',
+      INDEX_KEY: '',
+      DATA_KEY: '',
+      FIN: fin,
+      PORTAL_KEY: 'test-portal-key',
+    };
+    return { env, calls };
+  };
+
+  it('C-PD-1: production asks Salesforce for this owner and file, and passes on images and PDFs only', async () => {
+    const ok = production(200, 'image/jpeg');
+    expect((await ownerFile(ok.env, EMAILS.owner, FILE))?.type).toBe('image/jpeg');
+    expect(ok.calls).toEqual([`${FILE_URL}?email=${encodeURIComponent(EMAILS.owner)}&id=${FILE}`]);
+    expect(await ownerFile(production(200, 'text/html').env, EMAILS.owner, FILE)).toBeNull();
+    expect(await ownerFile(production(404, 'application/json').env, EMAILS.owner, FILE)).toBeNull();
+    await expect(ownerFile(production(500, 'text/plain').env, EMAILS.owner, FILE)).rejects.toThrow(/500/);
   });
 });

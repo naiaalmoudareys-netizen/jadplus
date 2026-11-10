@@ -33,8 +33,15 @@ Salesforce connected only at go-live.
 7. **Tabs**: owners get Home · My unit · Payments · News · Progress · Profile; tenants get Home · Profile (the
    unit's payments and owner news are the owner's). Services joins with phase B (routine requests). Owners
    with more than one unit switch units at the top of My unit and Payments.
-8. **Not yet**: documents and receipts as PDFs (needs a secure file route through the API), the floor plan
-   image, construction photos, notification and marketing switches (N4, L1), Arabic.
+8. **Photos** (construction updates, offers) come through `GET /api/owner/files/:id`: owner only, Salesforce
+   file ids only, fetched for that owner's email so Salesforce's own check (`JADPortalApi.file`) decides, and
+   only images or PDFs are passed on, marked private to the phone. Demo photos are the bundled project photos.
+9. **Design follow-up (Naya, 10-Nov-2026)**: project photos in taller frames (portrait on My unit), receipts and
+   fees as tidy two-sided rows, news as calm cards (photo, "TYPE · DATE", title, summary; tap for the full text;
+   owners' price with the list price crossed out), and every owner tab says when it could not load, with
+   "Try again".
+10. **Not yet**: receipts and SPA as PDFs (the file route is ready), the floor plan image, notification and
+    marketing switches (N4, L1), Arabic.
 
 ## Consequences
 

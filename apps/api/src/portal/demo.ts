@@ -155,6 +155,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         handover: null,
         project: 'J188',
         building: null,
+        photos: ['demo-photo-j188'],
       },
       {
         id: 'demo-u2',
@@ -166,6 +167,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         handover: null,
         project: 'JAD 288',
         building: 'Block C',
+        photos: ['demo-photo-jad288'],
       },
       {
         id: 'demo-u3',
@@ -177,6 +179,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         handover: null,
         project: 'J188',
         building: null,
+        photos: [],
       },
     ],
     posts: [
@@ -191,6 +194,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         expires: day(26),
         link: null,
         project: 'J188',
+        photos: ['demo-photo-j188'],
         offer: {
           unitName: '905-J188',
           type: '2 Bedroom',
@@ -215,6 +219,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         link: null,
         project: null,
         offer: null,
+        photos: ['demo-photo-jad288'],
       },
       {
         id: 'demo-p3',
@@ -228,6 +233,7 @@ export function demoOwnerPortal(now: number): OwnerPortal {
         link: 'https://jadglobal.ae/',
         project: 'JAD 288',
         offer: null,
+        photos: ['demo-photo-jad288'],
       },
     ],
     payUrl: PAY_URL,

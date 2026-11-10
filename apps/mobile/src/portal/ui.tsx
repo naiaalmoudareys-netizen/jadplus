@@ -2,6 +2,7 @@
 import type { InstalmentKind } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Button, Notice } from '../ui/kit.js';
 import { buttonRadius, colors, fonts, space } from '../ui/theme.js';
 import { usePortal } from './PortalProvider.js';
 import { unitTitle } from './format.js';
@@ -73,6 +74,49 @@ export function ProgressBar({ percent }: { percent: number }): ReactNode {
   );
 }
 
+/**
+ * One line of money: what it is (and what for) on the left, the amount (and date) on the right, so receipts
+ * and fees read as a tidy list rather than a block of text.
+ */
+export function LineItem(props: {
+  title: string;
+  detail?: string | null;
+  amount: string;
+  note?: string | null;
+  tone?: 'normal' | 'good' | 'bad';
+}): ReactNode {
+  const tone = props.tone ?? 'normal';
+  return (
+    <View
+      style={styles.line}
+      accessible
+      accessibilityLabel={[props.title, props.detail, props.amount, props.note].filter(Boolean).join(', ')}
+    >
+      <View style={styles.lineLeft}>
+        <Text style={styles.lineTitle}>{props.title}</Text>
+        {props.detail ? <Text style={styles.lineDetail}>{props.detail}</Text> : null}
+      </View>
+      <View style={styles.lineRight}>
+        <Text style={[styles.lineAmount, tone === 'bad' && styles.bad]}>{props.amount}</Text>
+        {props.note ? (
+          <Text style={[styles.lineDetail, tone === 'good' && styles.good]}>{props.note}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+/** Shown on an owner tab when the data could not be loaded, with a way to try again. */
+export function PortalError(): ReactNode {
+  const { error, loading, reload } = usePortal();
+  return (
+    <View style={styles.errorBox}>
+      <Notice tone="error">{error ?? 'We could not load your details right now.'}</Notice>
+      <Button title="Try again" busy={loading} onPress={() => void reload()} />
+    </View>
+  );
+}
+
 /** A label and its value on one line ("BEDROOMS   2"). Hidden when there is no value. */
 export function Fact({ label, value }: { label: string; value: string | number | null }): ReactNode {
   if (value === null || value === '') return null;
@@ -117,6 +161,22 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
     gap: space.md,
   },
+  line: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: space.md,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  lineLeft: { flex: 1, gap: 2 },
+  lineRight: { alignItems: 'flex-end', gap: 2 },
+  lineTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.text },
+  lineDetail: { fontFamily: fonts.regular, fontSize: 13, color: colors.muted },
+  lineAmount: { fontFamily: fonts.medium, fontSize: 15, color: colors.text, fontVariant: ['tabular-nums'] },
+  good: { color: colors.ok },
+  bad: { color: colors.urgent },
+  errorBox: { gap: space.md },
   factLabel: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 1.4, color: colors.muted },
   factValue: {
     fontFamily: fonts.regular,

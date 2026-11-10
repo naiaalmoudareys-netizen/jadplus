@@ -128,7 +128,13 @@ describe('Salesforce answer to the owner app', () => {
         penalties: [],
       },
     ],
-    updates: [],
+    updates: [
+      {
+        id: 'a1Pu',
+        title: 'Level 12',
+        photos: ['068000000000001AAA', '../../etc/passwd', 42, 'demo-photo-j188'],
+      },
+    ],
     posts: [
       {
         id: 'p1',
@@ -141,6 +147,12 @@ describe('Salesforce answer to the owner app', () => {
       { id: 'p2', type: 'News', title: 'Launch', date: null, link: 'https://jadglobal.ae/' },
     ],
   };
+
+  it('O1: construction photos keep only real file ids (anything else is dropped)', () => {
+    const out = fromSalesforce(salesforceOwnerAnswer.parse(raw), 'https://pay.jadglobal.ae/', TODAY);
+    expect(out.updates[0]?.photos).toEqual(['068000000000001AAA', 'demo-photo-j188']);
+    expect(out.posts[0]?.photos).toEqual([]);
+  });
 
   it('C-PD-1: passport documents, nationality and desk requests never reach the app', () => {
     const out = fromSalesforce(salesforceOwnerAnswer.parse(raw), 'https://pay.jadglobal.ae/', TODAY);

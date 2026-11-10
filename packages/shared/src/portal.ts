@@ -17,6 +17,18 @@ const date = z
   .nullable()
   .catch(null);
 const list = <T extends z.ZodType>(item: T) => z.array(item).max(500).catch([]);
+/** Salesforce file (ContentVersion) ids of photos; anything else is dropped. */
+const photoIds = z
+  .array(z.unknown())
+  .max(50)
+  .catch([])
+  .transform((ids) => ids.filter((id): id is string => typeof id === 'string' && isFileId(id)));
+
+/** A Salesforce file version id (068…, 15 or 18 characters), or a demo photo id ("demo-photo-…"). */
+export function isFileId(id: string): boolean {
+  const salesforce = /^068[A-Za-z0-9]+$/.test(id) && (id.length === 15 || id.length === 18);
+  return salesforce || /^demo-photo-[a-z0-9]{1,20}$/.test(id);
+}
 
 /** The parts of JADPortalApi.owner's answer JAD+ reads. Unknown fields are ignored (not passed on). */
 export const salesforceOwnerAnswer = z.object({
@@ -66,6 +78,7 @@ export const salesforceOwnerAnswer = z.object({
       handover: str,
       project: str,
       building: str,
+      photos: photoIds,
     }),
   ),
   posts: list(
@@ -80,6 +93,7 @@ export const salesforceOwnerAnswer = z.object({
       expires: date,
       link: str,
       project: str,
+      photos: photoIds,
       unit: z
         .object({
           name: str,
@@ -186,6 +200,8 @@ export const ownerPortalResponse = z.object({
       handover: z.string().nullable(),
       project: z.string().nullable(),
       building: z.string().nullable(),
+      /** Photo ids, shown through GET /api/owner/files/:id (only files this owner may see). */
+      photos: z.array(z.string()),
     }),
   ),
   posts: z.array(
@@ -200,6 +216,7 @@ export const ownerPortalResponse = z.object({
       expires: z.string().nullable(),
       link: z.string().nullable(),
       project: z.string().nullable(),
+      photos: z.array(z.string()),
       offer: z
         .object({
           unitName: z.string().nullable(),
@@ -318,6 +335,7 @@ export function fromSalesforce(
       handover: u.handover,
       project: u.project,
       building: u.building,
+      photos: u.photos,
     })),
     posts: raw.posts.map((p) => ({
       id: p.id,
@@ -330,6 +348,7 @@ export function fromSalesforce(
       expires: p.expires,
       link: safeLink(p.link),
       project: p.project,
+      photos: p.photos,
       offer:
         p.unit === null || p.unit === undefined
           ? null

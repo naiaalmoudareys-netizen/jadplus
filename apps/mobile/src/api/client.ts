@@ -38,6 +38,8 @@ export interface ApiClient {
   post<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
   /** For calls answered with "204 No Content". */
   postNoContent(path: string, body?: unknown): Promise<void>;
+  /** An image the API serves only to the signed-in person: address plus the session header. */
+  authorizedImage(path: string): { uri: string; headers: Record<string, string> };
 }
 
 export function createApiClient(o: ApiClientOptions): ApiClient {
@@ -78,6 +80,13 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
     post: async (path, body, schema) => read(await send('POST', path, body), schema),
     postNoContent: async (path, body) => {
       await send('POST', path, body);
+    },
+    authorizedImage: (path) => {
+      const credential = o.token();
+      return {
+        uri: `${o.baseUrl}${path}`,
+        headers: credential === null ? {} : { authorization: `Bearer ${credential}` },
+      };
     },
   };
 }
