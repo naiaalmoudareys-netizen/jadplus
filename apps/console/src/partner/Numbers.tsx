@@ -1,46 +1,42 @@
 /**
- * The partner office's own numbers (ADR 0023; S5 real data only, S8 never shown to owners): jobs done, SLA
- * targets met, rating and repeat visits over the last 7, 30 or 90 days, for the whole company.
+ * The company's recent numbers (ADR 0023; S5 real data only, S8 never shown to owners): jobs done, SLA targets
+ * met, rating and repeat visits over the last 7, 30 or 90 days. A section of the Performance page.
  */
 import { partnerStatsResponse } from '@jadplus/shared';
-import type { ReactNode } from 'react';
-import { onTimeText, ratingText } from '../lib/stats';
-import { STATS_DAYS, formatRoute, type StatsDays } from '../lib/router';
+import { useState, type ReactNode } from 'react';
+import { withQuery } from '../lib/api';
+import { STATS_DAYS, onTimeText, ratingText, type StatsDays } from '../lib/stats';
 import { useConsole, useLoad } from '../ui/hooks';
-import { Loaded, PageHeader } from '../ui/parts';
+import { Figure, Loaded, Section } from '../ui/parts';
 
-function Figure({ label, value, note }: { label: string; value: string; note: string }): ReactNode {
-  return (
-    <div className="card figure">
-      <p className="label">{label}</p>
-      <p className="figure-value">{value}</p>
-      <p className="hint">{note}</p>
-    </div>
-  );
-}
-
-export function Numbers({ days }: { days: StatsDays }): ReactNode {
+export function RecentNumbers(): ReactNode {
   const { api } = useConsole();
+  const [days, setDays] = useState<StatsDays>('30');
   const { state, reload } = useLoad(
-    () => api.get(`/api/partner/stats?days=${days}`, partnerStatsResponse),
-    days,
+    () => api.get(withQuery('/api/partner/stats', { days }), partnerStatsResponse),
+    `stats:${days}`,
   );
   return (
-    <>
-      <PageHeader eyebrow="Partner office" title="Our numbers">
-        <nav className="segmented" aria-label="Period">
+    <Section
+      title="Recent days"
+      actions={
+        <div className="segmented" role="group" aria-label="Period">
           {STATS_DAYS.map((d) => (
-            <a
+            <button
               key={d}
-              href={formatRoute({ name: 'numbers', days: d })}
+              type="button"
               className={d === days ? 'segment segment-current' : 'segment'}
-              aria-current={d === days ? 'page' : undefined}
+              aria-pressed={d === days}
+              onClick={() => {
+                setDays(d);
+              }}
             >
               {d} days
-            </a>
+            </button>
           ))}
-        </nav>
-      </PageHeader>
+        </div>
+      }
+    >
       <Loaded state={state} reload={reload}>
         {(s) => (
           <div className="figures">
@@ -63,6 +59,6 @@ export function Numbers({ days }: { days: StatsDays }): ReactNode {
           </div>
         )}
       </Loaded>
-    </>
+    </Section>
   );
 }

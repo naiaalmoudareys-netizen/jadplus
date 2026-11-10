@@ -1,7 +1,8 @@
 /**
- * JAD+ Admin "Partners" (ADR 0023; S6, S7, P3): each partner's standing, team size, open jobs and documents
- * (red when lapsed or missing, amber within 30 days). JAD+ Admin suspends or reinstates with a reason, which
- * is audited; a viewer only reads. The review list from the daily check follows.
+ * JAD+ Admin "Partners" (ADR 0023, 0025; S6, S7, S9, P3): each partner's standing, team size, open jobs and
+ * documents (red when lapsed or missing, amber within 30 days), what waits for JAD+'s decision (uploaded
+ * documents, rate-card changes), and the review list from the daily check. JAD+ Admin suspends or reinstates
+ * with a reason, which is audited; a viewer only reads. Each partner opens its own page.
  */
 import { adminPartnersResponse, partnerStatusBody } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
@@ -11,30 +12,31 @@ import { documentLines } from '../lib/documents';
 import { partnerStatusChangedResponse } from '../lib/schemas';
 import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
-import { Loaded, Notice, PageHeader, ReasonForm, Tag } from '../ui/parts';
+import { Empty, Link, Loaded, Notice, PageHeader, ReasonForm, Tag } from '../ui/parts';
+import { SortHeader, useSort } from '../ui/table';
+import { PendingDecisions } from './partner/Pending';
 import { PartnerReview } from './PartnerReview';
 
 type Partner = z.infer<typeof adminPartnersResponse>['partners'][number];
+type Column = 'name' | 'status' | 'technicians' | 'open';
 
-const STANDING = {
+export const STANDING = {
   active: { tone: 'good', label: 'Active' },
   suspended: { tone: 'bad', label: 'Suspended' },
   ended: { tone: 'calm', label: 'Contract ended' },
 } as const;
 
-function PartnerRow({
+/** Suspend or reinstate a partner, with a reason (S6, P3). Nothing for a partner whose contract ended. */
+export function StandingChange({
   partner,
-  now,
-  editable,
   onChanged,
 }: {
   partner: Partner;
-  now: number;
-  editable: boolean;
   onChanged: (message: string) => void;
 }): ReactNode {
   const { api } = useConsole();
   const [editing, setEditing] = useState(false);
+  if (partner.status === 'ended') return null;
   const target = partner.status === 'active' ? 'suspended' : 'active';
   const change = async (reason: string): Promise<void> => {
     const body = partnerStatusBody.safeParse({ status: target, reason });
@@ -47,64 +49,111 @@ function PartnerRow({
     setEditing(false);
     onChanged(`${partner.name} is now ${target === 'active' ? 'active' : 'suspended'}.`);
   };
-  const standing = STANDING[partner.status];
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="btn btn-outline"
+        onClick={() => {
+          setEditing(true);
+        }}
+      >
+        {target === 'active' ? 'Reinstate' : 'Suspend'}
+      </button>
+    );
+  }
   return (
-    <tr>
-      <td>
-        <strong>{partner.name}</strong>
-      </td>
-      <td>
-        <Tag tone={standing.tone}>{standing.label}</Tag>
-        {partner.statusReason === null ? null : <span className="block muted">{partner.statusReason}</span>}
-      </td>
-      <td className="num">{partner.technicians}</td>
-      <td className="num">{partner.openJobs}</td>
-      <td>
-        <ul className="plain">
-          {documentLines(partner.documents, now).map((d) => (
-            <li key={d.label}>
-              {d.label}: <Tag tone={d.tone}>{d.text}</Tag>
-            </li>
-          ))}
-        </ul>
-      </td>
-      {editable ? (
-        <td>
-          {partner.status === 'ended' ? null : editing ? (
-            <ReasonForm
-              label={target === 'active' ? 'Why reinstate?' : 'Why suspend?'}
-              submitLabel={target === 'active' ? 'Reinstate' : 'Suspend'}
-              minLength={3}
-              explain={
-                target === 'active'
-                  ? 'The partner can receive new jobs again.'
-                  : 'The partner gets no new jobs; waiting jobs move to the backup partner.'
-              }
-              onSubmit={change}
-              onCancel={() => {
-                setEditing(false);
-              }}
-            />
-          ) : (
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setEditing(true);
-              }}
-            >
-              {target === 'active' ? 'Reinstate' : 'Suspend'}
-            </button>
-          )}
-        </td>
-      ) : null}
-    </tr>
+    <ReasonForm
+      label={target === 'active' ? 'Why reinstate?' : 'Why suspend?'}
+      submitLabel={target === 'active' ? 'Reinstate' : 'Suspend'}
+      minLength={3}
+      explain={
+        target === 'active'
+          ? 'The partner can receive new jobs again.'
+          : 'The partner gets no new jobs; waiting jobs move to the backup partner.'
+      }
+      onSubmit={change}
+      onCancel={() => {
+        setEditing(false);
+      }}
+    />
+  );
+}
+
+function PartnerTable({
+  partners,
+  editable,
+  onChanged,
+}: {
+  partners: readonly Partner[];
+  editable: boolean;
+  onChanged: (message: string) => void;
+}): ReactNode {
+  const now = useNow();
+  const sorted = useSort<Partner, Column>(partners, { key: 'name', dir: 'asc' }, (p, key) => {
+    switch (key) {
+      case 'name':
+        return p.name;
+      case 'status':
+        return p.status;
+      case 'technicians':
+        return p.technicians;
+      case 'open':
+        return p.openJobs;
+    }
+  });
+  return (
+    <table className="table">
+      <thead>
+        <tr>
+          <SortHeader label="Partner" column="name" sorted={sorted} />
+          <SortHeader label="Standing" column="status" sorted={sorted} />
+          <SortHeader label="Technicians" column="technicians" sorted={sorted} numeric />
+          <SortHeader label="Open jobs" column="open" sorted={sorted} numeric />
+          <th scope="col">Documents</th>
+          {editable ? <th scope="col">Change</th> : null}
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.rows.map((p) => {
+          const standing = STANDING[p.status];
+          return (
+            <tr key={p.id}>
+              <td>
+                <Link to={{ name: 'partner', id: p.id }}>
+                  <strong>{p.name}</strong>
+                </Link>
+              </td>
+              <td>
+                <Tag tone={standing.tone}>{standing.label}</Tag>
+                {p.statusReason === null ? null : <span className="block muted">{p.statusReason}</span>}
+              </td>
+              <td className="num">{p.technicians}</td>
+              <td className="num">{p.openJobs}</td>
+              <td>
+                <ul className="plain">
+                  {documentLines(p.documents, now).map((d) => (
+                    <li key={d.label}>
+                      {d.label}: <Tag tone={d.tone}>{d.text}</Tag>
+                    </li>
+                  ))}
+                </ul>
+              </td>
+              {editable ? (
+                <td>
+                  <StandingChange partner={p} onChanged={onChanged} />
+                </td>
+              ) : null}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
 
 export function Partners(): ReactNode {
   const { api, session } = useConsole();
-  const now = useNow();
   const editable = canChange(session.role);
   const [done, setDone] = useState<string | null>(null);
   const { state, reload } = useLoad(() => api.get('/api/admin/partners', adminPartnersResponse), 'partners');
@@ -112,45 +161,24 @@ export function Partners(): ReactNode {
     <>
       <PageHeader eyebrow="JAD+ Admin" title="Partners" />
       {done === null ? null : <Notice tone="good">{done}</Notice>}
+      <PendingDecisions />
       <Loaded state={state} reload={reload}>
-        {({ partners }) =>
-          partners.length === 0 ? (
-            <p className="card muted">No partners yet.</p>
-          ) : (
-            <section className="card">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th scope="col">Partner</th>
-                    <th scope="col">Standing</th>
-                    <th scope="col" className="num">
-                      Technicians
-                    </th>
-                    <th scope="col" className="num">
-                      Open jobs
-                    </th>
-                    <th scope="col">Documents</th>
-                    {editable ? <th scope="col">Change</th> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {partners.map((p) => (
-                    <PartnerRow
-                      key={p.id}
-                      partner={p}
-                      now={now}
-                      editable={editable}
-                      onChanged={(message) => {
-                        setDone(message);
-                        reload();
-                      }}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )
-        }
+        {({ partners }) => (
+          <section className="card">
+            {partners.length === 0 ? (
+              <Empty>No partners yet.</Empty>
+            ) : (
+              <PartnerTable
+                partners={partners}
+                editable={editable}
+                onChanged={(message) => {
+                  setDone(message);
+                  reload();
+                }}
+              />
+            )}
+          </section>
+        )}
       </Loaded>
       <PartnerReview editable={editable} />
     </>

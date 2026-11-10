@@ -135,3 +135,55 @@ export function ReasonForm({
     </form>
   );
 }
+
+/** One labelled fact in a <dl className="facts">. */
+export function Fact({ label, children }: { label: string; children: ReactNode }): ReactNode {
+  return (
+    <div className="fact">
+      <dt className="label">{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+/** A large figure on a card: a count, a percentage, a rating. */
+export function Figure({ label, value, note }: { label: string; value: string; note?: string }): ReactNode {
+  return (
+    <div className="card figure">
+      <p className="label">{label}</p>
+      <p className="figure-value">{value}</p>
+      {note === undefined ? null : <p className="hint">{note}</p>}
+    </div>
+  );
+}
+
+/** What a list shows when there is nothing in it. */
+export function Empty({ children }: { children: ReactNode }): ReactNode {
+  return <p className="muted empty">{children}</p>;
+}
+
+/** A card with a section title, an optional count and optional buttons on the right. */
+export function Section({
+  title,
+  count,
+  actions,
+  children,
+}: {
+  title: string;
+  count?: number;
+  actions?: ReactNode;
+  children: ReactNode;
+}): ReactNode {
+  return (
+    <section className="card">
+      <div className="section-head">
+        <h2 className="section-title">
+          {title}
+          {count === undefined ? null : <span className="count">{count}</span>}
+        </h2>
+        {actions}
+      </div>
+      {children}
+    </section>
+  );
+}

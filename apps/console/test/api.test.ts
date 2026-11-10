@@ -10,6 +10,7 @@ import {
   apiPath,
   errorMessage,
   photoUrl,
+  withQuery,
   type Fetch,
 } from '../src/lib/api';
 import { reviewDetailText, reviewKindLabel } from '../src/lib/schemas';
@@ -106,6 +107,49 @@ describe('API client (ADR 0022, C-VAL-1, C-WEB-2)', () => {
     expect(apiPath('requests', '../admin')).toBe('/api/requests/..%2Fadmin');
     expect(photoUrl('r1', 'p 2')).toBe('/api/requests/r1/photos/p%202');
     expect(errorMessage(new Error('internal detail'))).toBe(UNEXPECTED_MESSAGE);
+  });
+});
+
+describe('API client: other methods, files and queries (ADR 0025)', () => {
+  it('C-WEB-2: PUT and DELETE carry the anti-forgery token like POST', async () => {
+    const { api, sent } = fakeApi(() => json({ ok: true }));
+    await api.put('/api/admin/guide', { a: 1 }, ok);
+    await api.delete('/api/admin/guide/g1', ok);
+    expect(sent.map((s) => s.init.method)).toEqual(['PUT', 'DELETE']);
+    expect(headersOf(sent[0])['x-jadplus-csrf']).toBe('csrf-token-0123456789abcdef');
+    expect(headersOf(sent[0])['content-type']).toBe('application/json');
+    expect(headersOf(sent[1])['x-jadplus-csrf']).toBe('csrf-token-0123456789abcdef');
+    expect(headersOf(sent[1])).not.toHaveProperty('content-type');
+    expect(sent[1]?.init.body).toBeUndefined();
+  });
+
+  it('S7: a PDF upload is the raw file with its own type, and the token', async () => {
+    const { api, sent } = fakeApi(() => json({ ok: true }, 201));
+    const pdf = new Blob(['%PDF-1.7 demo'], { type: 'application/pdf' });
+    await api.upload('/api/partner/documents/insurance?expiresOn=2027-01-31', pdf, 'application/pdf', ok);
+    expect(sent[0]?.init.method).toBe('POST');
+    expect(sent[0]?.init.body).toBe(pdf);
+    expect(headersOf(sent[0])['content-type']).toBe('application/pdf');
+    expect(headersOf(sent[0])['x-jadplus-csrf']).toBe('csrf-token-0123456789abcdef');
+  });
+
+  it('reads a file whole, and still shows the API’s message when it refuses', async () => {
+    const { api, sent } = fakeApi(() => new Response('a,b\r\n1,2\r\n', { status: 200 }));
+    const blob = await api.file('/api/admin/reports/monthly.csv?month=2026-10');
+    expect(await blob.text()).toBe('a,b\r\n1,2\r\n');
+    expect(headersOf(sent[0])).not.toHaveProperty('x-jadplus-csrf');
+    const refused = fakeApi(() => json({ error: 'Not found.' }, 404));
+    await expect(refused.api.file('/api/admin/partner-documents/x/file')).rejects.toThrow('Not found.');
+  });
+
+  it('builds query strings, leaving out empty values and encoding the rest', () => {
+    expect(withQuery('/api/admin/desk-requests', { status: null })).toBe('/api/admin/desk-requests');
+    expect(withQuery('/api/admin/desk-requests', { status: 'In progress' })).toBe(
+      '/api/admin/desk-requests?status=In+progress',
+    );
+    expect(withQuery('/api/admin/people', { q: 'a&b=c', x: '', y: undefined })).toBe(
+      '/api/admin/people?q=a%26b%3Dc',
+    );
   });
 });
 

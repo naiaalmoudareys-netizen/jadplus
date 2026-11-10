@@ -1,14 +1,15 @@
 /**
  * The partner office's team (ADR 0023; E4, E17): its active technicians, adding one by name and email or mobile
  * (they then sign in to the JAD+ app with a code), and removing one with a reason. Removal is immediate: their
- * access to this company's jobs and their sessions end at once.
+ * access to this company's jobs and their sessions end at once. Each name opens the technician's page (skills,
+ * time away, visits).
  */
 import { addTechnicianBody, partnerTeamResponse, removeTechnicianBody } from '@jadplus/shared';
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { ApiError, apiPath, errorMessage } from '../lib/api';
 import { technicianAddedResponse, technicianRemovedResponse } from '../lib/schemas';
 import { useConsole, useLoad } from '../ui/hooks';
-import { Loaded, Notice, PageHeader, ReasonForm } from '../ui/parts';
+import { Link, Loaded, Notice, PageHeader, ReasonForm } from '../ui/parts';
 
 function AddTechnician({ onAdded }: { onAdded: (name: string) => void }): ReactNode {
   const { api } = useConsole();
@@ -113,7 +114,9 @@ function Member({
   };
   return (
     <li className="member">
-      <span className="member-name">{name}</span>
+      <span className="member-name">
+        <Link to={{ name: 'technician', id }}>{name}</Link>
+      </span>
       {removing ? (
         <ReasonForm
           label={`Why remove ${name}?`}

@@ -14,7 +14,11 @@ function Row({ item, now }: { item: AttentionItem; now: number }): ReactNode {
     <tr>
       <td>
         {item.requestId === null ? (
-          <span>{item.what}</span>
+          item.deskId === null ? (
+            <span>{item.what}</span>
+          ) : (
+            <Link to={{ name: 'desk_item', id: item.deskId }}>{item.what}</Link>
+          )
         ) : (
           <Link to={{ name: 'request', id: item.requestId }}>
             <span className="ref">{item.ref}</span> {item.what}

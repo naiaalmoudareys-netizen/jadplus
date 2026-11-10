@@ -79,3 +79,6 @@ export function reviewDetailText(detail: unknown): string | null {
   ].filter((p): p is string => p !== undefined && p !== '');
   return parts.length === 0 ? null : parts.join('; ');
 }
+
+/** POST /api/admin/requests/:id/notes (201) and other changes that answer with the new id only. */
+export const createdIdResponse = z.object({ id: z.string() });

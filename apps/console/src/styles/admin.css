@@ -1,0 +1,86 @@
+/* JAD+ Admin pages (ADR 0025): overview, people, desk, partners, platform pages. */
+
+/* Overview tiles */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 0.3s var(--ease);
+}
+
+.tile:hover {
+  box-shadow: 0 16px 36px -12px rgba(0, 2, 41, 0.22);
+}
+
+.tile-alarm {
+  box-shadow:
+    inset 4px 0 0 var(--bad),
+    var(--shadow);
+}
+
+.tile-alarm .figure-value {
+  color: var(--bad);
+}
+
+/* Request page: timeline, notes, replies */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--cream-2);
+}
+
+.timeline-item {
+  position: relative;
+  padding: 8px 0 12px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 16px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bronze-soft);
+}
+
+.message-mine {
+  background: var(--cream);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.reply {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* Partner page: rate-card changes */
+.rate-change {
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rate-change:last-child {
+  border-bottom: none;
+}
+
+.rate-change .table {
+  margin: 8px 0;
+}
+
+.decide {
+  align-items: flex-end;
+}

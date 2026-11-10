@@ -105,3 +105,67 @@ export function aed(amount: number): string {
   const grouped = groups.join(',');
   return cents === undefined ? `AED ${grouped}` : `AED ${grouped}.${cents}`;
 }
+
+/** Money stored in fils (1 AED = 100 fils): "AED 1,250.50". */
+export function fils(amount: number): string {
+  return aed(amount / 100);
+}
+
+/** "92 %", or "—" when there was nothing to measure (S5: never a made-up figure). */
+export function percentText(value: number | null): string {
+  return value === null ? '—' : `${String(value)} %`;
+}
+
+/** "4.6 / 5", or "—" with no ratings. */
+export function starsText(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(1)} / 5`;
+}
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+] as const;
+
+/** "November 2026" for "2026-11". */
+export function monthText(month: string): string {
+  const [year, m] = month.split('-');
+  const name = MONTH_NAMES[Number(m) - 1];
+  return name === undefined || year === undefined ? month : `${name} ${year}`;
+}
+
+/** The month `delta` months from "YYYY-MM" (negative goes back). */
+export function shiftMonth(month: string, delta: number): string {
+  const [y = 1970, m = 1] = month.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7);
+}
+
+/** "2 h 30 min" for minutes, or "—" with no data. */
+export function minutesText(minutes: number | null): string {
+  return minutes === null ? '—' : duration(minutes * MIN);
+}
+
+/** "snake_case_words" or "camelCase" as "Snake case words", for codes the console has no label for. */
+export function humanize(code: string): string {
+  const words = code
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return words === '' ? code : words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** "1.2 MB", "350 KB". */
+export function bytesText(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${String(Math.max(1, Math.round(bytes / 1024)))} KB`;
+}

@@ -11,3 +11,7 @@ export function onTimeText(onTime: PartnerStats['onTime']): string {
 export function ratingText(rating: PartnerStats['rating']): string {
   return rating.average === null || rating.count === 0 ? '—' : `${rating.average.toFixed(1)} / 5`;
 }
+
+/** The periods the office can look back over (GET /api/partner/stats?days=). */
+export const STATS_DAYS = ['7', '30', '90'] as const;
+export type StatsDays = (typeof STATS_DAYS)[number];

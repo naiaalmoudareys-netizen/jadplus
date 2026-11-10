@@ -3,7 +3,7 @@
  *
  * - Same-origin only: the session is an HttpOnly cookie the page never sees; `credentials: 'same-origin'`.
  * - Every change (anything but GET) carries the anti-forgery token in the x-jadplus-csrf header.
- * - Every answer is checked with a zod schema before a screen uses it.
+ * - Every JSON answer is checked with a zod schema before a screen uses it.
  * - A 401 on a signed-in call means the session ended: the app goes back to sign-in.
  * - Error messages written by the API for people are shown as given; nothing else is.
  */
@@ -48,9 +48,29 @@ export interface CallOptions {
   readonly signedIn?: boolean;
 }
 
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+/** What a call sends: nothing, JSON, or a file as the raw body (a PDF upload). */
+type Payload =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'json'; readonly value: unknown }
+  | { readonly kind: 'file'; readonly value: Blob; readonly type: string };
+
+const NONE: Payload = { kind: 'none' };
+
 /** "/api/requests/abc/photos/def": every part is encoded, so an id can never change the path. */
 export function apiPath(...parts: readonly string[]): string {
   return `/api/${parts.map((p) => encodeURIComponent(p)).join('/')}`;
+}
+
+/** A path with a query string; empty and missing values are left out. */
+export function withQuery(path: string, query: Readonly<Record<string, string | null | undefined>>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== null && value !== undefined && value !== '') params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs === '' ? path : `${path}?${qs}`;
 }
 
 /** The address of a request photo, for an <img> (GET with the cookie; no token needed). */
@@ -70,28 +90,49 @@ export class Api {
   constructor(private readonly options: ApiOptions) {}
 
   async get<T>(path: string, schema: ZodType<T>, call: CallOptions = {}): Promise<T> {
-    return parse(await this.send('GET', path, undefined, call), schema);
+    return parse(await this.send('GET', path, NONE, call), schema);
   }
 
   async post<T>(path: string, body: unknown, schema: ZodType<T>, call: CallOptions = {}): Promise<T> {
-    return parse(await this.send('POST', path, body, call), schema);
+    return parse(await this.send('POST', path, { kind: 'json', value: body }, call), schema);
+  }
+
+  async put<T>(path: string, body: unknown, schema: ZodType<T>): Promise<T> {
+    return parse(await this.send('PUT', path, { kind: 'json', value: body }, {}), schema);
+  }
+
+  async delete<T>(path: string, schema: ZodType<T>): Promise<T> {
+    return parse(await this.send('DELETE', path, NONE, {}), schema);
+  }
+
+  /** A file sent as the raw body (POST), e.g. a PDF with content-type application/pdf. */
+  async upload<T>(path: string, file: Blob, type: string, schema: ZodType<T>): Promise<T> {
+    return parse(await this.send('POST', path, { kind: 'file', value: file, type }, {}), schema);
+  }
+
+  /** A file the API serves (a PDF, a CSV), read whole so it can be opened or saved from memory. */
+  async file(path: string): Promise<Blob> {
+    const res = await this.send('GET', path, NONE, {});
+    return res.blob();
   }
 
   /** A change whose answer carries nothing the console needs (e.g. 204 on sign-out). */
   async postOnly(path: string, body?: unknown, call: CallOptions = {}): Promise<void> {
-    await this.send('POST', path, body, call);
+    await this.send('POST', path, body === undefined ? NONE : { kind: 'json', value: body }, call);
   }
 
-  private async send(
-    method: 'GET' | 'POST',
-    path: string,
-    body: unknown,
-    call: CallOptions,
-  ): Promise<Response> {
+  private async send(method: Method, path: string, payload: Payload, call: CallOptions): Promise<Response> {
     const headers: Record<string, string> = { accept: 'application/json' };
-    if (body !== undefined) headers['content-type'] = 'application/json';
+    if (payload.kind === 'json') headers['content-type'] = 'application/json';
+    if (payload.kind === 'file') headers['content-type'] = payload.type;
     const csrf = this.options.csrf();
     if (method !== 'GET' && csrf !== null) headers[CSRF_HEADER] = csrf;
+    const body =
+      payload.kind === 'json'
+        ? { body: JSON.stringify(payload.value) }
+        : payload.kind === 'file'
+          ? { body: payload.value }
+          : {};
     let res: Response;
     try {
       res = await this.options.fetch(path, {
@@ -100,7 +141,7 @@ export class Api {
         credentials: 'same-origin',
         cache: 'no-store',
         redirect: 'error',
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        ...body,
       });
     } catch {
       throw new ApiError(OFFLINE_MESSAGE, 0);

@@ -1,0 +1,133 @@
+/* JAD+ Admin platform pages (ADR 0025): services, buildings, offers, on-call, reports, audit, staff, settings. */
+.page-intro {
+  margin: -12px 0 20px;
+}
+
+button.segment {
+  background: transparent;
+  color: var(--slate);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.segment.segment-current {
+  background: var(--slate);
+  color: var(--cream);
+}
+
+/* Two-column "label value" pairs inside a table cell or card. */
+.mini-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0 0 8px;
+}
+
+.mini-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding-top: 3px;
+}
+
+.mini-facts dd {
+  margin: 0;
+}
+
+.add-form {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* Notices */
+.notice-list > li {
+  margin: 0;
+}
+
+.notice-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.notice-item:last-child {
+  border-bottom: none;
+}
+
+.notice-item p + p {
+  margin-top: 4px;
+}
+
+/* Home guide */
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.guide-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* On-call calendar */
+.weeks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.week {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.week-current {
+  box-shadow:
+    inset 0 3px 0 var(--bronze),
+    var(--shadow);
+}
+
+.week-date {
+  color: var(--night);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* Reports */
+.month-picker {
+  align-items: flex-end;
+}
+
+/* Audit log */
+.code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.detail-lines {
+  font-size: 13px;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+.table.audit td {
+  padding: 8px 10px;
+}

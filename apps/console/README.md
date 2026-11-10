@@ -1,8 +1,20 @@
 # JAD+ Console
 
-The web console for JAD Global's staff and partner offices (ADR 0023): **JAD+ Admin** (Needs action, Requests,
-Partners) and the **Partner office** (Jobs board, Team, Our numbers). React + Vite + TypeScript. English only
-for now: the console is used by staff.
+The web console for JAD Global's staff and partner offices (ADR 0023, 0025). React + Vite + TypeScript. English
+only for now: the console is used by staff.
+
+- **JAD+ Admin**: Overview · Needs action · Requests (request page with timeline, internal notes, replies, move
+  to another partner, reclassify, cancel) · People (person page: units, tenancies, requests, agreements, sign out
+  everywhere, freeze, raise a request for an owner) · Desk · Partners (partner page: documents to verify, rate-card
+  changes, scorecard) · Services · Buildings (contacts, notices, home guide) · Offers · On-call · Reports · Audit
+  log · Staff · Settings · Invoices (ADR 0026, being built). A JAD+ viewer sees the same pages without any change
+  buttons, and not Audit log or Staff.
+- **Partner office**: Overview · Dispatch (day view per technician) · Jobs (board and job page with every step) ·
+  Messages · Quotes · Team (technician page: skills, time away) · Documents · Rate card · After-hours ·
+  Performance (scorecard, feedback, CSV) · Invoices (ADR 0026, being built).
+
+Pages live in `src/admin` and `src/partner`; logic without a screen (routing, sorting, dates, labels, dispatch
+grid, rate cards, job steps) lives in `src/lib` with tests in `test/`.
 
 Sign-in is the same one-time email code as the app. The session lives in an HttpOnly `__Host-` cookie the page
 cannot read; every change also sends the anti-forgery token (`x-jadplus-csrf`) and must come from the console's
@@ -45,7 +57,7 @@ address the local API accepts changes from.
 
 ```
 pnpm --filter @jadplus/console typecheck
-pnpm --filter @jadplus/console test     # router, formatting, grouping, API client, security headers
+pnpm --filter @jadplus/console test     # router, API client, sorting, dates, dispatch, rate cards, security headers
 pnpm --filter @jadplus/console build    # production files in apps/console/dist
 ```
 

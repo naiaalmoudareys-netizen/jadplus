@@ -1,0 +1,341 @@
+/* Partner office pages (ADR 0025): overview, dispatch day view, job page, documents, rate card. */
+
+.page-intro {
+  margin: -12px 0 20px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+/* Dispatch: technicians on the left, a 09:00-18:00 grid in 18 half-hour columns, unassigned jobs aside. */
+.dispatch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.dispatch-day {
+  color: var(--night);
+  font-weight: 600;
+  margin: -12px 0 16px;
+}
+
+.dispatch-board {
+  overflow-x: auto;
+}
+
+.dispatch-row {
+  display: grid;
+  grid-template-columns: 180px minmax(540px, 1fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.dispatch-row:last-child {
+  border-bottom: none;
+}
+
+.dispatch-head {
+  padding-top: 0;
+}
+
+.dispatch-who {
+  font-weight: 600;
+}
+
+.dispatch-grid {
+  display: grid;
+  grid-template-columns: repeat(18, minmax(0, 1fr));
+  grid-auto-flow: row dense;
+  gap: 4px 0;
+  min-height: 44px;
+  background-image: linear-gradient(to right, var(--line) 1px, transparent 1px);
+  background-size: calc(100% / 9) 100%;
+}
+
+.dispatch-head .dispatch-grid {
+  min-height: auto;
+  background-image: none;
+}
+
+.hour {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.visit {
+  margin: 0 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-button);
+  border-left: 3px solid var(--bronze);
+  background: var(--calm-bg);
+  color: var(--slate);
+  font-size: 12px;
+  line-height: 1.35;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.visit:hover {
+  background: var(--mist);
+  color: var(--night);
+}
+
+.dispatch-away {
+  opacity: 0.55;
+}
+
+.dispatch-away .dispatch-grid {
+  background-color: var(--cream-2);
+}
+
+.dispatch-outside {
+  grid-column: 2;
+}
+
+@media (max-width: 1100px) {
+  .dispatch {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Job page: progress tracker and step forms */
+.tracker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+}
+
+.tracker-step {
+  flex: 1 1 140px;
+  padding: 8px 12px;
+  border-top: 3px solid var(--cream-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tracker-done {
+  border-top-color: var(--good);
+  color: var(--good);
+}
+
+.tracker-current {
+  border-top-color: var(--bronze);
+  color: var(--night);
+}
+
+.step-form {
+  border-left: 3px solid var(--bronze);
+}
+
+/* Rate card editor */
+.rate-editor input,
+.rate-editor select {
+  width: 100%;
+}
+
+.price-input {
+  max-width: 140px;
+}
+
+/* Performance: star counts */
+.stars {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.stars li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.stars-count {
+  font-weight: 600;
+}
+
+/* Grid lines for dispatch blocks (CSP: classes only, never inline styles). */
+.gs-1 {
+  grid-column-start: 1;
+}
+
+.ge-1 {
+  grid-column-end: 1;
+}
+
+.gs-2 {
+  grid-column-start: 2;
+}
+
+.ge-2 {
+  grid-column-end: 2;
+}
+
+.gs-3 {
+  grid-column-start: 3;
+}
+
+.ge-3 {
+  grid-column-end: 3;
+}
+
+.gs-4 {
+  grid-column-start: 4;
+}
+
+.ge-4 {
+  grid-column-end: 4;
+}
+
+.gs-5 {
+  grid-column-start: 5;
+}
+
+.ge-5 {
+  grid-column-end: 5;
+}
+
+.gs-6 {
+  grid-column-start: 6;
+}
+
+.ge-6 {
+  grid-column-end: 6;
+}
+
+.gs-7 {
+  grid-column-start: 7;
+}
+
+.ge-7 {
+  grid-column-end: 7;
+}
+
+.gs-8 {
+  grid-column-start: 8;
+}
+
+.ge-8 {
+  grid-column-end: 8;
+}
+
+.gs-9 {
+  grid-column-start: 9;
+}
+
+.ge-9 {
+  grid-column-end: 9;
+}
+
+.gs-10 {
+  grid-column-start: 10;
+}
+
+.ge-10 {
+  grid-column-end: 10;
+}
+
+.gs-11 {
+  grid-column-start: 11;
+}
+
+.ge-11 {
+  grid-column-end: 11;
+}
+
+.gs-12 {
+  grid-column-start: 12;
+}
+
+.ge-12 {
+  grid-column-end: 12;
+}
+
+.gs-13 {
+  grid-column-start: 13;
+}
+
+.ge-13 {
+  grid-column-end: 13;
+}
+
+.gs-14 {
+  grid-column-start: 14;
+}
+
+.ge-14 {
+  grid-column-end: 14;
+}
+
+.gs-15 {
+  grid-column-start: 15;
+}
+
+.ge-15 {
+  grid-column-end: 15;
+}
+
+.gs-16 {
+  grid-column-start: 16;
+}
+
+.ge-16 {
+  grid-column-end: 16;
+}
+
+.gs-17 {
+  grid-column-start: 17;
+}
+
+.ge-17 {
+  grid-column-end: 17;
+}
+
+.gs-18 {
+  grid-column-start: 18;
+}
+
+.ge-18 {
+  grid-column-end: 18;
+}
+
+.gs-19 {
+  grid-column-start: 19;
+}
+
+.ge-19 {
+  grid-column-end: 19;
+}
+
+/* Period buttons (Performance) look like the period links. */
+button.segment {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.segment:not(.segment-current) {
+  background: transparent;
+  color: var(--slate);
+}
