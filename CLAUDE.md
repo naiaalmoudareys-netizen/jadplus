@@ -168,6 +168,18 @@ pnpm --filter @jadplus/mobile start   # Expo
   app tabs Today / Jobs / Done / Profile. Tenants (ADR 0021), repairs only. 504 tests. Console local run:
   `apps/console/README.md` (Chrome/Firefox, http://localhost:5173). Gaps: request timeline API, admin reply box,
   on-call rota and undelivered-alert screens, partner document upload.
+- 10-Nov-2026 (session 3, cont.): notifications for technicians and partner offices, and for new messages
+  (ADR 0024, migration 0018). Full console API and screens (ADR 0025, migrations 0019-0021): JAD+ Admin
+  (overview, needs action, requests with timeline/notes/reassign/reclassify/cancel, people, desk, partners,
+  services, buildings with notices and home guide, offers, on-call, reports, audit log, staff, settings) and
+  partner office (overview, dispatch, jobs, messages, quotes, team, documents, rate card, after-hours,
+  performance). Partner invoices recorded in JAD+, paid directly to the partner, 5% VAT, no commission
+  (ADR 0026, migration 0022); owner app shows invoices, building notices and the home guide. 708 tests.
+  Open: invoice pages in the console (placeholders; API ready), per-technician office stats, deadline on the
+  console job page, completion photos from the console, offer titles, audit search by name, E12 building
+  management delivery, after-hours contact in escalation, resident notice when JAD+ cancels/moves a request or
+  posts a building notice, PDF tab vs CSP check, console bundle split. Waiting on Naya: whether payment
+  instructions may hold bank details/links; partner targets (95% on time, 4.0 rating, 5% repeat visits).
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).
