@@ -154,6 +154,7 @@ export async function requestCode(c: Ctx, deps: Deps, body: RequestCodeBody): Pr
 
 export interface SignedIn {
   readonly token: string;
+  readonly sessionId: string;
   readonly expiresAt: number;
   readonly context: { readonly role: string; readonly partnerId: string | null };
   readonly contexts: readonly { readonly role: string; readonly partnerId: string | null }[];
@@ -284,5 +285,11 @@ export async function verifyCode(c: Ctx, deps: Deps, body: VerifyCodeBody): Prom
       detail: { client: body.client },
     }),
   ]);
-  return { token: session.token, expiresAt: session.absoluteExpiresAt, context: first, contexts };
+  return {
+    token: session.token,
+    sessionId: session.sessionId,
+    expiresAt: session.absoluteExpiresAt,
+    context: first,
+    contexts,
+  };
 }

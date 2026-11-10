@@ -168,7 +168,11 @@ export function harness(): Harness {
         json: { [field]: identifier, code: sent.code, client },
       });
       if (res.status !== 200) throw new Error(`sign-in failed: ${res.status}`);
-      return (await res.json<{ token: string }>()).token;
+      if (client === 'mobile') return (await res.json<{ token: string }>()).token;
+      // The console's token is only in its HttpOnly cookie (ADR 0022); tests send it back as a Bearer header.
+      const cookie = /__Host-jadplus=([A-Za-z0-9_-]{43})/.exec(res.headers.get('set-cookie') ?? '');
+      if (cookie?.[1] === undefined) throw new Error('no console session cookie');
+      return cookie[1];
     },
   };
   return h;

@@ -24,6 +24,18 @@ export const sessionResponse = z.object({
 });
 export type SessionResponse = z.infer<typeof sessionResponse>;
 
+/**
+ * POST /api/auth/verify and /switch for the web console (ADR 0022): the session is in an HttpOnly cookie, so
+ * the body carries only the anti-forgery token to send back in the x-jadplus-csrf header with every change.
+ */
+export const consoleSessionResponse = z.object({
+  expiresAt: z.number().int(),
+  context: roleContext,
+  contexts: z.array(roleContext),
+  csrf: z.string().min(20),
+});
+export type ConsoleSessionResponse = z.infer<typeof consoleSessionResponse>;
+
 /** GET /api/auth/me. */
 export const meResponse = z.object({
   userId: z.string(),
@@ -31,6 +43,8 @@ export const meResponse = z.object({
   partnerId: z.string().nullable(),
   client: z.enum(['mobile', 'console']),
   contexts: z.array(roleContext),
+  /** The console's anti-forgery token (ADR 0022); null on the phone. */
+  csrf: z.string().nullable(),
 });
 export type MeResponse = z.infer<typeof meResponse>;
 

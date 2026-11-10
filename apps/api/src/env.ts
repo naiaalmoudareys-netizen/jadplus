@@ -17,6 +17,8 @@ export interface Bindings {
   readonly FIN?: Fetcher;
   /** Secret (wrangler secret put): shared with the finance worker's portal door. */
   readonly PORTAL_KEY?: string;
+  /** Comma-separated web origins of the JAD+ console allowed to make changes with the session cookie (ADR 0022). */
+  readonly CONSOLE_ORIGINS?: string;
 }
 
 /** The signed-in person, set by the authenticate middleware (C-SES-1, C-AZ-1). */

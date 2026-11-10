@@ -9,7 +9,7 @@ import { SessionController, type TokenStore } from '../src/session/session.js';
 
 const TOKEN = 'a'.repeat(43);
 const ROTATED = 'b'.repeat(43);
-const ME = { userId: 'u-1', role: 'partner', partnerId: 'p-1', client: 'mobile', contexts: [] };
+const ME = { userId: 'u-1', role: 'partner', partnerId: 'p-1', client: 'mobile', contexts: [], csrf: null };
 
 interface Call {
   url: string;

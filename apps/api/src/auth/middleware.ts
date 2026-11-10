@@ -7,6 +7,7 @@ import type { UserRole } from '@jadplus/shared';
 import type { MiddlewareHandler } from 'hono';
 import { ApiError } from '../errors.js';
 import type { AppEnv } from '../env.js';
+import { checkCookieChange, cookieToken } from './console-cookie.js';
 import { resolveSession } from './sessions.js';
 
 /** The only routes reachable without signing in. Changing this list is a security review item. */
@@ -35,9 +36,17 @@ export function authenticate(): MiddlewareHandler<AppEnv> {
       await next();
       return;
     }
-    const token = bearerToken(c.req.header('authorization'));
+    // The phone sends a Bearer token; the console's token is in its HttpOnly cookie (ADR 0022).
+    const bearer = bearerToken(c.req.header('authorization'));
+    const token = bearer ?? cookieToken(c);
     const session = token === null ? null : await resolveSession(c.env.DB, token, c.get('now'));
     if (session === null) throw signInRequired();
+    if (bearer === null) {
+      // A cookie is sent by the browser on its own: only console sessions use it, and every change made with
+      // it must come from the console with its anti-forgery token (C-WEB-2).
+      if (session.client !== 'console') throw signInRequired();
+      await checkCookieChange(c, session.sessionId);
+    }
     // U9: a frozen account can still look, but cannot change anything.
     if (
       session.userStatus === 'frozen' &&

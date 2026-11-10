@@ -104,7 +104,7 @@ export async function importKeys(indexKeyB64: string, dataKeyB64: string): Promi
 }
 
 /** Purposes keep blind indexes for different things apart (the same input never gives the same value). */
-export type IndexPurpose = 'email' | 'phone' | 'ip' | 'sign_in_code';
+export type IndexPurpose = 'email' | 'phone' | 'ip' | 'sign_in_code' | 'csrf';
 
 export async function blindIndex(
   keys: Keys,

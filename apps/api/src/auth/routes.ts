@@ -10,6 +10,7 @@ import {
   verifyCodeBody,
   type UserRole,
 } from '@jadplus/shared';
+import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { ApiError } from '../errors.js';
 import { auditStatement } from '../audit.js';
@@ -18,9 +19,21 @@ import type { AppEnv } from '../env.js';
 import { parseJsonBody } from '../validate.js';
 import { requireRole } from './middleware.js';
 import { newSession, revokeAllStatement, revokeSessionStatement, roleContexts } from './sessions.js';
-import { CODE_SENT_MESSAGE, requestCode, verifyCode } from './signin.js';
+import { clearSessionCookie, csrfFor, setSessionCookie } from './console-cookie.js';
+import { CODE_SENT_MESSAGE, requestCode, verifyCode, type SignedIn } from './signin.js';
 
 const EVERY_ROLE: readonly UserRole[] = ROLES.filter((r): r is UserRole => r !== 'system');
+
+/**
+ * What a successful sign-in (or view switch) answers. The phone gets its token to keep in secure storage; the
+ * console gets an HttpOnly cookie instead and only the anti-forgery token in the body (ADR 0022).
+ */
+async function answer(c: Context<AppEnv>, s: SignedIn, client: 'mobile' | 'console'): Promise<object> {
+  const rest = { expiresAt: s.expiresAt, context: s.context, contexts: s.contexts };
+  if (client === 'mobile') return { token: s.token, ...rest };
+  setSessionCookie(c, s.token, s.expiresAt);
+  return { ...rest, csrf: await csrfFor(c.get('keys'), s.sessionId) };
+}
 
 export function authRoutes(deps: Deps): Hono<AppEnv> {
   const auth = new Hono<AppEnv>();
@@ -30,14 +43,25 @@ export function authRoutes(deps: Deps): Hono<AppEnv> {
     return c.json({ message: CODE_SENT_MESSAGE }, 202);
   });
 
-  auth.post('/verify', async (c) =>
-    c.json(await verifyCode(c, deps, await parseJsonBody(c, verifyCodeBody))),
-  );
+  auth.post('/verify', async (c) => {
+    const body = await parseJsonBody(c, verifyCodeBody);
+    const signedIn = await verifyCode(c, deps, body);
+    return c.json(await answer(c, signedIn, body.client));
+  });
 
   auth.get('/me', requireRole(...EVERY_ROLE), async (c) => {
     const a = c.get('auth');
     const contexts = contextsForClient(await roleContexts(c.env.DB, a.userId), a.client);
-    return c.json({ userId: a.userId, role: a.role, partnerId: a.partnerId, client: a.client, contexts });
+    // The console reads its anti-forgery token here after a page reload (its cookie is not readable, ADR 0022).
+    const csrf = a.client === 'console' ? await csrfFor(c.get('keys'), a.sessionId) : null;
+    return c.json({
+      userId: a.userId,
+      role: a.role,
+      partnerId: a.partnerId,
+      client: a.client,
+      contexts,
+      csrf,
+    });
   });
 
   // R5/U7: one person, several views (e.g. owns one unit, rents another). The session is rotated, so a
@@ -72,11 +96,24 @@ export function authRoutes(deps: Deps): Hono<AppEnv> {
         detail: { from: a.role, to: target.role },
       }),
     ]);
-    return c.json({ token: session.token, expiresAt: session.absoluteExpiresAt, context: target, contexts });
+    return c.json(
+      await answer(
+        c,
+        {
+          token: session.token,
+          sessionId: session.sessionId,
+          expiresAt: session.absoluteExpiresAt,
+          context: target,
+          contexts,
+        },
+        a.client,
+      ),
+    );
   });
 
   auth.post('/sign-out', requireRole(...EVERY_ROLE), async (c) => {
     const a = c.get('auth');
+    if (a.client === 'console') clearSessionCookie(c);
     const now = c.get('now');
     const db = c.env.DB;
     await db.batch([
@@ -98,6 +135,7 @@ export function authRoutes(deps: Deps): Hono<AppEnv> {
   // T3: lost phone — end every session of this person, on every device.
   auth.post('/sign-out-everywhere', requireRole(...EVERY_ROLE), async (c) => {
     const a = c.get('auth');
+    if (a.client === 'console') clearSessionCookie(c);
     const now = c.get('now');
     const db = c.env.DB;
     await db.batch([
