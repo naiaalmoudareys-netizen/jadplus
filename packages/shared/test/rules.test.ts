@@ -24,7 +24,7 @@ describe('emergency rules', () => {
 
   it('L3: confirmation text has no instructions', () => {
     expect(emergencyConfirmationText('our maintenance partner')).toBe(
-      'Your emergency has been sent to our maintenance partner. If anyone is in danger, call 999.',
+      'Your emergency has been sent to our maintenance partner.',
     );
   });
 

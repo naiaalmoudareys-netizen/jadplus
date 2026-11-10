@@ -47,11 +47,11 @@ export function qualifiesAsEmergency(type: EmergencyType, dubaiMonth: number): b
 }
 
 /**
- * The ONLY confirmation text shown after an emergency is raised (L3, p.12-13).
- * No instructions about water, power, gas or anything else.
+ * The ONLY confirmation text shown after an emergency is raised (L3, p.12-13). No instructions about water,
+ * power or anything else. Naya, 10-Nov-2026 (ADR 0020): without the plan's "If anyone is in danger, call 999."
  */
 export function emergencyConfirmationText(providerName: string): string {
-  return `Your emergency has been sent to ${providerName}. If anyone is in danger, call 999.`;
+  return `Your emergency has been sent to ${providerName}.`;
 }
 
 /** Text the owner receives when a tenant raises an emergency (E1, p.13 step 2). */

@@ -48,8 +48,7 @@ export const screensRequests = words({
     'req.msg.masked': 'Phone numbers and emails were removed. Please keep all contact in JAD+.',
     'req.emergency.sent': 'Emergency sent',
     'req.emergency.reference': 'Reference {ref}',
-    'req.emergency.confirmation':
-      'Your emergency has been sent to {provider}. If anyone is in danger, call 999.',
+    'req.emergency.confirmation': 'Your emergency has been sent to {provider}.',
     'req.emergency.what': 'What is happening?',
     'req.emergency.noHome': 'No home is linked to your account yet. Please contact JAD+.',
     'req.emergency.where': 'Where?',
@@ -101,8 +100,7 @@ export const screensRequests = words({
     'req.msg.masked': 'تمت إزالة أرقام الهواتف وعناوين البريد الإلكتروني. يرجى إبقاء كل التواصل عبر JAD+.',
     'req.emergency.sent': 'تم إرسال البلاغ الطارئ',
     'req.emergency.reference': 'المرجع {ref}',
-    'req.emergency.confirmation':
-      'تم إرسال حالتك الطارئة إلى {provider}. إذا كان أي شخص في خطر، اتصل بالرقم 999.',
+    'req.emergency.confirmation': 'تم إرسال حالتك الطارئة إلى {provider}.',
     'req.emergency.what': 'ماذا يحدث؟',
     'req.emergency.noHome': 'لا يوجد منزل مرتبط بحسابك بعد. يرجى التواصل مع JAD+.',
     'req.emergency.where': 'أين؟',
@@ -157,8 +155,7 @@ export const screensRequests = words({
       'Les numéros de téléphone et les e-mails ont été supprimés. Merci de garder tous les échanges dans JAD+.',
     'req.emergency.sent': 'Urgence envoyée',
     'req.emergency.reference': 'Référence {ref}',
-    'req.emergency.confirmation':
-      "Votre urgence a été transmise à {provider}. Si quelqu'un est en danger, appelez le 999.",
+    'req.emergency.confirmation': 'Votre urgence a été transmise à {provider}.',
     'req.emergency.what': 'Que se passe-t-il ?',
     'req.emergency.noHome': "Aucun logement n'est encore lié à votre compte. Veuillez contacter JAD+.",
     'req.emergency.where': 'Où ?',
@@ -212,8 +209,7 @@ export const screensRequests = words({
       'Номера телефонов и адреса электронной почты удалены. Пожалуйста, ведите всё общение в JAD+.',
     'req.emergency.sent': 'Сообщение об аварии отправлено',
     'req.emergency.reference': 'Номер {ref}',
-    'req.emergency.confirmation':
-      'Ваше сообщение об аварии отправлено: {provider}. Если кому-либо угрожает опасность, звоните 999.',
+    'req.emergency.confirmation': 'Ваше сообщение об аварии отправлено: {provider}.',
     'req.emergency.what': 'Что случилось?',
     'req.emergency.noHome': 'К вашему аккаунту пока не привязано жильё. Пожалуйста, обратитесь в JAD+.',
     'req.emergency.where': 'Где?',
@@ -265,7 +261,7 @@ export const screensRequests = words({
     'req.msg.masked': '电话号码和电子邮箱已被删除。请通过 JAD+ 进行所有联系。',
     'req.emergency.sent': '紧急情况已发送',
     'req.emergency.reference': '编号 {ref}',
-    'req.emergency.confirmation': '您的紧急情况已发送至{provider}。如有任何人身处危险，请拨打 999。',
+    'req.emergency.confirmation': '您的紧急情况已发送至{provider}。',
     'req.emergency.what': '发生了什么？',
     'req.emergency.noHome': '您的账户尚未关联任何住所。请联系 JAD+。',
     'req.emergency.where': '在哪里？',

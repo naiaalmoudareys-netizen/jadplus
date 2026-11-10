@@ -5,7 +5,7 @@
  */
 import type { Translate } from '../i18n/lang.js';
 
-const ENGLISH = /^Your emergency has been sent to (.+)\. If anyone is in danger, call 999\.$/s;
+const ENGLISH = /^Your emergency has been sent to (.+)\.$/s;
 
 export function confirmationText(confirmation: string, t: Translate): string {
   const provider = ENGLISH.exec(confirmation)?.[1];

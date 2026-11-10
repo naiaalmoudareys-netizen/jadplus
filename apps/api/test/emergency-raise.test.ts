@@ -11,9 +11,7 @@ describe('raising an emergency', () => {
     const res = await raise(w, leak);
     expect(res.status).toBe(201);
     const body = await res.json<{ requestId: string; ref: string; confirmation: string }>();
-    expect(body.confirmation).toBe(
-      'Your emergency has been sent to Primary Fixers LLC. If anyone is in danger, call 999.',
-    );
+    expect(body.confirmation).toBe('Your emergency has been sent to Primary Fixers LLC.');
     expect(body.ref).toMatch(/^JAD-[2-9A-HJ-NP-Z]{6}$/);
     expect(rows(w, 'SELECT status, partner_id, next_due_kind FROM requests')).toEqual([
       { status: 'assigned', partner_id: 'p-primary', next_due_kind: 'emergency_ack' },
@@ -105,7 +103,7 @@ describe('raising an emergency', () => {
     ]);
     const sprinkler = await raise(w, { ...leak, faultSource: 'fire_system' });
     expect((await sprinkler.json<{ confirmation: string }>()).confirmation).toBe(
-      'Your emergency has been sent to the building management team. If anyone is in danger, call 999.',
+      'Your emergency has been sent to the building management team.',
     );
     expect(rows(w, "SELECT partner_id FROM requests WHERE fault_source = 'fire_system'")).toEqual([
       { partner_id: null },

@@ -1,7 +1,7 @@
 /**
  * Report an emergency (E1, E2, E12, E14, L3). Only a water leak or an AC failure (ADR 0017). The app gives no
  * instructions: it asks what is happening and where, then shows the API's exact confirmation ("Your emergency
- * has been sent to … If anyone is in danger, call 999.").
+ * has been sent to …", ADR 0020).
  */
 import type { EmergencyRaised, FaultSource, MyPlace, RaisableEmergencyType } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
