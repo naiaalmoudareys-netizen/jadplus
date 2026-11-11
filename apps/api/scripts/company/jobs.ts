@@ -5,7 +5,7 @@
 import { call, post, upload, type Actor } from './actors.js';
 import type { Company, Owner, Provider, Tech } from './company.js';
 import { PHOTO_COLOURS, demoPhoto } from './files.js';
-import { HOUR, MIN, SLOT_HOURS, dubaiTime, type Slot } from './sim.js';
+import { DAY, HOUR, MIN, SLOT_HOURS, dubaiTime, type Slot } from './sim.js';
 
 export const SLOTS: readonly Slot[] = ['morning', 'midday', 'afternoon'];
 
@@ -133,9 +133,21 @@ const RESIDENT_NOTES = [
 const TECH_NOTES = [
   'Noted, see you in the window.',
   'Thanks, I will bring the spare part with me.',
-  'Running about 15 minutes late, sorry.',
   'Understood, I will check with reception on arrival.',
 ] as const;
+
+/** The Dubai hour of day (with minutes as a fraction) of `t`. */
+function dubaiHour(t: number): number {
+  return ((t + 4 * HOUR) % DAY) / HOUR;
+}
+
+/** `t` if it falls between `from` and `to` o'clock in Dubai, else `from` o'clock on the next such morning. */
+export function withinHours(t: number, from: number, to: number): number {
+  const h = dubaiHour(t);
+  if (h >= from && h < to) return t;
+  const midnight = t - h * HOUR;
+  return midnight + (h < from ? 0 : DAY) + from * HOUR;
+}
 
 /** One message; a request closed meanwhile (409) or out of a tenant's sight after the tenancy ended (404) takes none. */
 function say(c: Company, who: Actor, id: string, body: string): Promise<unknown> {
@@ -143,14 +155,44 @@ function say(c: Company, who: Actor, id: string, body: string): Promise<unknown>
 }
 
 /**
- * A short exchange on the request, run alongside the job (contact details are never written; the API would remove
- * them anyway).
+ * A short exchange on the request before the visit at `visitStart` (contact details are never written; the API
+ * would remove them anyway). People write at plausible times: the resident while awake (08:00-21:00), the
+ * technician in working hours (08:00-19:00), both before the technician sets off; on an emergency (`urgent`)
+ * within minutes, whatever the hour.
  */
-export function chat(c: Company, id: string, resident: Actor, staff: Actor | null): void {
-  c.sim.spawn(c.sim.now + c.r.int(10, 120) * MIN, async () => {
+export function chat(
+  c: Company,
+  id: string,
+  resident: Actor,
+  staff: Actor | null,
+  visitStart: number,
+  urgent = false,
+): void {
+  const now = c.sim.now;
+  const awake = (t: number) => dubaiHour(t) >= 8 && dubaiHour(t) < 21;
+  // Moved to the next morning: a few minutes past the hour, not on the dot.
+  const at = (t: number, from: number, to: number) => {
+    const moved = withinHours(t, from, to);
+    return moved === t ? t : moved + c.r.int(5, 40) * MIN;
+  };
+  let asked = urgent ? now + c.r.int(2, 8) * MIN : at(now + c.r.int(10, 120) * MIN, 8, 21);
+  if (!urgent && asked > visitStart - HOUR) {
+    // No quiet moment before the visit: write now if it is a waking hour, else not at all.
+    if (!awake(now)) return;
+    asked = now + c.r.int(5, 15) * MIN;
+  }
+  let answered: number | null = urgent
+    ? asked + c.r.int(2, 6) * MIN
+    : at(asked + c.r.int(5, 90) * MIN, 8, 19);
+  if (!urgent && answered > visitStart - 45 * MIN) {
+    answered = asked + c.r.int(3, 10) * MIN;
+    if (!awake(answered) || answered > visitStart - 30 * MIN) answered = null;
+  }
+  const reply = answered;
+  c.sim.spawn(asked, async () => {
     await say(c, resident, id, c.r.pick(RESIDENT_NOTES));
-    if (staff === null) return;
-    await c.sim.wait(c.r.int(5, 90) * MIN);
+    if (staff === null || reply === null) return;
+    await c.sim.until(reply);
     await say(c, staff, id, c.r.pick(TECH_NOTES));
   });
 }

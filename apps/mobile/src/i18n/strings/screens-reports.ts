@@ -33,7 +33,9 @@ export const screensReports = words({
     'snag.reopen': 'Not fixed',
     'snag.photo': 'Snag photo',
     'snag.fixPhoto': 'Photo of the fix',
-    'snag.reopened': 'Reopened {count} times',
+    'snag.reopened.once': 'Reopened once',
+    'snag.reopened.twice': 'Reopened twice',
+    'snag.reopened.many': 'Reopened {count} times',
   },
   ar: {
     'report.snagging.choose': 'أي نوع من فحص العيوب؟',
@@ -61,7 +63,9 @@ export const screensReports = words({
     'snag.reopen': 'لم يُصلَح',
     'snag.photo': 'صورة العيب',
     'snag.fixPhoto': 'صورة الإصلاح',
-    'snag.reopened': 'أُعيد فتحه {count} مرات',
+    'snag.reopened.once': 'أُعيد فتحه مرة واحدة',
+    'snag.reopened.twice': 'أُعيد فتحه مرتين',
+    'snag.reopened.many': 'عدد مرات إعادة الفتح: {count}',
   },
   fr: {
     'report.snagging.choose': 'Quelle inspection des défauts ?',
@@ -90,7 +94,9 @@ export const screensReports = words({
     'snag.reopen': 'Pas corrigé',
     'snag.photo': 'Photo du défaut',
     'snag.fixPhoto': 'Photo de la correction',
-    'snag.reopened': 'Rouvert {count} fois',
+    'snag.reopened.once': 'Rouvert une fois',
+    'snag.reopened.twice': 'Rouvert deux fois',
+    'snag.reopened.many': 'Rouvert {count} fois',
   },
   ru: {
     'report.snagging.choose': 'Какая проверка дефектов?',
@@ -118,7 +124,9 @@ export const screensReports = words({
     'snag.reopen': 'Не устранён',
     'snag.photo': 'Фото дефекта',
     'snag.fixPhoto': 'Фото устранения',
-    'snag.reopened': 'Открыт повторно: {count}',
+    'snag.reopened.once': 'Открыт повторно один раз',
+    'snag.reopened.twice': 'Открыт повторно дважды',
+    'snag.reopened.many': 'Открыт повторно (всего раз: {count})',
   },
   zh: {
     'report.snagging.choose': '选择哪种验房？',
@@ -146,6 +154,8 @@ export const screensReports = words({
     'snag.reopen': '未修复',
     'snag.photo': '问题照片',
     'snag.fixPhoto': '修复照片',
-    'snag.reopened': '已重新打开 {count} 次',
+    'snag.reopened.once': '已重新打开一次',
+    'snag.reopened.twice': '已重新打开两次',
+    'snag.reopened.many': '已重新打开 {count} 次',
   },
 });

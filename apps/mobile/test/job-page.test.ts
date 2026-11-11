@@ -1,6 +1,7 @@
 /** The technician's job page (R3): the progress tracker and the "More" steps beside the one big button. */
-import type { RequestDetail } from '@jadplus/shared';
+import { LANGUAGES, type RequestDetail } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
+import { DICTIONARY } from '../src/i18n/dictionary.js';
 import { isOneTap, jobProgress, moreActions } from '../src/partner/progress.js';
 
 type Detail = Pick<RequestDetail, 'visit' | 'quote'>;
@@ -106,5 +107,33 @@ describe('A8: one-tap steps', () => {
     expect(isOneTap('acknowledge')).toBe(false);
     expect(isOneTap('book_visit')).toBe(false);
     expect(isOneTap('work_done')).toBe(false);
+  });
+});
+
+describe('R3: tracker labels fit a 390 px phone', () => {
+  // Six steps share about 350 px: about 58 px each, nine Latin or Cyrillic letters at 11 px. A wide (CJK) character
+  // counts as two. A longer word would be broken in the middle ("Acknowledge/d").
+  const wide = (ch: string): boolean => {
+    const cp = ch.codePointAt(0) ?? 0;
+    return (cp >= 0x3000 && cp <= 0x9fff) || (cp >= 0xff00 && cp <= 0xffef);
+  };
+  const width = (word: string): number => Array.from(word).reduce((n, ch) => n + (wide(ch) ? 2 : 1), 0);
+  it('R3: every word of every step label is at most nine letters wide, in all five languages', () => {
+    for (const language of LANGUAGES) {
+      const table = DICTIONARY[language];
+      for (const step of [
+        'new',
+        'booked',
+        'acknowledged',
+        'on_the_way',
+        'working',
+        'done',
+        'confirmed',
+      ] as const) {
+        const label = table[`job.track.${step}`];
+        for (const word of label.split(/\s+/u))
+          expect(width(word), `${language}: ${label}`).toBeLessThanOrEqual(9);
+      }
+    }
   });
 });

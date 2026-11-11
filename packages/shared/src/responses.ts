@@ -144,6 +144,11 @@ const requestSummary = z.object({
   /** ADR 0030: a JAD Global team shows "JAD Global team" instead of the "JAD+ verified" badge. */
   partnerKind: z.enum(PROVIDER_KINDS).nullable(),
   arrivalWindow,
+  /**
+   * Where the latest visit stands (A8), null when none is booked: residents read "Technician on the way" only
+   * once the technician has tapped "I'm on my way" (on_the_way), never just because a visit is booked.
+   */
+  visitStatus: z.enum(['booked', 'on_the_way', 'arrived', 'done']).nullable(),
   preferredVisit,
   location: location.nullable(),
   createdAt: z.number().int(),

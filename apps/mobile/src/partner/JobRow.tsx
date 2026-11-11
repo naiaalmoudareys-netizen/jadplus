@@ -7,8 +7,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { partnerJobs } from '../api/endpoints.js';
-import { arrivalLabel, dueLabel, isOverdue, jobStatusLabel, jobTitle, placeLabel } from '../jobs/format.js';
-import { useT } from '../i18n/I18nProvider.js';
+import { dueLabel, isOverdue, jobStatusLabel, jobTitle, placeLabel, visitLine } from '../jobs/format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { useSessionController } from '../session/SessionProvider.js';
 import { useLoad, type Loaded } from '../ui/hooks.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
@@ -40,11 +40,12 @@ export function JobRow({
   /** Finished jobs have no clock to show. */
   showClock?: boolean;
 }): ReactNode {
-  const t = useT();
+  const lang = useLang();
+  const { t } = lang;
   const router = useRouter();
   const due = showClock ? dueLabel(job, now, t) : null;
   const late = showClock && isOverdue(job, now);
-  const arrival = arrivalLabel(job, t);
+  const arrival = visitLine(job, lang);
   const urgent = showClock && job.emergency;
   return (
     <Pressable

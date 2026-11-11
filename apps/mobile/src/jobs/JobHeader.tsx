@@ -64,7 +64,13 @@ function Tracker({ progress }: { progress: JobProgress }): ReactNode {
               />
               <View style={[styles.line, i === last && styles.hidden, i < reached && styles.lineOn]} />
             </View>
-            <Text style={[styles.stepText, i === reached && styles.stepCurrent]} numberOfLines={2}>
+            {/* Each label is one short word or two (job-page test); it shrinks rather than break a word at 390 px. */}
+            <Text
+              style={[styles.stepText, i === reached && styles.stepCurrent]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {t(STEP_KEYS[step])}
             </Text>
           </View>
@@ -131,7 +137,7 @@ const styles = StyleSheet.create({
   pillText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.slate },
   trackBox: { gap: space.sm, marginTop: space.sm },
   track: { flexDirection: 'row' },
-  stop: { flex: 1, alignItems: 'center', gap: space.xs },
+  stop: { flex: 1, minWidth: 0, alignItems: 'center', gap: space.xs },
   dotRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch' },
   line: { flex: 1, height: 2, backgroundColor: colors.line },
   lineOn: { backgroundColor: colors.slate },
@@ -148,7 +154,13 @@ const styles = StyleSheet.create({
   dotCurrent: { transform: [{ scale: 1.3 }] },
   dotPaused: { borderColor: colors.warn, backgroundColor: colors.warnSoft },
   dotComplete: { borderColor: colors.ok, backgroundColor: colors.ok },
-  stepText: { fontFamily: fonts.regular, fontSize: 11, color: colors.muted, textAlign: 'center' },
+  stepText: {
+    fontFamily: fonts.regular,
+    fontSize: 11,
+    color: colors.muted,
+    textAlign: 'center',
+    paddingHorizontal: 1,
+  },
   stepCurrent: { fontFamily: fonts.semibold, color: colors.navy },
   pausedRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   pausedText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.warn },

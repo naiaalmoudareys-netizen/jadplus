@@ -12,7 +12,7 @@ import type { Lang } from '../i18n/lang.js';
 import { mapsLink } from '../partner/logic.js';
 import { Body, Button, Card, Notice } from '../ui/kit.js';
 import { colors, fonts } from '../ui/theme.js';
-import { arrivalLabel, dayLabel, placeLabel, preferredVisitLabel } from './format.js';
+import { dayLabel, placeLabel, preferredVisitLabel, visitLine } from './format.js';
 
 type Visit = NonNullable<RequestDetail['visit']>;
 
@@ -32,7 +32,7 @@ export function JobVisit(props: { job: PartnerJob; visit: Visit | null; now: num
   const { job, visit } = props;
   const [failed, setFailed] = useState(false);
   const link = mapsLink(job.location, Platform.OS === 'ios' ? 'ios' : 'android');
-  const arrival = arrivalLabel(job, t);
+  const arrival = visitLine(job, lang);
   const when = visit === null ? (arrival ?? t('job.page.notBooked')) : whenLabel(visit, props.now, lang);
   const preferred = visit === null && arrival === null ? preferredVisitLabel(job, lang) : null;
   const technician = visit?.technician ?? null;

@@ -7,7 +7,18 @@
 import { post } from './actors.js';
 import { holder, provider, tech, type Company } from './company.js';
 import { invoiceStory } from './invoices.js';
-import { SLOTS, arrive, book, chat, confirmAndRate, finish, photo, resident, type Party } from './jobs.js';
+import {
+  SLOTS,
+  arrive,
+  book,
+  chat,
+  confirmAndRate,
+  finish,
+  photo,
+  resident,
+  withinHours,
+  type Party,
+} from './jobs.js';
 import { DAY, HOUR, MIN, addDays } from './sim.js';
 
 export const ROUTINE_VARIANTS = [
@@ -156,7 +167,7 @@ export async function routine(c: Company, x: Party, v: RoutineVariant): Promise<
   await c.sim.wait(c.r.chance(0.85) ? c.r.int(20, 180) * MIN : c.r.int(6, 26) * HOUR);
   const t = tech(p, c.r.int(0, 9));
   let start = await book(c, p, id, t, date, slot);
-  if (c.r.chance(0.5)) chat(c, id, x.raiser, t.actor);
+  if (c.r.chance(0.5)) chat(c, id, x.raiser, t.actor, start);
   if (v === 'no_access') {
     await c.sim.until(start + 25 * MIN);
     const photoId = await photo(c, t.actor, id);
@@ -175,7 +186,8 @@ export async function routine(c: Company, x: Party, v: RoutineVariant): Promise<
   await finish(c, id, t);
   if (v.startsWith('quote')) c.sim.spawn(c.sim.now + c.r.int(2, 30) * HOUR, () => invoiceStory(c, x, id, p));
   if (v === 'reopened') {
-    await c.sim.wait(c.r.int(5, 30) * HOUR);
+    // The resident looks again the next day or so, and writes while awake.
+    await c.sim.until(withinHours(c.sim.now + c.r.int(5, 30) * HOUR, 8, 21));
     await post(c.w, resident(c, x), `/api/requests/${id}/confirm`, { done: false });
     await post(c.w, resident(c, x), `/api/requests/${id}/messages`, {
       body: 'Still leaking a little after one day, sorry.',

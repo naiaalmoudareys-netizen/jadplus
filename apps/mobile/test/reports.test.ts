@@ -2,11 +2,13 @@
 import { LANGUAGES, VALUATION_DISCLAIMER, type OwnerReport } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import { DICTIONARY } from '../src/i18n/dictionary.js';
+import { translator } from '../src/i18n/lang.js';
 import { fill } from '../src/i18n/translate.js';
 import {
   REPORT_TITLE,
   SNAGGING_OPTIONS,
   SNAG_STATUS,
+  reopenedLabel,
   reportsForUnit,
   snagCounts,
 } from '../src/requests/reportLogic.js';
@@ -61,5 +63,19 @@ describe('report screens (O3, L2)', () => {
     ];
     expect(reportsForUnit(all, '1204-J188').map((r) => r.id)).toEqual(['rep-1']);
     expect(reportsForUnit(all, null)).toEqual([]);
+  });
+});
+
+describe('snag reopened count (O3)', () => {
+  it('O3: reads "once", "twice", then "N times", never "1 times"', () => {
+    const en = translator('en');
+    expect(reopenedLabel(1, en)).toBe('Reopened once');
+    expect(reopenedLabel(2, en)).toBe('Reopened twice');
+    expect(reopenedLabel(5, en)).toBe('Reopened 5 times');
+    for (const language of LANGUAGES) {
+      const t = translator(language);
+      expect(reopenedLabel(1, t)).not.toMatch(/\d/u);
+      expect(reopenedLabel(7, t)).toContain('7');
+    }
   });
 });

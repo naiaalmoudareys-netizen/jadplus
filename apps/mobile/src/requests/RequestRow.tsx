@@ -2,14 +2,17 @@
 import type { RequestSummary } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { arrivalLabel, jobTitle, placeLabel, residentStatusLabel } from '../jobs/format.js';
-import { useT } from '../i18n/I18nProvider.js';
+import { jobTitle, placeLabel, residentStatusLabel, residentVisitLine } from '../jobs/format.js';
+import { useLang } from '../i18n/I18nProvider.js';
 import { PartnerName } from '../ui/HelpBits.js';
+import { useNow } from '../ui/hooks.js';
 import { cardShadow, colors, fonts, radius, space } from '../ui/theme.js';
 
 export function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => void }): ReactNode {
-  const t = useT();
-  const arrival = arrivalLabel(r, t);
+  const lang = useLang();
+  const { t } = lang;
+  const now = useNow();
+  const arrival = residentVisitLine(r, now, lang);
   return (
     <Pressable
       accessibilityRole="button"
@@ -20,7 +23,7 @@ export function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => v
         <Text style={[styles.title, r.emergency && styles.urgent]}>{jobTitle(r, t)}</Text>
         <Text style={styles.ref}>{r.ref}</Text>
       </View>
-      <Text style={styles.status}>{residentStatusLabel(r.status, t)}</Text>
+      <Text style={styles.status}>{residentStatusLabel(r, now, lang)}</Text>
       {r.partnerName === null ? null : (
         <PartnerName name={r.partnerName} verified={r.partnerVerified} kind={r.partnerKind} />
       )}

@@ -8,11 +8,11 @@ import { useCallback, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { requestDetail } from '../../src/api/endpoints.js';
 import {
-  arrivalLabel,
   jobTitle,
   placeLabel,
   preferredVisitLabel,
   residentStatusLabel,
+  residentVisitLine,
 } from '../../src/jobs/format.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
 import { ReportCard } from '../../src/requests/ReportCard.js';
@@ -24,7 +24,7 @@ import { consultationOf } from '../../src/api/consultation.js';
 import { ConsultationJourney } from '../../src/requests/ConsultationJourney.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Conversation } from '../../src/ui/Conversation.js';
-import { useLoad } from '../../src/ui/hooks.js';
+import { useLoad, useNow } from '../../src/ui/hooks.js';
 import { Body, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { PartnerName } from '../../src/ui/HelpBits.js';
 import { colors, radius, space } from '../../src/ui/theme.js';
@@ -37,6 +37,7 @@ export default function RequestPage(): ReactNode {
   const lang = useLang();
   const { t } = lang;
   const { id } = useLocalSearchParams<{ id: string }>();
+  const now = useNow();
   const load = useCallback(() => requestDetail(api, id), [api, id]);
   const detail = useLoad(load, REFRESH_MS);
   // ADR 0031: a consultation shows its stages instead of the visit journey (null for any other request).
@@ -53,8 +54,9 @@ export default function RequestPage(): ReactNode {
     );
   }
   const { request, messages, canMessage, photos } = detail.data;
-  const preferred = preferredVisitLabel(request, lang);
-  const arrival = arrivalLabel(request, t);
+  // ADR 0031: a consultation's day and window are the best time to call, not a visit.
+  const preferred = preferredVisitLabel(request, lang, consultation.data === null ? 'visit' : 'call');
+  const arrival = residentVisitLine(request, now, lang);
   return (
     <Page>
       <Heading>{jobTitle(request, t)}</Heading>
@@ -62,7 +64,7 @@ export default function RequestPage(): ReactNode {
         {request.ref} · {placeLabel(request.location, t)}
       </Body>
       <View style={styles.card}>
-        <Body>{residentStatusLabel(request.status, t)}</Body>
+        <Body>{residentStatusLabel(request, now, lang)}</Body>
         {request.partnerName === null ? null : (
           <PartnerName
             name={t('req.handledBy', { name: request.partnerName })}
@@ -71,7 +73,9 @@ export default function RequestPage(): ReactNode {
           />
         )}
         {arrival === null ? null : <Body>{arrival}</Body>}
-        {arrival === null && preferred !== null ? <Body muted>{preferred}</Body> : null}
+        {arrival === null && request.arrivalWindow === null && preferred !== null ? (
+          <Body muted>{preferred}</Body>
+        ) : null}
       </View>
       <View style={styles.card}>
         <Body>{request.description}</Body>

@@ -2,6 +2,7 @@
 import {
   VISIT_SLOTS,
   dubaiClock,
+  dubaiDate,
   type PartnerJob,
   type RequestSummary,
   type UnitLocation,
@@ -54,9 +55,38 @@ const RESIDENT_STATUS_KEYS: Readonly<Record<RequestSummary['status'], MessageKey
   cancelled: 'residentStatus.cancelled',
 };
 
-/** What a resident sees as the status of their request. */
-export function residentStatusLabel(status: RequestSummary['status'], t: Translate): string {
-  return t(RESIDENT_STATUS_KEYS[status]);
+type ResidentView = Pick<RequestSummary, 'status' | 'visitStatus' | 'arrivalWindow'>;
+
+/** True when a booked window starts on today's Dubai date. */
+function visitToday(r: Pick<RequestSummary, 'arrivalWindow'>, now: number): boolean {
+  return r.arrivalWindow !== null && dubaiDate(r.arrivalWindow.start) === dubaiDate(now);
+}
+
+/**
+ * What a resident sees as the status of their request (A8). A booked visit reads "Visit booked: Thu 12 Nov,
+ * 09:00-11:00", "Technician today" on the visit day, and "Technician on the way" only once the technician has
+ * tapped "I'm on my way" (visitStatus on_the_way): never just because the request is scheduled.
+ */
+export function residentStatusLabel(r: ResidentView, now: number, lang: Lang): string {
+  const { t } = lang;
+  if (r.status !== 'scheduled') return t(RESIDENT_STATUS_KEYS[r.status]);
+  if (r.visitStatus === 'on_the_way') return t('residentStatus.onTheWay');
+  if (r.arrivalWindow === null) return t(RESIDENT_STATUS_KEYS.scheduled);
+  if (visitToday(r, now)) return t('residentStatus.today');
+  return t('residentStatus.visitBooked', {
+    day: dayLabel(dubaiDate(r.arrivalWindow.start), lang.locale),
+    from: dubaiClock(r.arrivalWindow.start),
+    to: dubaiClock(r.arrivalWindow.end),
+  });
+}
+
+/**
+ * The visit line under a resident's status: "Arriving 09:00-11:00" on the day (the status already gives the day
+ * and window of a later visit), "Visited Tue 10 Nov" once the work is done, else nothing.
+ */
+export function residentVisitLine(r: ResidentView, now: number, lang: Lang): string | null {
+  if (r.status === 'scheduled' && r.visitStatus !== 'on_the_way' && !visitToday(r, now)) return null;
+  return visitLine(r, lang);
 }
 
 /** "JAD288-1102 · Building B · JAD 288" (names as Salesforce holds them, never translated). */
@@ -104,13 +134,23 @@ export function needsAcknowledgement(job: Pick<PartnerJob, 'emergency' | 'status
   return job.emergency && job.status === 'assigned';
 }
 
-/** "Arriving 14:30-16:00" in Dubai time, once acknowledged. */
-export function arrivalLabel(job: Pick<PartnerJob, 'arrivalWindow'>, t: Translate): string | null {
-  if (job.arrivalWindow === null) return null;
-  return t('job.arriving', {
-    from: dubaiClock(job.arrivalWindow.start),
-    to: dubaiClock(job.arrivalWindow.end),
-  });
+/** Statuses in which the booked window is still ahead or under way. */
+const VISIT_AHEAD: ReadonlySet<Status> = new Set(['scheduled', 'in_progress', 'on_hold']);
+/** Statuses in which the work was done (A5): the window is history. */
+const VISIT_DONE: ReadonlySet<Status> = new Set(['completed', 'closed']);
+
+/**
+ * "Arriving 14:30-16:00" (Dubai time) while the visit is upcoming or under way; "Visited Tue 10 Nov" once the work
+ * is completed or closed; nothing otherwise (no window, cancelled, reopened and waiting for a new visit).
+ */
+export function visitLine(job: Pick<PartnerJob, 'arrivalWindow' | 'status'>, lang: Lang): string | null {
+  const w = job.arrivalWindow;
+  if (w === null) return null;
+  if (VISIT_DONE.has(job.status)) {
+    return lang.t('job.visited', { day: dayLabel(dubaiDate(w.start), lang.locale) });
+  }
+  if (!VISIT_AHEAD.has(job.status)) return null;
+  return lang.t('job.arriving', { from: dubaiClock(w.start), to: dubaiClock(w.end) });
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -131,12 +171,19 @@ export function dayLabel(date: string, locale: string): string {
   return `${WEEKDAYS[d.getUTCDay()] ?? ''} ${String(d.getUTCDate())} ${MONTHS[d.getUTCMonth()] ?? ''}`;
 }
 
-/** "Preferred: Tue 10 Nov · Morning (9:00 - 12:00)", or null when none was given (ADR 0013). */
-export function preferredVisitLabel(job: Pick<PartnerJob, 'preferredVisit'>, lang: Lang): string | null {
+/**
+ * "Preferred: Tue 10 Nov · Morning (9:00 - 12:00)", or null when none was given (ADR 0013). A consultation is a
+ * call, not a visit (ADR 0031): its day and window read "Best time to call: …".
+ */
+export function preferredVisitLabel(
+  job: Pick<PartnerJob, 'preferredVisit'>,
+  lang: Lang,
+  kind: 'visit' | 'call' = 'visit',
+): string | null {
   const v = job.preferredVisit;
   if (v === null) return null;
   const slot = VISIT_SLOTS.find((s) => s.key === v.slot);
-  return lang.t('job.preferred', {
+  return lang.t(kind === 'call' ? 'job.bestTimeToCall' : 'job.preferred', {
     day: dayLabel(v.date, lang.locale),
     slot: slot === undefined ? v.slot : visitSlotText(slot, lang.t),
   });

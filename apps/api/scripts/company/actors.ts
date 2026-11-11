@@ -1,9 +1,11 @@
 /**
  * People acting in the demo company. Each actor signs in exactly as the apps do (email code; the console
  * gets its session cookie), from its own fictional address (TEST-NET ranges), and signs in again when its session
- * has run out in simulated time. Every call must succeed: an unexpected answer stops the generator with the
+ * has run out in simulated time. On the first sign-in they accept the current terms as the app's "Before you start"
+ * screen does (POST /api/me/consents, L1), so nobody opening the demo lands on that screen. Every call must succeed: an unexpected answer stops the generator with the
  * path and the API's error, never any personal data.
  */
+import { TERMS_VERSION } from '@jadplus/shared';
 import type { CompanyWorld } from './world.js';
 
 export type Client = 'mobile' | 'console';
@@ -13,6 +15,8 @@ export interface Actor {
   readonly client: Client;
   readonly ip: string;
   token: string | null;
+  /** The current terms were accepted (L1), at the first sign-in. */
+  termsAccepted: boolean;
 }
 
 export class ApiFailure extends Error {
@@ -35,6 +39,7 @@ export function actor(email: string, client: Client): Actor {
     client,
     ip: `198.51.${String(100 + Math.floor(n / 250))}.${String((n % 250) + 1)}`,
     token: null,
+    termsAccepted: false,
   };
 }
 
@@ -62,12 +67,25 @@ export async function signIn(w: CompanyWorld, a: Actor): Promise<void> {
   if (res.status !== 200) throw new ApiFailure(res.status, '/api/auth/verify', await res.text());
   if (a.client === 'mobile') {
     a.token = (await res.json<{ token: string }>()).token;
-    return;
+  } else {
+    // The console's token is only in its HttpOnly cookie (ADR 0022); in process it is sent back as a Bearer header.
+    const cookie = /__Host-jadplus=([A-Za-z0-9_-]{43})/.exec(res.headers.get('set-cookie') ?? '');
+    if (cookie?.[1] === undefined) throw new Error('No console session cookie');
+    a.token = cookie[1];
   }
-  // The console's token is only in its HttpOnly cookie (ADR 0022); in process it is sent back as a Bearer header.
-  const cookie = /__Host-jadplus=([A-Za-z0-9_-]{43})/.exec(res.headers.get('set-cookie') ?? '');
-  if (cookie?.[1] === undefined) throw new Error('No console session cookie');
-  a.token = cookie[1];
+  if (!a.termsAccepted) await acceptTerms(w, a);
+}
+
+/** L1: the current terms, accepted as the app does it, with the time of the simulation's "now". */
+async function acceptTerms(w: CompanyWorld, a: Actor): Promise<void> {
+  const res = await raw(w, a, '/api/me/consents', {
+    method: 'POST',
+    json: { kind: 'terms', version: TERMS_VERSION, accepted: true },
+  });
+  if (res.status !== 200 && res.status !== 201) {
+    throw new ApiFailure(res.status, 'POST /api/me/consents', await res.text());
+  }
+  a.termsAccepted = true;
 }
 
 /** One API call as `a`; signs in first (or again after expiry). Returns the parsed JSON answer. */

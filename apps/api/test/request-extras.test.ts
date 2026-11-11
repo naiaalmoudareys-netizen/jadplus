@@ -8,6 +8,7 @@ import {
   MAKE_SAFE_VERSION,
   dubaiDate,
   inboxResponse,
+  myRequestsResponse,
   preferredDays,
   requestDetailResponse,
   requestRaisedResponse,
@@ -69,8 +70,14 @@ describe('visit day (A7, A8)', () => {
     const w = await world();
     const id = await routine(w);
     await book(w, id);
+    // A booked visit is not "on the way" until the technician says so (the request list carries the fact).
+    expect((await detail(w, id)).request.visitStatus).toBe('booked');
     expect((await post(w, `/api/partner/jobs/${id}/on-my-way`, w.primaryToken)).status).toBe(200);
     expect((await detail(w, id)).visit?.status).toBe('on_the_way');
+    const list = myRequestsResponse.parse(
+      await (await w.h.request('/api/requests', { token: w.ownerToken })).json(),
+    );
+    expect(list.requests.find((r) => r.id === id)?.visitStatus).toBe('on_the_way');
     expect(await kinds(w)).toEqual(['on_the_way', 'visit_booked']);
     expect((await post(w, `/api/partner/jobs/${id}/on-my-way`, w.primaryToken)).status).toBe(409);
   });

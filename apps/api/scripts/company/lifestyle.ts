@@ -160,18 +160,33 @@ export async function design(c: Company, x: Party, reach: number): Promise<void>
   await confirmAndRate(c, x, id, 'confirm');
 }
 
-/** An investor session `inDays` after it is announced; owners take seats; attendance is marked after it. */
+/** Whether an investor session (not cancelled) is already set on this Dubai date. */
+function sessionOn(c: Company, date: string): boolean {
+  const row = c.w.db
+    .prepare(
+      'SELECT 1 AS yes FROM education_sessions WHERE cancelled_at IS NULL AND starts_at >= ? AND starts_at < ?',
+    )
+    .get(dubaiTime(date, 0), dubaiTime(date, 24));
+  return row !== undefined;
+}
+
+/**
+ * An investor session `inDays` after it is announced (moved on to the next free working day, so two sessions
+ * never share a day), at `hour` (Dubai); owners take seats; attendance is marked after it.
+ */
 export async function session(
   c: Company,
   seats: number,
   takers: readonly Owner[],
   inDays: number,
   title: string,
+  hour = 18,
 ): Promise<void> {
   const re = provider(c, 're').office;
-  const date = workingDay(addDays(dubaiDate(c.sim.now), inDays));
+  let date = workingDay(addDays(dubaiDate(c.sim.now), inDays));
+  while (sessionOn(c, date)) date = workingDay(addDays(date, 1));
   const online = c.r.chance(0.3);
-  const startsAt = dubaiTime(date, 18);
+  const startsAt = dubaiTime(date, hour);
   const { id } = await post<{ id: string }>(c.w, re, '/api/partner/education/sessions', {
     title,
     description: 'A practical evening with the JAD Global team, with time for your questions.',

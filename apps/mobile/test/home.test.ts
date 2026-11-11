@@ -3,7 +3,7 @@ import type { RequestSummary } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import { attentionItems, greeting, openCount, topRequests } from '../src/home/attention.js';
 import { langOf, type Lang } from '../src/i18n/lang.js';
-import { arrivalLabel, dayLabel, jobTitle, preferredVisitLabel } from '../src/jobs/format.js';
+import { dayLabel, jobTitle, preferredVisitLabel, visitLine } from '../src/jobs/format.js';
 
 const en = langOf('en');
 const ar = langOf('ar');
@@ -23,6 +23,7 @@ const req = (over: Partial<RequestSummary>): RequestSummary => ({
   partnerVerified: true,
   partnerKind: 'external',
   arrivalWindow: null,
+  visitStatus: null,
   preferredVisit: null,
   location: null,
   createdAt: NOW - HOUR,
@@ -42,7 +43,7 @@ const attention = (
     owner,
     t: lang.t,
     label: (r) => jobTitle(r, lang.t),
-    arrival: (r) => arrivalLabel(r, lang.t),
+    arrival: (r) => visitLine(r, lang),
     invoices: [],
     invoiceDetail: (i) => i.number,
   });
@@ -133,6 +134,11 @@ describe('preferred visit', () => {
     );
     expect(preferredVisitLabel(req({}), en)).toBeNull();
     expect(dayLabel('2026-11-10', en.locale)).toBe('Tue 10 Nov');
+  });
+
+  it('ADR 0031: a consultation names its day and window the best time to call, not a visit', () => {
+    const r = req({ preferredVisit: { date: '2026-11-11', slot: 'morning' } });
+    expect(preferredVisitLabel(r, en, 'call')).toBe('Best time to call: Wed 11 Nov · Morning (9:00 - 12:00)');
   });
 
   it('ADR 0016: day and window in the chosen language, on the same calendar day', () => {

@@ -4,6 +4,7 @@
  * offered are the ones the API allows (detail.actions); the API checks each again (C-AZ-2).
  */
 import {
+  consultationResponse,
   partnerTeamResponse,
   requestDetailResponse,
   type PartnerTeam,
@@ -119,12 +120,13 @@ export function JobPage({ id }: { id: string }): ReactNode {
       Promise.all([
         api.get(apiPath('requests', id), requestDetailResponse),
         api.get('/api/partner/team', partnerTeamResponse),
+        api.get(apiPath('requests', id, 'consultation'), consultationResponse),
       ]),
     id,
   );
   return (
     <Loaded state={state} reload={reload}>
-      {([d, team]) => (
+      {([d, team, { consultation }]) => (
         <>
           <PageHeader
             eyebrow={`Job ${d.request.ref}`}
@@ -135,10 +137,15 @@ export function JobPage({ id }: { id: string }): ReactNode {
           <Steps d={d} team={team.technicians} now={now} onChanged={reload} />
           <ConsultationSteps id={id} onChanged={reload} />
           <ProjectSection id={id} onChanged={reload} />
-          <Summary d={d} now={now} />
+          <Summary d={d} now={now} consultation={consultation} />
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />
-          <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
-          <AddPhotos d={d} onAdded={reload} />
+          {/* ADR 0031: a consultation is a call; there is no finished work to photograph. */}
+          {consultation === null ? (
+            <>
+              <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
+              <AddPhotos d={d} onAdded={reload} />
+            </>
+          ) : null}
           <ReportSection requestId={id} refText={d.request.ref} onChanged={reload} />
           <Messages d={d} editable onSent={reload} />
         </>

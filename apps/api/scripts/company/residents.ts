@@ -12,6 +12,11 @@ import { DAY, HOUR, MIN, addDays } from './sim.js';
 
 const VERSION = '2026-11-draft';
 const LANGUAGES = ['en', 'en', 'en', 'en', 'ar', 'ar', 'fr', 'ru', 'zh'] as const;
+/** The accounts used to show the demo (Layla Haddad, Omar Al Mansoori) read English. */
+export const ENGLISH_ONLY: ReadonlySet<string> = new Set([
+  'layla.haddad@example.com',
+  'omar.al.mansoori@example.com',
+]);
 
 function lookup(o: DemoOwner): OwnerLookup {
   return {
@@ -38,9 +43,11 @@ async function join(c: Company, o: Owner): Promise<void> {
     .get(o.person.units[0]?.id ?? '') as { user_id: string } | undefined;
   if (row === undefined) throw new Error('Owner was not linked to the unit');
   o.userId = row.user_id;
-  await post(w, o.actor, '/api/me/consents', { kind: 'terms', version: VERSION, accepted: true });
+  // The terms were accepted at sign-in (actors.ts). The main demo accounts stay in English; others vary.
+  const picked = r.pick(LANGUAGES);
+  const language = ENGLISH_ONLY.has(o.person.email) ? 'en' : picked;
   await post(w, o.actor, '/api/me/preferences', {
-    language: r.pick(LANGUAGES),
+    language,
     notifications: {
       payments: true,
       construction: r.chance(0.8),

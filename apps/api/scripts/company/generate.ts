@@ -11,7 +11,7 @@
  * request waiting more than 48 hours, an overdue valuation, keys due this week, a missing statement, a pending
  * rate card, an expiring insurance, a gap in the on-call rota.
  */
-import { actor } from './actors.js';
+import { actor, signIn, type Actor } from './actors.js';
 import type { Company, Owner } from './company.js';
 import { consultation, type ConsultService } from './consultations.js';
 import { emergency, type EmergencyVariant } from './emergency.js';
@@ -37,7 +37,8 @@ import { leave, statements, weekly } from './routines.js';
 import { pendingRateCard, setupCompany } from './setup.js';
 import { DAY, HOUR, MIN, Sim, addDays } from './sim.js';
 import { companyWorld, type CompanyWorld } from './world.js';
-import { dubaiDate } from '@jadplus/shared';
+import { TERMS_VERSION, dubaiDate } from '@jadplus/shared';
+import { blindIndex } from '../../src/crypto.js';
 
 export interface CompanyOptions {
   readonly indexKey: string;
@@ -208,7 +209,8 @@ function streams(c: Company, ready: number): void {
   spawn(c, E - 10 * DAY, () =>
     session(c, 30, [ownerAt(c, 0), ...people.slice(2, 11)], 14, 'Golden Visa and residency for investors'),
   );
-  spawn(c, E - 8 * DAY, () => session(c, 6, people.slice(20, 26), 13, 'Q&A with the handover team'));
+  // A morning session four days after the evening one: upcoming sessions never share a day or a time.
+  spawn(c, E - 8 * DAY, () => session(c, 6, people.slice(20, 26), 16, 'Q&A with the handover team', 11));
   people.slice(0, 8).forEach((o, i) => {
     spawn(c, at(0.1 + i * 0.1), () => investorBook(c, o, i % 3 !== 2));
   });
@@ -216,6 +218,35 @@ function streams(c: Company, ready: number): void {
   people.slice(10, 22).forEach((o, i) => {
     spawn(c, at(0.05 + i * 0.075), () => offerStory(c, o));
   });
+}
+
+/** Every account of the demo company: JAD+ staff, provider offices and teams, owners and tenants (invited ones too). */
+function everyone(c: Company): Actor[] {
+  const providers = [...c.providers.values()].flatMap((p) => [p.office, ...p.techs.map((t) => t.actor)]);
+  const owners = c.owners.flatMap((o) => [o.actor, ...o.tenancies.map((t) => t.tenant)]);
+  const invited = c.tenantPeople.map((p) => actor(p.email, 'mobile'));
+  return [c.admin, c.ops, c.viewer, ...providers, ...owners, ...invited];
+}
+
+/**
+ * L1: anyone JAD+ knows who has not accepted the current terms during the quarter (someone who never signed in, a
+ * tenant invited but not yet answering) signs in once before "now" and accepts them as the app does (actors.ts),
+ * so every demo account opens straight onto its home screen.
+ */
+async function acceptTermsEveryone(c: Company): Promise<void> {
+  const seen = new Set<string>();
+  for (const a of everyone(c)) {
+    if (seen.has(a.email)) continue;
+    seen.add(a.email);
+    const hash = await blindIndex(c.w.keys, 'email', a.email);
+    const user = c.w.db.prepare('SELECT id FROM users WHERE email_hash = ?').get(hash) as
+      { id: string } | undefined;
+    if (user === undefined) continue;
+    const accepted = c.w.db
+      .prepare("SELECT 1 AS yes FROM consents WHERE user_id = ? AND kind = 'terms' AND version = ?")
+      .get(user.id, TERMS_VERSION);
+    if (accepted === undefined) await signIn(c.w, a);
+  }
 }
 
 export async function buildCompany(o: CompanyOptions): Promise<Company> {
@@ -252,6 +283,7 @@ export async function buildCompany(o: CompanyOptions): Promise<Company> {
     spawn(c, o.end - 2 * DAY + 3 * HOUR, () => pendingRateCard(c));
     spawn(c, o.end - 3 * DAY, () => leave(c, 'fixers'));
     spawn(c, o.end - 12 * DAY, () => leave(c, 'gulf'));
+    spawn(c, o.end - 40 * MIN, () => acceptTermsEveryone(c));
   });
   await sim.run();
   return c;

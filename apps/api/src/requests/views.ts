@@ -30,7 +30,9 @@ export function toLocation(row: LocationRow): UnitLocation | null {
 export const SUMMARY_COLUMNS = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, p.name AS partner_name,
   CASE WHEN p.status = 'active' THEN 1 ELSE 0 END AS partner_verified, p.kind AS partner_kind,
   (SELECT name FROM services WHERE code = r.service_code) AS service_name,
-  r.arrival_window_start, r.arrival_window_end, r.preferred_date, r.preferred_slot, r.created_at, ${LOCATION_COLUMNS}`;
+  r.arrival_window_start, r.arrival_window_end, r.preferred_date, r.preferred_slot, r.created_at, ${LOCATION_COLUMNS},
+  (SELECT v.status FROM visits v WHERE v.request_id = r.id AND v.status IN ('booked', 'on_the_way', 'arrived', 'done')
+    ORDER BY v.created_at DESC, v.rowid DESC LIMIT 1) AS visit_status`;
 
 export interface SummaryRow extends LocationRow {
   id: string;
@@ -47,6 +49,7 @@ export interface SummaryRow extends LocationRow {
   preferred_date: string | null;
   preferred_slot: VisitSlot | null;
   created_at: number;
+  visit_status: RequestSummary['visitStatus'];
 }
 
 /** The owner's preferred visit, when both parts are set. */
@@ -74,6 +77,7 @@ export function toSummary(r: SummaryRow): RequestSummary {
       r.arrival_window_start === null || r.arrival_window_end === null
         ? null
         : { start: r.arrival_window_start, end: r.arrival_window_end },
+    visitStatus: r.visit_status,
     preferredVisit: toPreferredVisit(r),
     location: toLocation(r),
     createdAt: r.created_at,

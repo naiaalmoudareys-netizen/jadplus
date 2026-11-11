@@ -81,7 +81,7 @@ export async function emergency(
     arrivalWindowStart: arrival,
     arrivalWindowEnd: arrival + HOUR,
   });
-  chat(c, id, x.raiser, t.actor);
+  chat(c, id, x.raiser, t.actor, arrival, true);
   await c.sim.until(arrival + c.r.int(5, 40) * MIN);
   await post(c.w, t.actor, `/api/partner/jobs/${id}/start`);
   if (x.owner.makeSafe && !ac && c.r.chance(0.6)) {

@@ -33,7 +33,7 @@ import { aedFromFils, dueText } from '../../src/invoices/logic.js';
 import { ownerManagedUnits } from '../../src/api/managed.js';
 import { managedUnitNames } from '../../src/managed/logic.js';
 import { useUnread } from '../../src/inbox/useUnread.js';
-import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
+import { jobTitle, visitLine } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
 import { usePortalOptional } from '../../src/portal/PortalProvider.js';
 import { DemoBadge, ProgressBar } from '../../src/portal/ui.js';
@@ -108,7 +108,7 @@ export default function Home(): ReactNode {
     owner,
     t,
     label: (r) => jobTitle(r, t),
-    arrival: (r) => arrivalLabel(r, t),
+    arrival: (r) => visitLine(r, lang),
     invoices: invoices.data ?? [],
     invoiceDetail: (i) => `${aedFromFils(i.totalFils, locale)} · ${dueText(i, dubaiDate(now), lang)}`,
     managedUnits: managedUnitNames(managed.data ?? []),

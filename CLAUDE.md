@@ -209,6 +209,13 @@ pnpm --filter @jadplus/mobile start   # Expo
   48-hour "call the owner" for managed units, report upload from the technician app, Hospital check-ups
   as a News & offers post (no build), native-speaker review of new texts, Naya's confirmations listed in
   ADRs 0030-0035.
+- 11-Nov-2026 (cont.): provider workspaces (ADR 0036: each office's console derived from its services, API
+  403 outside it); console review fixes (strict D1 stand-in for bind counts, shared partner document kinds);
+  `pnpm db:demo:company` (scripts/company: fictional company simulated through the real API over 90 days);
+  wording fixes (visit status from the real on-my-way fact, "Visited", consultation facts, plurals).
+  Desktop for Naya: deck "JAD+ Every Case Every Screen.pptx" (100 slides, built in the scratchpad, not in
+  the repo), "JAD+ How Every Case Is Covered.pdf" (6 pages), "JAD+ Management Summary.pdf" (2 pages).
+  1,124 tests.
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

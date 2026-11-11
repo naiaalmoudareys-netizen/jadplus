@@ -11,7 +11,7 @@ import { useSessionController } from '../session/SessionProvider.js';
 import { useLoad } from '../ui/hooks.js';
 import { Body, Button, Card, Eyebrow, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
-import { SNAG_STATUS, snagCounts } from './reportLogic.js';
+import { SNAG_STATUS, reopenedLabel, snagCounts } from './reportLogic.js';
 
 function SnagItem(props: {
   requestId: string;
@@ -46,7 +46,7 @@ function SnagItem(props: {
       <Body muted>
         {snag.room} · {t(SNAG_STATUS[snag.status])}
       </Body>
-      {snag.reopenCount > 0 ? <Body muted>{t('snag.reopened', { count: snag.reopenCount })}</Body> : null}
+      {snag.reopenCount > 0 ? <Body muted>{reopenedLabel(snag.reopenCount, t)}</Body> : null}
       {photos.length === 0 ? null : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {photos.map((p) => (

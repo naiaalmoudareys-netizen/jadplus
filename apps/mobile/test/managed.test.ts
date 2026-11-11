@@ -99,6 +99,7 @@ describe('approval by the manager on Home (A1)', () => {
     partnerVerified: false,
     partnerKind: null,
     arrivalWindow: null,
+    visitStatus: null,
     preferredVisit: null,
     location: { unitName, project: 'JAD 288', building: null, address: null },
     createdAt: 0,

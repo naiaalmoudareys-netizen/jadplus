@@ -3,7 +3,7 @@
  * notes (with "owner called", A1) and JAD+'s actions: move to another partner, reclassify, cancel. A viewer
  * reads everything and changes nothing (C-AZ-1; the API refuses anyway).
  */
-import { requestDetailResponse } from '@jadplus/shared';
+import { consultationResponse, requestDetailResponse } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { apiPath } from '../lib/api';
 import { jobWhat } from '../lib/jobs';
@@ -25,24 +25,33 @@ export function RequestPage({ id }: { id: string }): ReactNode {
   const now = useNow();
   // Bumped after a change, so the timeline and notes load again with it.
   const [round, setRound] = useState(0);
-  const { state, reload } = useLoad(() => api.get(apiPath('requests', id), requestDetailResponse), id);
+  const { state, reload } = useLoad(
+    () =>
+      Promise.all([
+        api.get(apiPath('requests', id), requestDetailResponse),
+        api.get(apiPath('requests', id, 'consultation'), consultationResponse),
+      ]),
+    id,
+  );
   const changed = (): void => {
     reload();
     setRound((r) => r + 1);
   };
   return (
     <Loaded state={state} reload={reload}>
-      {(d) => (
+      {([d, { consultation }]) => (
         <>
           <PageHeader
             eyebrow={`Request ${d.request.ref}`}
             title={jobWhat(d.request)}
             tags={d.request.emergency ? <Tag tone="bad">Emergency</Tag> : null}
           />
-          <Summary d={d} now={now} />
+          <Summary d={d} now={now} consultation={consultation} />
           {editable ? <RequestActions d={d} onChanged={changed} /> : null}
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />
-          <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
+          {consultation === null ? (
+            <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
+          ) : null}
           <ReportView requestId={id} refText={d.request.ref} />
           <ConsultationView requestId={id} />
           <ProjectSection id={id} onChanged={reload} />

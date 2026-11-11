@@ -12,6 +12,7 @@ import {
   type SnagStatus,
 } from '@jadplus/shared';
 import type { MessageKey } from '../i18n/dictionary.js';
+import type { Translate } from '../i18n/lang.js';
 
 export interface SnaggingOption {
   readonly type: SnaggingType;
@@ -51,4 +52,14 @@ export function snagCounts(statuses: readonly SnagStatus[]): Record<SnagStatus, 
 export function reportsForUnit(reports: readonly OwnerReport[], unitName: string | null): OwnerReport[] {
   if (unitName === null) return [];
   return reports.filter((r) => r.unitName === unitName);
+}
+
+/**
+ * "Reopened once", "Reopened twice", "Reopened 3 times" (O3): the count the owner sent the snag back. Languages
+ * whose plurals need more forms use a wording that fits every larger number (ADR 0016).
+ */
+export function reopenedLabel(count: number, t: Translate): string {
+  if (count === 1) return t('snag.reopened.once');
+  if (count === 2) return t('snag.reopened.twice');
+  return t('snag.reopened.many', { count });
 }

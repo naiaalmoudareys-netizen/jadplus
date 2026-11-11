@@ -1,14 +1,14 @@
 /** Partner job screens: R3 clock and next action, E4 acknowledgement and arrival choices. */
 import { arrivalChoices, arrivalWindowAllowed, type PartnerJob } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
-import { translator } from '../src/i18n/lang.js';
+import { langOf, translator } from '../src/i18n/lang.js';
 import {
-  arrivalLabel,
   dueLabel,
   isOverdue,
   jobTitle,
   needsAcknowledgement,
   statusLabel,
+  visitLine,
 } from '../src/jobs/format.js';
 
 const en = translator('en');
@@ -61,9 +61,24 @@ describe('job clock (R3)', () => {
     expect(jobTitle(job({ emergency: false, emergencyType: null, serviceName: null }), en)).toBe(
       'Service request',
     );
-    expect(arrivalLabel(job({ arrivalWindow: { start: NOW, end: NOW + 120 * MIN } }), en)).toBe(
+    expect(
+      visitLine(
+        job({ status: 'scheduled', arrivalWindow: { start: NOW, end: NOW + 120 * MIN } }),
+        langOf('en'),
+      ),
+    ).toBe('Arriving 12:00-14:00');
+  });
+
+  it('A5: a completed job shows when it was visited, not the arrival window', () => {
+    const window = { start: NOW, end: NOW + 120 * MIN };
+    expect(visitLine(job({ status: 'completed', arrivalWindow: window }), langOf('en'))).toBe(
+      'Visited Mon 9 Nov',
+    );
+    expect(visitLine(job({ status: 'in_progress', arrivalWindow: window }), langOf('en'))).toBe(
       'Arriving 12:00-14:00',
     );
+    expect(visitLine(job({ status: 'reopened', arrivalWindow: window }), langOf('en'))).toBeNull();
+    expect(visitLine(job({ status: 'cancelled', arrivalWindow: window }), langOf('en'))).toBeNull();
   });
 });
 
@@ -83,9 +98,12 @@ describe('jobs in another language (ADR 0016)', () => {
     );
     expect(statusLabel('assigned', en)).toBe('New: acknowledge');
     expect(statusLabel('assigned', fr)).toBe('Nouveau : à confirmer');
-    expect(arrivalLabel(job({ arrivalWindow: { start: NOW, end: NOW + 120 * MIN } }), fr)).toBe(
-      'Arrivée 12:00-14:00',
-    );
+    expect(
+      visitLine(
+        job({ status: 'scheduled', arrivalWindow: { start: NOW, end: NOW + 120 * MIN } }),
+        langOf('fr'),
+      ),
+    ).toBe('Arrivée 12:00-14:00');
   });
 });
 

@@ -2,8 +2,14 @@
  * Consultation words for the partner office console (ADR 0031): the owner's answers, the best time to call, the
  * consent and the stage names, in English (the console is English). The rules themselves are in packages/shared.
  */
-import { consultationConsentText, questionsFor, stagesFor, type ConsultationView } from '@jadplus/shared';
-import { dateTime, dayText, humanize, preferredText } from './format';
+import {
+  consultationConsentText,
+  consultationTimeline,
+  questionsFor,
+  stagesFor,
+  type ConsultationView,
+} from '@jadplus/shared';
+import { dateTime, dayText, humanize, preferredText, type Tone } from './format';
 
 const STEP_NAMES: Readonly<Record<string, string>> = {
   contact_made: 'Contact made',
@@ -37,4 +43,25 @@ export function bestTimeText(v: Pick<ConsultationView, 'bestTime'>): string {
 export function consentLine(v: Pick<ConsultationView, 'consent'>): string {
   const { providerName, at, version } = v.consent;
   return `“${consultationConsentText(providerName)}” Agreed ${dateTime(at)} (wording ${version}).`;
+}
+
+/**
+ * A consultation is a call, not a visit (ADR 0031): instead of "Answered: no visit booked yet", whether the office
+ * has made contact with the owner, and when.
+ */
+export function contactFact(v: Pick<ConsultationView, 'steps'>): { text: string; tone: Tone } {
+  const made = v.steps.find((s) => s.step === 'contact_made');
+  return made === undefined
+    ? { text: 'Not contacted yet', tone: 'warn' }
+    : { text: `Contact made ${dateTime(made.at)}`, tone: 'good' };
+}
+
+/** Where the consultation stands now: the current stage, or how it ended ("Done", "Did not proceed", "Closed"). */
+export function currentStageText(v: Pick<ConsultationView, 'serviceCode' | 'status' | 'steps'>): string {
+  const timeline = consultationTimeline(v.serviceCode, v.status, v.steps);
+  const current = timeline.find((item) => item.state === 'current');
+  if (current !== undefined) return stepName(v.serviceCode, current.id);
+  const last = timeline.at(-1);
+  if (last?.state === 'done') return stepName(v.serviceCode, last.id);
+  return v.status === 'cancelled' ? 'Cancelled' : 'Closed';
 }

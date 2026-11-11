@@ -4,10 +4,11 @@
  * visit, quote, make-safe work, rating and photos. Photos load through the API after its access check
  * (C-AZ-1); they are never cached (`private, no-store`).
  */
-import type { RequestDetail } from '@jadplus/shared';
+import type { ConsultationView, RequestDetail } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { photoUrl } from '../lib/api';
 import { aed, dateTime, preferredText, windowText } from '../lib/format';
+import { contactFact, currentStageText } from '../lib/consultation';
 import { acknowledgedFact, deadlineFact, placeText } from '../lib/jobs';
 import { Fact, StatusTag, Tag } from '../ui/parts';
 
@@ -64,14 +65,27 @@ export function Photos({
   );
 }
 
-/** E4, S4: whether the partner has answered, and the next deadline (partner and JAD+ staff only). */
-function ClockFacts({ d, now }: { d: RequestDetail; now: number }): ReactNode {
+/**
+ * E4, S4: whether the partner has answered, and the next deadline (partner and JAD+ staff only). A consultation
+ * (ADR 0031) is answered by contacting the owner, not by booking a visit.
+ */
+function ClockFacts({
+  d,
+  now,
+  consultation,
+}: {
+  d: RequestDetail;
+  now: number;
+  consultation: ConsultationView | null;
+}): ReactNode {
   if (d.clock === null) return null;
-  const ack = acknowledgedFact(d.clock, d.request.emergency);
+  const ack =
+    consultation === null ? acknowledgedFact(d.clock, d.request.emergency) : contactFact(consultation);
   const due = deadlineFact(d.clock, now);
+  const label = consultation !== null ? 'Contact' : d.request.emergency ? 'Acknowledged' : 'Answered';
   return (
     <>
-      <Fact label={d.request.emergency ? 'Acknowledged' : 'Answered'}>
+      <Fact label={label}>
         <Tag tone={ack.tone}>{ack.text}</Tag>
       </Fact>
       <Fact label="Next deadline">
@@ -81,8 +95,21 @@ function ClockFacts({ d, now }: { d: RequestDetail; now: number }): ReactNode {
   );
 }
 
-export function Summary({ d, now }: { d: RequestDetail; now: number }): ReactNode {
+/**
+ * `consultation` (ADR 0031): a call, not a visit, so the visit facts give way to the contact and the current stage
+ * (the best time to call is on the consultation panel).
+ */
+export function Summary({
+  d,
+  now,
+  consultation = null,
+}: {
+  d: RequestDetail;
+  now: number;
+  consultation?: ConsultationView | null;
+}): ReactNode {
   const r = d.request;
+  const visits = consultation === null;
   return (
     <section className="card">
       <dl className="facts">
@@ -95,14 +122,15 @@ export function Summary({ d, now }: { d: RequestDetail; now: number }): ReactNod
           {r.partnerName !== null && !r.partnerVerified ? <Tag tone="warn">Not verified</Tag> : null}
         </Fact>
         <Fact label="Raised">{dateTime(r.createdAt)}</Fact>
-        <ClockFacts d={d} now={now} />
-        {r.preferredVisit === null ? null : (
+        <ClockFacts d={d} now={now} consultation={consultation} />
+        {consultation === null ? null : <Fact label="Current stage">{currentStageText(consultation)}</Fact>}
+        {!visits || r.preferredVisit === null ? null : (
           <Fact label="Preferred visit">{preferredText(r.preferredVisit)}</Fact>
         )}
-        {r.arrivalWindow === null ? null : (
+        {!visits || r.arrivalWindow === null ? null : (
           <Fact label="Arrival window">{windowText(r.arrivalWindow.start, r.arrivalWindow.end, now)}</Fact>
         )}
-        {d.visit === null ? null : (
+        {!visits || d.visit === null ? null : (
           <Fact label="Visit">
             {windowText(d.visit.start, d.visit.end, now)} · {VISIT_LABELS[d.visit.status]}
             {d.visit.technician === null ? '' : ` · ${d.visit.technician}`}
