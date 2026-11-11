@@ -1,11 +1,12 @@
 /**
- * One partner, for JAD+ Admin (ADR 0023, 0025; S5-S10, P1, P3): standing (with suspend / reinstate), the
- * verified licence and insurance, uploads waiting to be verified, proposed rate cards and the monthly
- * scorecard. A viewer reads everything and changes nothing.
+ * One partner, for JAD+ Admin (ADR 0023, 0025, 0030; S5-S10, P1, P3): its kind (outside partner or JAD Global
+ * team), standing (with suspend / reinstate), the verified licence and insurance, uploads waiting to be
+ * verified, proposed rate cards and the monthly scorecard. A viewer reads everything and changes nothing.
  */
 import { adminPartnersResponse } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { documentLines } from '../lib/documents';
+import { PROVIDER_KIND_LABELS } from '../lib/providers';
 import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Fact, Loaded, Notice, PageHeader, Tag } from '../ui/parts';
@@ -29,6 +30,9 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
         return (
           <>
             <PageHeader eyebrow="Partner" title={partner.name}>
+              <Tag tone={PROVIDER_KIND_LABELS[partner.kind].tone}>
+                {PROVIDER_KIND_LABELS[partner.kind].label}
+              </Tag>
               <Tag tone={standing.tone}>{standing.label}</Tag>
             </PageHeader>
             {done === null ? null : <Notice tone="good">{done}</Notice>}
@@ -40,6 +44,7 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
                     <span className="block muted">{partner.statusReason}</span>
                   )}
                 </Fact>
+                <Fact label="Kind">{PROVIDER_KIND_LABELS[partner.kind].label}</Fact>
                 <Fact label="Technicians">{partner.technicians}</Fact>
                 <Fact label="Open jobs">{partner.openJobs}</Fact>
                 <Fact label="Verified documents">

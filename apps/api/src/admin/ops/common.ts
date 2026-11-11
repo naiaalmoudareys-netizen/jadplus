@@ -2,7 +2,7 @@
  * Shared pieces of the JAD+ Admin operations routes (ADR 0025): the audit entry for a staff action, encrypted
  * staff text (notes and reasons, C-PD-2), decrypting a person's fields, and reading a request for a staff action.
  */
-import { canTransition, type Status } from '@jadplus/shared';
+import { canTransition, type NOTE_KINDS, type Status } from '@jadplus/shared';
 import type { Context } from 'hono';
 import { z } from 'zod';
 import { auditStatement, type AuditAction } from '../../audit.js';
@@ -69,7 +69,7 @@ export async function personFields(
   return { name, email, phone };
 }
 
-export type NoteKind = 'note' | 'owner_called' | 'reassigned' | 'reclassified' | 'cancelled';
+export type NoteKind = (typeof NOTE_KINDS)[number];
 
 /** A staff note on a request, encrypted (staff text can name people). */
 export async function noteStatement(

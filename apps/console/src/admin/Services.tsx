@@ -1,7 +1,9 @@
 /**
- * JAD+ Admin "Services" (ADR 0025; S1-S4): every service in its group, who takes a new request now (a partner,
- * the JAD+ team, or "coming soon"), whether owners see it in the app, its primary and backup partner, and its
- * service-level targets. JAD+ Admin changes the listing and the partners; a viewer only reads.
+ * JAD+ Admin "Services" (ADR 0025, 0030; S1-S4, P6): every service in its group, how its requests run (flow), who
+ * takes a new request now (an outside partner, a JAD Global team, or "coming soon"), whether owners see it in the
+ * app, its primary and backup provider, the first deadline of a new request and its other targets. JAD+ Admin
+ * changes the listing and the providers (JAD Global teams for in-house services, outside partners for the
+ * others); a viewer only reads.
  */
 import {
   SERVICE_GROUPS,
@@ -9,12 +11,14 @@ import {
   adminServicesResponse,
   servicePartnersBody,
   type AdminServices,
+  type ProviderKind,
 } from '@jadplus/shared';
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { ApiError, apiPath } from '../lib/api';
 import { minutesText } from '../lib/format';
 import { SLA_METRIC_LABELS } from '../lib/labels';
 import { serviceListedResponse, servicePartnersResponse } from '../lib/platform-schemas';
+import { FLOW_LABELS, PROVIDER_KIND_LABELS, providerChoices } from '../lib/providers';
 import { canChange } from '../lib/session';
 import { ConfirmButton, useAction } from '../ui/actions';
 import { useConsole, useLoad } from '../ui/hooks';
@@ -26,11 +30,12 @@ interface PartnerChoice {
   readonly id: string;
   readonly name: string;
   readonly status: 'active' | 'suspended' | 'ended';
+  readonly kind: ProviderKind;
 }
 
 const ROUTING = {
   partner: { tone: 'good', label: 'Goes to the partner' },
-  jad: { tone: 'calm', label: 'Handled by the JAD+ team' },
+  jad: { tone: 'good', label: 'Goes to the JAD Global team' },
   coming_soon: { tone: 'warn', label: 'Coming soon' },
 } as const;
 
@@ -39,6 +44,7 @@ function partnerText(p: PartnerRef | null): ReactNode {
   return (
     <>
       {p.name}
+      {p.kind === 'jad_group' ? <Tag tone="good">{PROVIDER_KIND_LABELS.jad_group.label}</Tag> : null}
       {p.status === 'active' ? null : (
         <Tag tone="bad">{p.status === 'suspended' ? 'Suspended' : 'Ended'}</Tag>
       )}
@@ -93,11 +99,9 @@ function PartnersForm({
   const [primary, setPrimary] = useState(service.primary?.id ?? '');
   const [backup, setBackup] = useState(service.backup?.id ?? '');
   const action = useAction();
-  // A suspended partner already in place still shows, so the choice is never silently blank.
-  const choices = [...partners];
-  for (const p of [service.primary, service.backup]) {
-    if (p !== null && !choices.some((c) => c.id === p.id)) choices.push(p);
-  }
+  // Only the kind this service takes; a suspended provider already in place still shows.
+  const choices = providerChoices(partners, service.providerKind, [service.primary, service.backup]);
+  const kindName = service.providerKind === 'jad_group' ? 'JAD Global teams' : 'outside partners';
   const save = (e: SyntheticEvent): void => {
     e.preventDefault();
     action.run(async () => {
@@ -120,7 +124,7 @@ function PartnersForm({
     <form className="inline-form" onSubmit={save}>
       <PartnerPicker label="Primary" value={primary} partners={choices} onChange={setPrimary} />
       <PartnerPicker label="Backup" value={backup} partners={choices} onChange={setBackup} />
-      <p className="hint">Only active partners can be chosen. Jobs already sent stay where they are.</p>
+      <p className="hint">Only active {kindName} can be chosen. Jobs already sent stay where they are.</p>
       {action.error === null ? null : <Notice tone="bad">{action.error}</Notice>}
       <div className="row-actions">
         <button type="submit" className="btn" disabled={action.busy}>
@@ -192,7 +196,8 @@ function ServiceRow({
       <td>
         <strong>{service.name}</strong>
         <span className="block hint">
-          {service.delivery === 'partner' ? 'By a partner' : 'By the JAD+ team'}
+          {service.delivery === 'partner' ? 'By an outside partner' : 'By a JAD Global team'} ·{' '}
+          {FLOW_LABELS[service.flow]}
         </span>
       </td>
       <td>
@@ -200,9 +205,7 @@ function ServiceRow({
         {service.listed ? null : <Tag tone="calm">Hidden from owners</Tag>}
       </td>
       <td>
-        {service.delivery === 'inhouse' ? (
-          <span className="muted">JAD+ team</span>
-        ) : editing ? (
+        {editing ? (
           <PartnersForm
             service={service}
             partners={partners}
@@ -224,6 +227,13 @@ function ServiceRow({
         )}
       </td>
       <td>
+        {service.firstResponse === null ? (
+          <span className="block">No clock: the next course date is given on request.</span>
+        ) : (
+          <span className="block">
+            <strong>First deadline:</strong> {service.firstResponse.text}
+          </span>
+        )}
         {service.sla.length === 0 ? (
           <span className="muted">{service.plannedSla ?? 'No targets yet'}</span>
         ) : (
@@ -240,7 +250,7 @@ function ServiceRow({
       {editable ? (
         <td>
           <div className="row-actions">
-            {service.delivery === 'partner' && !editing ? (
+            {!editing ? (
               <button
                 type="button"
                 className="btn btn-outline"
@@ -248,7 +258,7 @@ function ServiceRow({
                   setEditing(true);
                 }}
               >
-                Change partners
+                Change providers
               </button>
             ) : null}
             <ListedSwitch service={service} onSaved={onSaved} />
@@ -281,7 +291,7 @@ export function Services(): ReactNode {
       {done === null ? null : <Notice tone="good">{done}</Notice>}
       <Loaded state={state} reload={reload}>
         {([{ services }, { partners }]) => {
-          const choices = partners.map((p) => ({ id: p.id, name: p.name, status: p.status }));
+          const choices = partners.map((p) => ({ id: p.id, name: p.name, status: p.status, kind: p.kind }));
           return SERVICE_GROUPS.map((group) => {
             const inGroup = services.filter((s) => s.group === group);
             return (
@@ -294,7 +304,7 @@ export function Services(): ReactNode {
                       <tr>
                         <th scope="col">Service</th>
                         <th scope="col">New requests</th>
-                        <th scope="col">Partners</th>
+                        <th scope="col">Providers</th>
                         <th scope="col">Targets</th>
                         {editable ? <th scope="col">Change</th> : null}
                       </tr>

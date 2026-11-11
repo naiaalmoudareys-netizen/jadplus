@@ -8,8 +8,10 @@
  * - POST /requests/:id/reassign    { partnerId, reason } to another active partner (E6, S6)
  * - POST /requests/:id/reclassify  { reason } emergency -> routine (E13)
  * - POST /requests/:id/cancel      { reason } cancelled by JAD+
- * The owner and the person who raised the request are told in the app when JAD+ moves, reclassifies or cancels
- * it (ADR 0027); the reason stays a staff note.
+ * - POST /requests/:id/handled     { reason } an old in-house request nobody could take, handled by JAD+ itself
+ *                                  (ADR 0030): it moves to "work done" and the resident confirms, as on any job
+ * The owner and the person who raised the request are told in the app when JAD+ moves, reclassifies, cancels or
+ * handles it (ADR 0027, 0030); the reason stays a staff note.
  */
 import {
   OPEN_STATUSES,
@@ -17,8 +19,12 @@ import {
   adminNoteBody,
   adminReasonBody,
   adminReassignBody,
+  canMarkHandledByJad,
+  providerFits,
   reassignedDue,
   reclassifiedDue,
+  type ProviderKind,
+  type ServiceDelivery,
   type Status,
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
@@ -131,12 +137,18 @@ async function reassign(c: Ctx) {
   const db = c.env.DB;
   const now = c.get('now');
   const partner = await db
-    .prepare('SELECT id, status FROM partners WHERE id = ?')
-    .bind(body.partnerId)
-    .first<{ id: string; status: string }>();
+    .prepare(
+      'SELECT p.id, p.status, p.kind, s.delivery FROM partners p JOIN services s ON s.code = ? WHERE p.id = ?',
+    )
+    .bind(row.service_code, body.partnerId)
+    .first<{ id: string; status: string; kind: ProviderKind; delivery: ServiceDelivery }>();
   if (partner === null) throw new ApiError(404, NOT_FOUND_PARTNER);
   if (partner.status !== 'active') throw new ApiError(409, 'This partner is not active.');
   if (partner.id === row.partner_id) throw new ApiError(409, 'The job is already with this partner.');
+  // ADR 0030: in-house services go to JAD Global teams, partner services to outside partners.
+  if (!providerFits(partner.delivery, partner.kind)) {
+    throw new ApiError(409, 'This provider does not deliver this kind of service.');
+  }
   const emergency = row.is_emergency === 1;
   const note = await noteStatement(c, id, 'reassigned', body.reason);
   const cal = await loadCalendar(db);
@@ -148,7 +160,7 @@ async function reassign(c: Ctx) {
         : [partnerInboxStatement(db, { requestId: id, partnerId: row.partner_id }, 'job_moved_away', now)]),
       ...changeStatements(c, row, {
         to: 'assigned',
-        nextDue: reassignedDue(emergency, now, cal),
+        nextDue: reassignedDue(emergency, now, cal, row.service_code),
         audit: 'request_reassigned_by_jad',
         detail: { from: row.partner_id, to: partner.id, emergency },
       }),
@@ -268,6 +280,32 @@ async function cancel(c: Ctx) {
   return c.json({ id, status: 'cancelled', partnerId: row.partner_id, emergency: row.is_emergency === 1 });
 }
 
+/**
+ * ADR 0030: an in-house request raised before in-house teams were providers waits with nobody to take it. JAD+
+ * Admin either moves it to a JAD Global team (reassign) or, when JAD+ dealt with it directly, marks it handled:
+ * it moves to "work done", the resident is asked to confirm (E10, and it closes by itself after 72 h, A4), and
+ * the reason is kept as a staff note.
+ */
+async function handled(c: Ctx) {
+  const { id } = parseParams(c, idParam);
+  const body = await parseJsonBody(c, adminReasonBody);
+  const row = await requestForAction(c, id, 'completed');
+  const legacy = { status: row.status, partnerId: row.partner_id, emergency: row.is_emergency === 1 };
+  if (!canMarkHandledByJad(legacy)) {
+    throw new ApiError(409, 'Only a routine request waiting with no provider can be marked as handled.');
+  }
+  const db = c.env.DB;
+  const note = await noteStatement(c, id, 'handled_by_jad', body.reason);
+  await withConflictCheck(() =>
+    db.batch([
+      ...changeStatements(c, row, { to: 'completed', nextDue: null, audit: 'request_handled_by_jad' }),
+      ...inboxStatements(db, row, 'work_done', c.get('now')),
+      note.statement,
+    ]),
+  );
+  return c.json({ id, status: 'completed', partnerId: null, emergency: false });
+}
+
 export function requestActionRoutes(r: Hono<AppEnv>): void {
   r.get('/requests/:id/timeline', requireRole(...READ), timeline);
   r.get('/requests/:id/notes', requireRole(...READ), notes);
@@ -275,4 +313,5 @@ export function requestActionRoutes(r: Hono<AppEnv>): void {
   r.post('/requests/:id/reassign', requireRole('jad_admin'), reassign);
   r.post('/requests/:id/reclassify', requireRole('jad_admin'), reclassify);
   r.post('/requests/:id/cancel', requireRole('jad_admin'), cancel);
+  r.post('/requests/:id/handled', requireRole('jad_admin'), handled);
 }

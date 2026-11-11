@@ -59,6 +59,7 @@ export default function RequestPage(): ReactNode {
           <PartnerName
             name={t('req.handledBy', { name: request.partnerName })}
             verified={request.partnerVerified}
+            kind={request.partnerKind}
           />
         )}
         {arrival === null ? null : <Body>{arrival}</Body>}

@@ -8,6 +8,7 @@ import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { JOB_ACTIONS } from './jobflow.js';
 import { ROLES, STATUSES } from './lifecycle.js';
 import { requestClockSchema } from './request-clock.js';
+import { PROVIDER_KINDS } from './services.js';
 import { VISIT_SLOT_KEYS } from './visits.js';
 
 const roleContext = z.object({
@@ -139,6 +140,8 @@ const requestSummary = z.object({
   partnerName: z.string().nullable(),
   /** S8: the partner is signed and up to date with JAD+ (owners see this badge, never scorecards). */
   partnerVerified: z.boolean(),
+  /** ADR 0030: a JAD Global team shows "JAD Global team" instead of the "JAD+ verified" badge. */
+  partnerKind: z.enum(PROVIDER_KINDS).nullable(),
   arrivalWindow,
   preferredVisit,
   location: location.nullable(),

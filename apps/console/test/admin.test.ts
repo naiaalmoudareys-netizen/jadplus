@@ -121,22 +121,29 @@ describe('labels', () => {
 
 describe('request actions for JAD+ Admin (ADR 0025)', () => {
   it('E6: a request with or without a partner can be moved while it is open; never once closed', () => {
-    expect(adminRequestActions('assigned', false).reassign).toBe(true);
-    expect(adminRequestActions('submitted', false).reassign).toBe(true);
-    expect(adminRequestActions('closed', false).reassign).toBe(false);
-    expect(adminRequestActions('cancelled', true).reassign).toBe(false);
+    expect(adminRequestActions('assigned', false, true).reassign).toBe(true);
+    expect(adminRequestActions('submitted', false, true).reassign).toBe(true);
+    expect(adminRequestActions('closed', false, true).reassign).toBe(false);
+    expect(adminRequestActions('cancelled', true, true).reassign).toBe(false);
   });
 
   it('E13: only an open emergency can be reclassified as routine', () => {
-    expect(adminRequestActions('assigned', true).reclassify).toBe(true);
-    expect(adminRequestActions('assigned', false).reclassify).toBe(false);
-    expect(adminRequestActions('closed', true).reclassify).toBe(false);
+    expect(adminRequestActions('assigned', true, true).reclassify).toBe(true);
+    expect(adminRequestActions('assigned', false, true).reclassify).toBe(false);
+    expect(adminRequestActions('closed', true, true).reclassify).toBe(false);
   });
 
   it('a closed or cancelled request cannot be cancelled again', () => {
-    expect(adminRequestActions('scheduled', false).cancel).toBe(true);
-    expect(adminRequestActions('closed', false).cancel).toBe(false);
-    expect(adminRequestActions('cancelled', false).cancel).toBe(false);
+    expect(adminRequestActions('scheduled', false, true).cancel).toBe(true);
+    expect(adminRequestActions('closed', false, true).cancel).toBe(false);
+    expect(adminRequestActions('cancelled', false, true).cancel).toBe(false);
+  });
+
+  it('ADR 0030: only a waiting routine request with no provider can be marked as handled by JAD+', () => {
+    expect(adminRequestActions('submitted', false, false).handled).toBe(true);
+    expect(adminRequestActions('submitted', false, true).handled).toBe(false);
+    expect(adminRequestActions('submitted', true, false).handled).toBe(false);
+    expect(adminRequestActions('completed', false, false).handled).toBe(false);
   });
 });
 

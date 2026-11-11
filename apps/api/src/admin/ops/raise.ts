@@ -1,7 +1,7 @@
 /**
  * POST /requests (jad_admin): a routine request logged for an owner who called or came in (U8, V3; ADR 0025).
  * The unit must be one of that owner's units (C-AZ-2, JAD+'s copy from Salesforce). It is routed exactly like
- * the owner's own request (routine.ts): the service's partner with the 4-working-hour clock, or the JAD+ team.
+ * the owner's own request (routine.ts): the service's provider with its first-response clock (S4, ADR 0030).
  * raised_by_role is 'jad_admin'; raised_by_user_id is the owner, so the owner receives the request's updates
  * and can cancel it as the requester. The staff member who logged it is the 'created' event's actor and in the
  * audit log.
@@ -52,7 +52,7 @@ async function raiseOnBehalf(c: Ctx) {
     .bind(body.sfUnitId, today, today)
     .first<{ id: string }>();
   const partner = route.partner;
-  const due = reassignedDue(false, now, cal);
+  const due = reassignedDue(false, now, cal, route.service.code);
   const id = newId();
   const ref = newRef();
   const sys = { requestId: id, at: now, actorUserId: null, actorRole: 'system' as const };
@@ -75,8 +75,8 @@ async function raiseOnBehalf(c: Ctx) {
         body.description,
         partner === null ? 'submitted' : 'assigned',
         partner?.id ?? null,
-        due.at,
-        due.kind,
+        due?.at ?? null,
+        due?.kind ?? null,
         body.preferredDate,
         body.preferredSlot,
         now,

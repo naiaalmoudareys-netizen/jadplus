@@ -1,9 +1,13 @@
-/** "JAD+ verified" (S8) and the two help shortcuts: a missing unit (U1), a payment page that failed (U11). */
+/**
+ * "JAD+ verified" (S8) or "JAD Global team" (ADR 0030), and the two help shortcuts: a missing unit (U1), a
+ * payment page that failed (U11).
+ */
 import { words } from '../translate.js';
 
 export const screensHelp = words({
   en: {
     'help.verified': 'JAD+ verified',
+    'help.jadTeam': 'JAD Global team',
     'help.unitMissing': 'A residence is missing?',
     'help.unitMissingNote': 'Tell the JAD+ desk; it is usually fixed within 2 working days.',
     'help.unitMissingText': 'A residence I bought is not shown in JAD+. Project and unit number (if known): ',
@@ -13,6 +17,7 @@ export const screensHelp = words({
   },
   ar: {
     'help.verified': 'معتمد من JAD+',
+    'help.jadTeam': 'فريق JAD Global',
     'help.unitMissing': 'هل هناك وحدة غير ظاهرة؟',
     'help.unitMissingNote': 'أبلغ مكتب JAD+؛ يُحلّ ذلك عادةً خلال يومي عمل.',
     'help.unitMissingText': 'وحدة اشتريتها لا تظهر في JAD+. المشروع ورقم الوحدة (إن عُرفا): ',
@@ -22,6 +27,7 @@ export const screensHelp = words({
   },
   fr: {
     'help.verified': 'Vérifié JAD+',
+    'help.jadTeam': 'Équipe JAD Global',
     'help.unitMissing': 'Un logement manque ?',
     'help.unitMissingNote': 'Prévenez le service JAD+ ; c’est généralement réglé sous 2 jours ouvrés.',
     'help.unitMissingText':
@@ -34,6 +40,7 @@ export const screensHelp = words({
   },
   ru: {
     'help.verified': 'Проверено JAD+',
+    'help.jadTeam': 'Команда JAD Global',
     'help.unitMissing': 'Не видите свой объект?',
     'help.unitMissingNote': 'Сообщите в службу JAD+; обычно это исправляют за 2 рабочих дня.',
     'help.unitMissingText':
@@ -45,6 +52,7 @@ export const screensHelp = words({
   },
   zh: {
     'help.verified': 'JAD+ 认证',
+    'help.jadTeam': 'JAD Global 团队',
     'help.unitMissing': '有房产未显示？',
     'help.unitMissingNote': '请告知 JAD+ 服务台，通常会在 2 个工作日内处理。',
     'help.unitMissingText': '我购买的一处房产未在 JAD+ 中显示。项目和单元号（如已知）：',

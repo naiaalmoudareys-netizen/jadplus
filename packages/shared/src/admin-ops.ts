@@ -4,14 +4,14 @@
  * Pure rules (month ranges, CSV, percentages, clocks after a staff action) live here with tests.
  */
 import { z } from 'zod';
-import { addWorkingMinutes, type WorkingCalendar } from './calendar.js';
+import type { WorkingCalendar } from './calendar.js';
 import { DESK_REQUEST_TYPES, DESK_STATUSES, type DeskStatus } from './desk.js';
 import { EMERGENCY_ACK_MINUTES } from './emergency.js';
 import { ROLES, STATUSES, type Status } from './lifecycle.js';
 import { normalisePhone } from './owners.js';
 import { emailSchema, idSchema, sfIdSchema } from './schemas.js';
 import { SERVICE_CODES } from './services.js';
-import { MAINTENANCE_SLA } from './sla.js';
+import { firstResponseDue } from './service-targets.js';
 import { VISIT_SLOT_KEYS } from './visits.js';
 import { monthSchema, toCsv } from './periods.js';
 
@@ -32,16 +32,19 @@ export interface Due {
 }
 
 /**
- * E6/S6: the new partner's clock after JAD+ Admin moves a job: acknowledge an emergency, or answer in 4 working
- * hours on `cal` (E20: the holidays JAD+ Admin keeps).
+ * E6/S6/S4: the new provider's clock after JAD+ Admin moves a job (or raises one for an owner): acknowledge an
+ * emergency in 15 minutes, or the service's first-response target (service-targets.ts; maintenance: answer in 4
+ * working hours) on `cal` (E20: the holidays JAD+ Admin keeps). Null when the service has no clock (education).
  */
-export function reassignedDue(isEmergency: boolean, now: number, cal: WorkingCalendar): Due {
+export function reassignedDue(
+  isEmergency: boolean,
+  now: number,
+  cal: WorkingCalendar,
+  serviceCode = 'maintenance',
+): Due | null {
   return isEmergency
     ? { at: now + EMERGENCY_ACK_MINUTES * MIN, kind: 'emergency_ack' }
-    : {
-        at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, cal),
-        kind: 'routine_response',
-      };
+    : firstResponseDue(serviceCode, now, cal);
 }
 
 /**
@@ -144,7 +147,15 @@ export const adminTimelineResponse = z.object({
   ),
 });
 
-export const NOTE_KINDS = ['note', 'owner_called', 'reassigned', 'reclassified', 'cancelled'] as const;
+/** Mirrors the request_notes.kind CHECK list (migration 0027). handled_by_jad: ADR 0030. */
+export const NOTE_KINDS = [
+  'note',
+  'owner_called',
+  'reassigned',
+  'reclassified',
+  'cancelled',
+  'handled_by_jad',
+] as const;
 
 /** GET /api/admin/requests/:id/notes (staff only). */
 export const adminNotesResponse = z.object({

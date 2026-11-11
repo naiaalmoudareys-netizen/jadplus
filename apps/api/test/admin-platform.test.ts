@@ -47,7 +47,15 @@ describe('JAD+ Admin: services and partners', () => {
     });
     expect(maintenance?.sla.map((t) => t.metric)).toContain('emergency_ack');
     expect(list.find((s) => s.code === 'mortgage')).toMatchObject({ routing: 'coming_soon', primary: null });
-    expect(list.find((s) => s.code === 'leasing')).toMatchObject({ routing: 'jad', delivery: 'inhouse' });
+    // ADR 0030: an in-house service with no JAD Global team assigned yet is "coming soon" (P6).
+    expect(list.find((s) => s.code === 'leasing')).toMatchObject({
+      routing: 'coming_soon',
+      delivery: 'inhouse',
+      flow: 'consultation',
+      providerKind: 'jad_group',
+      firstResponse: { kind: 'first_contact', clock: 'working' },
+    });
+    expect(list.find((s) => s.code === 'education')?.firstResponse).toBeNull();
     expect((await w.h.request('/api/admin/services', { token: w.ownerToken })).status).toBe(403);
     expect((await w.h.request('/api/admin/services', { token: w.primaryToken })).status).toBe(403);
     const change = await post(w, '/api/admin/services/maintenance/listed', viewer, { listed: false });

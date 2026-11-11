@@ -11,7 +11,8 @@
  * - GET  /api/admin/settings                         versions, limits, calendar, SLA targets (read-only; the
  *                                                    holidays come from the table JAD+ Admin keeps, ADR 0028)
  * Holidays: platform/holidays.ts. Services: platform/services.ts. Buildings and contacts: platform/buildings.ts.
- * Notices, guide: platform/notices.ts. Building help lines (E12, ADR 0029): platform/lines.ts.
+ * Notices, guide: platform/notices.ts. Building help lines (E12, ADR 0029): platform/lines.ts. Adding a provider
+ * company (ADR 0030): platform/providers.ts.
  */
 import {
   canBeOnCall,
@@ -38,6 +39,7 @@ import { CHANGERS, READERS, audit } from './platform/common.js';
 import { platformHolidayRoutes } from './platform/holidays.js';
 import { platformLineRoutes } from './platform/lines.js';
 import { platformNoticeRoutes } from './platform/notices.js';
+import { platformProviderRoutes } from './platform/providers.js';
 import { platformServiceRoutes } from './platform/services.js';
 
 /** How many weeks the on-call calendar shows. */
@@ -50,6 +52,7 @@ const nameOf = (keys: Keys, userId: string, nameEnc: Uint8Array | null): Promise
 export function adminPlatformRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
   r.route('/', platformServiceRoutes());
+  r.route('/', platformProviderRoutes());
   r.route('/', platformBuildingRoutes());
   r.route('/', platformNoticeRoutes());
   r.route('/', platformHolidayRoutes());

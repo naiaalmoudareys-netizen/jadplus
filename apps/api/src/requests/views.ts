@@ -28,7 +28,7 @@ export function toLocation(row: LocationRow): UnitLocation | null {
 /** Columns for a request summary; needs `r`, LOCATION_JOIN and `LEFT JOIN partners p ON p.id = r.partner_id`. */
 // S8: a partner is "JAD+ verified" while active; the daily check suspends one whose licence or insurance lapsed (S7).
 export const SUMMARY_COLUMNS = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, p.name AS partner_name,
-  CASE WHEN p.status = 'active' THEN 1 ELSE 0 END AS partner_verified,
+  CASE WHEN p.status = 'active' THEN 1 ELSE 0 END AS partner_verified, p.kind AS partner_kind,
   (SELECT name FROM services WHERE code = r.service_code) AS service_name,
   r.arrival_window_start, r.arrival_window_end, r.preferred_date, r.preferred_slot, r.created_at, ${LOCATION_COLUMNS}`;
 
@@ -41,6 +41,7 @@ export interface SummaryRow extends LocationRow {
   status: RequestSummary['status'];
   partner_name: string | null;
   partner_verified: number;
+  partner_kind: RequestSummary['partnerKind'];
   arrival_window_start: number | null;
   arrival_window_end: number | null;
   preferred_date: string | null;
@@ -68,6 +69,7 @@ export function toSummary(r: SummaryRow): RequestSummary {
     status: r.status,
     partnerName: r.partner_name,
     partnerVerified: r.partner_name !== null && r.partner_verified === 1,
+    partnerKind: r.partner_name === null ? null : r.partner_kind,
     arrivalWindow:
       r.arrival_window_start === null || r.arrival_window_end === null
         ? null

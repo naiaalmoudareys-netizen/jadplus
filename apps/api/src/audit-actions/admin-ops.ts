@@ -4,6 +4,7 @@ export const ADMIN_OPS_ACTIONS = [
   'request_reassigned_by_jad',
   'request_reclassified',
   'request_cancelled_by_jad',
+  'request_handled_by_jad',
   'request_raised_on_behalf',
   'person_viewed',
   'person_signed_out_by_jad',

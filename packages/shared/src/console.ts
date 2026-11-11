@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { STATUSES } from './lifecycle.js';
 import { emailSchema, idSchema, phoneSchema } from './schemas.js';
+import { PROVIDER_KINDS } from './services.js';
 
 const HOUR = 3_600_000;
 
@@ -85,6 +86,8 @@ export const adminPartnersResponse = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      /** ADR 0030: an outside partner or a JAD Global team. */
+      kind: z.enum(PROVIDER_KINDS),
       status: z.enum(['active', 'suspended', 'ended']),
       statusReason: z.string().nullable(),
       technicians: z.number().int(),

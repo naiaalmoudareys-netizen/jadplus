@@ -1,13 +1,16 @@
 /**
- * JAD+ Admin's changes to a request (ADR 0025): move it to another partner (E6, S6: the new partner's clock
- * starts now), reclassify an open emergency as routine (E13), or cancel it. Each needs a reason, kept as an
- * internal note and in the audit log. Only the changes the lifecycle allows now are offered.
+ * JAD+ Admin's changes to a request (ADR 0025, 0030): move it to another provider of the kind the service takes
+ * (E6, S6: the new provider's clock starts now), reclassify an open emergency as routine (E13), cancel it, or
+ * mark an old in-house request nobody could take as handled by JAD+ (the resident is asked to confirm). Each
+ * needs a reason, kept as an internal note and in the audit log. Only the changes the rules allow now are offered.
  */
 import {
+  SERVICES,
   adminPartnersResponse,
   adminReasonBody,
   adminReassignBody,
   adminRequestActionResponse,
+  providerKindFor,
   type RequestDetail,
 } from '@jadplus/shared';
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
@@ -17,16 +20,44 @@ import { useAction } from '../../ui/actions';
 import { useConsole, useLoad } from '../../ui/hooks';
 import { Loaded, Notice, ReasonForm, Section } from '../../ui/parts';
 
-type Open = 'reassign' | 'reclassify' | 'cancel' | null;
+type Open = 'reassign' | 'reclassify' | 'cancel' | 'handled' | null;
+type ReasonStep = Exclude<Open, 'reassign' | null>;
+
+const REASON_FORM: Readonly<
+  Record<ReasonStep, { label: string; submit: string; explain: string; done: string }>
+> = {
+  reclassify: {
+    label: 'Why is this not an emergency?',
+    submit: 'Reclassify as routine',
+    explain:
+      'E13: the emergency clocks stop; a request not yet answered gets the routine 4-working-hour clock.',
+    done: 'The request is now routine: the routine clock applies.',
+  },
+  cancel: {
+    label: 'Why cancel?',
+    submit: 'Cancel the request',
+    explain: 'The request closes as cancelled by JAD+. Booked visits are called off.',
+    done: 'The request was cancelled.',
+  },
+  handled: {
+    label: 'How did JAD+ handle it?',
+    submit: 'Mark as handled by JAD+',
+    explain:
+      'For a request raised before JAD Global teams took in-house services. It moves to "work done"; the resident is asked to confirm, and it closes by itself after 72 hours.',
+    done: 'The request is marked as handled. The resident is asked to confirm.',
+  },
+};
 
 function Reassign({
   id,
   current,
+  serviceName,
   onDone,
   onCancel,
 }: {
   id: string;
   current: string | null;
+  serviceName: string | null;
   onDone: (message: string) => void;
   onCancel: () => void;
 }): ReactNode {
@@ -47,12 +78,18 @@ function Reassign({
   return (
     <Loaded state={state} reload={reload}>
       {({ partners }) => {
-        const choices = partners.filter((p) => p.status === 'active' && p.name !== current);
+        // ADR 0030: JAD Global teams for an in-house service, outside partners for the others.
+        const delivery = SERVICES.find((s) => s.name === serviceName)?.delivery;
+        const kind = delivery === undefined ? null : providerKindFor(delivery);
+        const choices = partners.filter(
+          (p) => p.status === 'active' && p.name !== current && (kind === null || p.kind === kind),
+        );
         return (
           <form className="inline-form" onSubmit={save}>
             <p className="hint">
-              Booked visits are called off and a waiting quote is withdrawn. The new partner must acknowledge
-              an emergency within 15 minutes, or answer a routine request within 4 working hours.
+              Booked visits are called off and a waiting quote is withdrawn. The new provider must acknowledge
+              an emergency within 15 minutes, or meet the service’s first deadline (4 working hours for
+              maintenance).
             </p>
             <label className="field">
               <span className="label">Move to</span>
@@ -105,22 +142,18 @@ export function RequestActions({ d, onChanged }: { d: RequestDetail; onChanged: 
   const { api } = useConsole();
   const [open, setOpen] = useState<Open>(null);
   const [done, setDone] = useState<string | null>(null);
-  const allowed = adminRequestActions(d.request.status, d.request.emergency);
-  if (!allowed.reassign && !allowed.reclassify && !allowed.cancel) return null;
+  const allowed = adminRequestActions(d.request.status, d.request.emergency, d.request.partnerName !== null);
+  if (!allowed.reassign && !allowed.reclassify && !allowed.cancel && !allowed.handled) return null;
   const finish = (message: string): void => {
     setOpen(null);
     setDone(message);
     onChanged();
   };
-  const withReason = (step: 'reclassify' | 'cancel') => async (reason: string) => {
+  const withReason = (step: ReasonStep) => async (reason: string) => {
     const body = adminReasonBody.safeParse({ reason });
     if (!body.success) throw new ApiError('Give a reason of at least 3 characters.', 400);
     await api.post(apiPath('admin', 'requests', d.request.id, step), body.data, adminRequestActionResponse);
-    finish(
-      step === 'cancel'
-        ? 'The request was cancelled.'
-        : 'The request is now routine: the routine clock applies.',
-    );
+    finish(REASON_FORM[step].done);
   };
   return (
     <Section title="JAD+ actions">
@@ -160,11 +193,23 @@ export function RequestActions({ d, onChanged }: { d: RequestDetail; onChanged: 
               Cancel the request
             </button>
           ) : null}
+          {allowed.handled ? (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                setOpen('handled');
+              }}
+            >
+              Mark as handled by JAD+
+            </button>
+          ) : null}
         </div>
       ) : open === 'reassign' ? (
         <Reassign
           id={d.request.id}
           current={d.request.partnerName}
+          serviceName={d.request.serviceName}
           onDone={finish}
           onCancel={() => {
             setOpen(null);
@@ -172,14 +217,10 @@ export function RequestActions({ d, onChanged }: { d: RequestDetail; onChanged: 
         />
       ) : (
         <ReasonForm
-          label={open === 'cancel' ? 'Why cancel?' : 'Why is this not an emergency?'}
-          submitLabel={open === 'cancel' ? 'Cancel the request' : 'Reclassify as routine'}
+          label={REASON_FORM[open].label}
+          submitLabel={REASON_FORM[open].submit}
           minLength={3}
-          explain={
-            open === 'cancel'
-              ? 'The request closes as cancelled by JAD+. Booked visits are called off.'
-              : 'E13: the emergency clocks stop; a request not yet answered gets the routine 4-working-hour clock.'
-          }
+          explain={REASON_FORM[open].explain}
           onSubmit={withReason(open)}
           onCancel={() => {
             setOpen(null);

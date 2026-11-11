@@ -3,8 +3,8 @@
  * holidays; routine clocks count working minutes only. While a request is on hold (parts/access, A6) or
  * waiting for the owner, the clock is paused (lifecycle.ts clockPaused).
  *
- * Service-specific milestones (snagging, leasing, valuation, mortgage, Golden Visa, furnishing, interior,
- * education) are added when those services are wired to the catalogue (phase C/D).
+ * Each service's first deadline (first contact, booking, report, quote) is in service-targets.ts (ADR 0030);
+ * later milestones of the report and consultation flows follow with those flows.
  */
 import { addWorkingMinutes, workingMinutesBetween, type WorkingCalendar } from './calendar.js';
 import { EMERGENCY_ACK_MINUTES, EMERGENCY_ON_SITE_MINUTES } from './emergency.js';
@@ -29,7 +29,7 @@ export interface SlaTarget {
 }
 
 /** Working day length (09:00-18:00) used to turn "working days" into working minutes. */
-const WORKING_DAY_MINUTES = 9 * 60;
+export const WORKING_DAY_MINUTES = 9 * 60;
 
 /** S4 maintenance targets, as proposed in the plan (p.10). */
 export const MAINTENANCE_SLA = {

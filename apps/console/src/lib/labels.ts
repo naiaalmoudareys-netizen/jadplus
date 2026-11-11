@@ -154,6 +154,7 @@ export const NOTE_KIND_LABELS: Readonly<Record<string, string>> = {
   reassigned: 'Moved to another partner',
   reclassified: 'Reclassified',
   cancelled: 'Cancelled',
+  handled_by_jad: 'Handled by JAD+',
 };
 
 export function label<K extends string>(labels: Readonly<Partial<Record<K, string>>>, code: K): string {

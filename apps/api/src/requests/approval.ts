@@ -7,7 +7,7 @@
  * clock starting at the approval (S4). Decline: the request closes as "owner declined". The tenant is told
  * either way (in-app). Only the owner of the unit, only while the request waits (jobflow.ts).
  */
-import { MAINTENANCE_SLA, addWorkingMinutes, approvalBody, requestIdParam } from '@jadplus/shared';
+import { approvalBody, firstResponseDue, requestIdParam } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
@@ -52,14 +52,15 @@ export function approvalRoutes(): Hono<AppEnv> {
       .first<{ service_code: string }>();
     const route = service === null ? null : await routeService(db, service.service_code);
     const partner = route?.partner ?? null;
-    const due = addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, await loadCalendar(db));
+    // S4: the service's first deadline, from the owner's approval (ADR 0030; tenants request repairs only).
+    const due = firstResponseDue(service?.service_code ?? 'maintenance', now, await loadCalendar(db));
     const sys = { requestId: id, at: now, actorUserId: null, actorRole: 'system' as const };
     await withConflictCheck(() =>
       db.batch([
         // The owner's step (awaiting_owner -> submitted), then the system hands it to the partner.
         ...changeStatements(c, row, {
           to: 'submitted',
-          nextDue: { at: due, kind: 'routine_response' },
+          nextDue: due,
           audit: 'request_approved_by_owner',
         }),
         ...(partner === null

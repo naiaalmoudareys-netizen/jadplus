@@ -5,7 +5,8 @@
  * - GET  /api/admin/attention           everything late or waiting for JAD+, most urgent first
  * - GET  /api/admin/requests?q=&status= search by reference, unit or partner (the request page itself is
  *                                       GET /api/requests/:id, which JAD+ staff may read)
- * - GET  /api/admin/partners            partners with status, documents, team size and open jobs
+ * - GET  /api/admin/partners            partners (outside or JAD Global teams, ADR 0030) with status, documents,
+ *                                       team size and open jobs. Adding one: platform/providers.ts
  * - POST /api/admin/partners/:id/status suspend or reinstate a partner, with the reason
  */
 import {
@@ -23,6 +24,7 @@ import {
   type AttentionKind,
   type EmergencyType,
   type OnCallPosition,
+  type ProviderKind,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -209,7 +211,7 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
     const open = [...OPEN_STATUSES];
     const { results } = await db
       .prepare(
-        `SELECT p.id, p.name, p.status, p.status_reason,
+        `SELECT p.id, p.name, p.kind, p.status, p.status_reason,
            (SELECT count(*) FROM technicians t WHERE t.partner_id = p.id AND t.status = 'active') AS technicians,
            (SELECT count(*) FROM requests r WHERE r.partner_id = p.id AND r.status IN (${open.map(() => '?').join(', ')}))
              AS open_jobs
@@ -219,6 +221,7 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
       .all<{
         id: string;
         name: string;
+        kind: ProviderKind;
         status: 'active' | 'suspended' | 'ended';
         status_reason: string | null;
         technicians: number;
@@ -233,6 +236,7 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
       partners: results.map((p) => ({
         id: p.id,
         name: p.name,
+        kind: p.kind,
         status: p.status,
         statusReason: p.status_reason,
         technicians: p.technicians,

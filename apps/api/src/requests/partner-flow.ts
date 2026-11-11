@@ -53,7 +53,7 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
       throw new ApiError(400, 'Choose a window of 30 minutes to 4 hours within the next 30 days.');
     }
     const visitId = newId();
-    const first = firstResponseStatement(c, row);
+    const first = firstResponseStatement(c, row, 'visit');
     await withConflictCheck(() =>
       db.batch([
         ...changeStatements(c, row, {
@@ -114,7 +114,7 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
     const quoteId = newId();
     const revision = state.quotesSent + 1;
     const scope = maskContactDetails(body.scope).text.slice(0, 2000);
-    const first = firstResponseStatement(c, row);
+    const first = firstResponseStatement(c, row, 'quote');
     await withConflictCheck(() =>
       db.batch([
         ...changeStatements(c, row, {

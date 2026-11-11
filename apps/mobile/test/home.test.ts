@@ -21,6 +21,7 @@ const req = (over: Partial<RequestSummary>): RequestSummary => ({
   status: 'assigned',
   partnerName: 'Demo Fixers LLC',
   partnerVerified: true,
+  partnerKind: 'external',
   arrivalWindow: null,
   preferredVisit: null,
   location: null,

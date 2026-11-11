@@ -21,7 +21,9 @@ export function RequestRow({ r, onPress }: { r: RequestSummary; onPress: () => v
         <Text style={styles.ref}>{r.ref}</Text>
       </View>
       <Text style={styles.status}>{residentStatusLabel(r.status, t)}</Text>
-      {r.partnerName === null ? null : <PartnerName name={r.partnerName} verified={r.partnerVerified} />}
+      {r.partnerName === null ? null : (
+        <PartnerName name={r.partnerName} verified={r.partnerVerified} kind={r.partnerKind} />
+      )}
       {arrival === null ? null : <Text style={styles.status}>{arrival}</Text>}
       <Text style={styles.place}>{placeLabel(r.location, t)}</Text>
     </Pressable>

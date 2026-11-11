@@ -1,27 +1,43 @@
 /**
- * Small shared pieces: the partner's name with the "JAD+ verified" badge (S8: owners see the name and the badge,
- * never scorecards), and a "talk to a person" link that opens a JAD+ desk request with the words filled in
- * (U1 missing residence, U11 payment page failed).
+ * Small shared pieces: the provider's name with the "JAD+ verified" badge (S8: owners see the name and the badge,
+ * never scorecards), or "JAD Global team" for one of the group's own teams (ADR 0030), and a "talk to a person"
+ * link that opens a JAD+ desk request with the words filled in (U1 missing residence, U11 payment page failed).
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import type { ProviderKind } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MessageKey } from '../i18n/dictionary.js';
 import { useI18n, useT } from '../i18n/I18nProvider.js';
+import { providerBadge } from '../requests/provider.js';
 import { colors, fonts, radius, space } from './theme.js';
 
-export function PartnerName({ name, verified }: { name: string; verified: boolean }): ReactNode {
+export function PartnerName({
+  name,
+  verified,
+  kind,
+}: {
+  name: string;
+  verified: boolean;
+  kind: ProviderKind | null;
+}): ReactNode {
   const t = useT();
+  const badge = providerBadge(kind, verified);
+  const text = badge === 'jad_team' ? t('help.jadTeam') : t('help.verified');
   return (
     <View style={styles.partner}>
       <Text style={styles.name}>{name}</Text>
-      {verified ? (
-        <View style={styles.badge} accessibilityLabel={t('help.verified')}>
-          <Ionicons name="shield-checkmark" size={13} color={colors.ok} />
-          <Text style={styles.badgeText}>{t('help.verified')}</Text>
+      {badge === null ? null : (
+        <View style={styles.badge} accessibilityLabel={text}>
+          <Ionicons
+            name={badge === 'jad_team' ? 'business' : 'shield-checkmark'}
+            size={13}
+            color={colors.ok}
+          />
+          <Text style={styles.badgeText}>{text}</Text>
         </View>
-      ) : null}
+      )}
     </View>
   );
 }

@@ -1,6 +1,7 @@
 /**
  * Demo data for a developer's LOCAL database only (never preview or production): a fictional partner with
- * one technician, a fictional owner with two units, fictional building help lines (E12), and one open demo
+ * one technician, two fictional JAD Global teams (ADR 0030) with an office admin and one team member each, every
+ * service assigned to a provider so the whole catalogue is live, a fictional owner with two units, fictional building help lines (E12), and one open demo
  * emergency (added only when none is open; older ones and kinds no longer offered are closed, ADR 0017), so the
  * app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
  *
@@ -52,6 +53,51 @@ async function line(
   VALUES (${text(id)}, ${text(project)}, '', ${text(kind)}, ${phoneEnc}, ${text(hours)}, ${now}, 'demo-admin');`;
 }
 
+/**
+ * ADR 0030: the in-house services each fictional JAD Global team takes, and the partner services the demo partner
+ * takes besides maintenance, so every service is live in the demo.
+ */
+const TEAMS = [
+  {
+    id: 'demo-harbor-re',
+    name: 'Harbor Real Estate (demo)',
+    office: ['demo-harbor-re-office', 'harbor.re.demo@jadplus.ae', 'Harbor RE Office Demo'],
+    member: ['demo-harbor-re-member', 'harbor.re.team.demo@jadplus.ae', 'Harbor RE Agent Demo'],
+    services: ['leasing', 'resale', 'valuation', 'education'],
+  },
+  {
+    id: 'demo-harbor-pm',
+    name: 'Harbor Property Management (demo)',
+    office: ['demo-harbor-pm-office', 'harbor.pm.demo@jadplus.ae', 'Harbor PM Office Demo'],
+    member: ['demo-harbor-pm-member', 'harbor.pm.team.demo@jadplus.ae', 'Harbor PM Manager Demo'],
+    services: ['handover', 'property-management'],
+  },
+] as const;
+const PARTNER_SERVICES = ['snagging', 'mortgage', 'furnishing', 'interior-design', 'golden-visa'] as const;
+
+async function team(t: (typeof TEAMS)[number]): Promise<string[]> {
+  const [officeId, officeEmail, officeName] = t.office;
+  const [memberId, memberEmail, memberName] = t.member;
+  return [
+    await user(officeId, officeEmail, officeName),
+    await user(memberId, memberEmail, memberName),
+    `INSERT OR IGNORE INTO partners (id, name, kind, created_at, updated_at)
+      VALUES (${text(t.id)}, ${text(t.name)}, 'jad_group', ${now}, ${now});`,
+    `INSERT OR IGNORE INTO user_roles (id, user_id, role, partner_id, granted_at) VALUES
+      (${text(`${officeId}-grant`)}, ${text(officeId)}, 'partner_admin', ${text(t.id)}, ${now}),
+      (${text(`${memberId}-grant`)}, ${text(memberId)}, 'partner', ${text(t.id)}, ${now});`,
+    `INSERT OR IGNORE INTO technicians (id, partner_id, user_id, created_at)
+      VALUES (${text(`${memberId}-tech`)}, ${text(t.id)}, ${text(memberId)}, ${now});`,
+    `INSERT OR IGNORE INTO partner_documents (id, partner_id, kind, r2_key, expires_on, uploaded_at, uploaded_by) VALUES
+      (${text(`${t.id}-licence`)}, ${text(t.id)}, 'trade_licence', ${text(`demo/${t.id}/licence.pdf`)}, '2027-12-31', ${now}, 'demo-admin'),
+      (${text(`${t.id}-insurance`)}, ${text(t.id)}, 'insurance', ${text(`demo/${t.id}/insurance.pdf`)}, '2027-12-31', ${now}, 'demo-admin');`,
+    ...t.services.map(
+      (code) => `INSERT OR IGNORE INTO service_partners (id, service_code, partner_id, rank, started_at)
+      VALUES (${text(`demo-sp-${code}`)}, ${text(code)}, ${text(t.id)}, 'primary', ${now});`,
+    ),
+  ];
+}
+
 const UNIT = 'a0XDEMO0000000001A';
 const UNIT_2 = 'a0XDEMO0000000002A';
 const OPEN = "status NOT IN ('closed', 'cancelled')";
@@ -74,6 +120,11 @@ const sql = [
   `INSERT OR IGNORE INTO partner_documents (id, partner_id, kind, r2_key, expires_on, uploaded_at, uploaded_by) VALUES
     ('demo-doc-1', 'demo-partner', 'trade_licence', 'demo/licence.pdf', '2027-12-31', ${now}, 'demo-owner'),
     ('demo-doc-2', 'demo-partner', 'insurance', 'demo/insurance.pdf', '2027-12-31', ${now}, 'demo-owner');`,
+  ...PARTNER_SERVICES.map(
+    (code) => `INSERT OR IGNORE INTO service_partners (id, service_code, partner_id, rank, started_at)
+    VALUES (${text(`demo-sp-${code}`)}, ${text(code)}, 'demo-partner', 'primary', ${now});`,
+  ),
+  ...(await Promise.all(TEAMS.map(team))).flat(),
   // The same two units as the demo owner portal (src/portal/demo.ts), so My unit and New request agree.
   `INSERT INTO owner_units (user_id, sf_unit_id, sf_deal_id, unit_name, project, building, address, deal_role, synced_at)
     VALUES ('demo-owner', '${UNIT}', '006DEMO0000000001A', '1204-J188', 'J188', NULL, 'Al Jaddaf, Dubai', 'Buyer', ${now}),

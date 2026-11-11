@@ -1,6 +1,7 @@
 /** Audit actions for JAD+ Admin platform settings (ADR 0025). Each module owns its list; audit.ts joins them. */
 export const ADMIN_PLATFORM_ACTIONS = [
   'service_partners_set',
+  'provider_added',
   'service_listed_changed',
   'building_contact_added',
   'building_contact_removed',

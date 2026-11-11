@@ -1,5 +1,6 @@
 /**
- * JAD+ Admin "Partners" (ADR 0023, 0025; S6, S7, S9, P3): each partner's standing, team size, open jobs and
+ * JAD+ Admin "Partners" (ADR 0023, 0025, 0030; S6, S7, S9, S10, P3): each provider company (outside partner or
+ * JAD Global team, shown as a tag; JAD+ Admin adds new ones), its standing, team size, open jobs and
  * documents (red when lapsed or missing, amber within 30 days), what waits for JAD+'s decision (uploaded
  * documents, rate-card changes), and the review list from the daily check. JAD+ Admin suspends or reinstates
  * with a reason, which is audited; a viewer only reads. Each partner opens its own page.
@@ -10,10 +11,12 @@ import type { z } from 'zod';
 import { ApiError, apiPath } from '../lib/api';
 import { documentLines } from '../lib/documents';
 import { partnerStatusChangedResponse } from '../lib/schemas';
+import { PROVIDER_KIND_LABELS } from '../lib/providers';
 import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, Notice, PageHeader, ReasonForm, Tag } from '../ui/parts';
 import { SortHeader, useSort } from '../ui/table';
+import { AddProvider } from './partner/AddProvider';
 import { PendingDecisions } from './partner/Pending';
 import { PartnerReview } from './PartnerReview';
 
@@ -123,6 +126,9 @@ function PartnerTable({
                 <Link to={{ name: 'partner', id: p.id }}>
                   <strong>{p.name}</strong>
                 </Link>
+                <span className="block">
+                  <Tag tone={PROVIDER_KIND_LABELS[p.kind].tone}>{PROVIDER_KIND_LABELS[p.kind].label}</Tag>
+                </span>
               </td>
               <td>
                 <Tag tone={standing.tone}>{standing.label}</Tag>
@@ -161,6 +167,14 @@ export function Partners(): ReactNode {
     <>
       <PageHeader eyebrow="JAD+ Admin" title="Partners" />
       {done === null ? null : <Notice tone="good">{done}</Notice>}
+      {editable ? (
+        <AddProvider
+          onAdded={(message) => {
+            setDone(message);
+            reload();
+          }}
+        />
+      ) : null}
       <PendingDecisions />
       <Loaded state={state} reload={reload}>
         {({ partners }) => (

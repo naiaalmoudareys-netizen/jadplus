@@ -95,6 +95,13 @@ const DUE_KIND_LABELS: Readonly<Record<string, string>> = {
   routine_visit: 'Visit the unit',
   quote_after_visit: 'Send the quote',
   rebook_after_no_access: 'Book a new visit after no access',
+  // S4: each service's first deadline (ADR 0030, packages/shared service-targets.ts).
+  snagging_booking: 'Book the inspection',
+  first_contact: 'Contact the owner',
+  valuation_report: 'Send the valuation report',
+  eligibility_answer: 'Answer on eligibility',
+  service_quote: 'Send the quote',
+  design_proposal: 'Send the design proposal',
 };
 
 export function dueKindText(kind: string): string {

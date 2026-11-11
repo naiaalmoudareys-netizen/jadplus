@@ -19,7 +19,7 @@ import {
   TERMS_VERSION,
 } from './preferences.js';
 import { emailSchema, idSchema, phoneSchema } from './schemas.js';
-import { SERVICE_CODES, SERVICE_GROUPS } from './services.js';
+import { PROVIDER_KINDS, SERVICE_CODES, SERVICE_FLOWS, SERVICE_GROUPS } from './services.js';
 import { MAINTENANCE_SLA, SLA_METRICS, type SlaTarget } from './sla.js';
 
 /** V1: what a building notice is about. Mirrors the CHECK list in migration 0020. */
@@ -216,6 +216,7 @@ const partnerRef = z.object({
   id: z.string(),
   name: z.string(),
   status: z.enum(['active', 'suspended', 'ended']),
+  kind: z.enum(PROVIDER_KINDS),
 });
 
 /** GET /api/admin/services. */
@@ -226,6 +227,9 @@ export const adminServicesResponse = z.object({
       name: z.string(),
       group: z.enum(SERVICE_GROUPS),
       delivery: z.enum(['partner', 'inhouse']),
+      flow: z.enum(SERVICE_FLOWS),
+      /** ADR 0030: the kind of provider it takes (outside partners, or JAD Global teams for in-house). */
+      providerKind: z.enum(PROVIDER_KINDS),
       listed: z.boolean(),
       /** Who would take a new request now (S2, S3); an unlisted service takes none. */
       routing: z.enum(['partner', 'jad', 'coming_soon']),
@@ -233,6 +237,11 @@ export const adminServicesResponse = z.object({
       backup: partnerRef.nullable(),
       sla: z.array(slaTargetView),
       plannedSla: z.string().nullable(),
+      /** S4: the first deadline of a new request (service-targets.ts); null = no clock (education). */
+      firstResponse: slaTargetView
+        .omit({ metric: true })
+        .extend({ kind: z.string(), text: z.string() })
+        .nullable(),
     }),
   ),
 });

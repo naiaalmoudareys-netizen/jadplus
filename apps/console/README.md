@@ -46,6 +46,8 @@ You need two windows, both started from the repository folder (`C:\dev\jadplus`)
 4. Open http://localhost:5173 and sign in with a demo account:
    - `admin.demo@jadplus.ae`: JAD+ Admin
    - `office.demo@jadplus.ae`: Partner office of the demo partner
+   - `harbor.re.demo@jadplus.ae`, `harbor.pm.demo@jadplus.ae`: offices of the two demo JAD Global teams
+     (Harbor Real Estate, Harbor Property Management; ADR 0030)
 
    No email is sent locally: the 6-digit code is printed in the API window.
 

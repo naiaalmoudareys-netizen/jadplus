@@ -6,6 +6,7 @@
 import type {
   DispatchPartner,
   NotificationTemplate,
+  ProviderKind,
   RequestFacts,
   Role,
   Status,
@@ -107,6 +108,8 @@ export function notificationStatement(
 
 export interface ServicePartner extends DispatchPartner {
   readonly name: string;
+  /** ADR 0030: an outside partner or a JAD Global team. */
+  readonly kind: ProviderKind;
 }
 
 /** The current primary and backup partner of a service (S3). */
@@ -116,14 +119,20 @@ export async function servicePartners(
 ): Promise<{ primary: ServicePartner | null; backup: ServicePartner | null }> {
   const { results } = await db
     .prepare(
-      `SELECT sp.rank, p.id, p.name, p.status FROM service_partners sp JOIN partners p ON p.id = sp.partner_id
+      `SELECT sp.rank, p.id, p.name, p.status, p.kind FROM service_partners sp JOIN partners p ON p.id = sp.partner_id
        WHERE sp.service_code = ? AND sp.ended_at IS NULL`,
     )
     .bind(serviceCode)
-    .all<{ rank: 'primary' | 'backup'; id: string; name: string; status: ServicePartner['status'] }>();
+    .all<{
+      rank: 'primary' | 'backup';
+      id: string;
+      name: string;
+      status: ServicePartner['status'];
+      kind: ProviderKind;
+    }>();
   const pick = (rank: 'primary' | 'backup') => {
     const row = results.find((r) => r.rank === rank);
-    return row === undefined ? null : { id: row.id, name: row.name, status: row.status };
+    return row === undefined ? null : { id: row.id, name: row.name, status: row.status, kind: row.kind };
   };
   return { primary: pick('primary'), backup: pick('backup') };
 }

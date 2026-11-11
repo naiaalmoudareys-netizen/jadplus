@@ -3,7 +3,13 @@
  * the history event and the audit entry, as statements for one atomic batch. The routine first-response SLA
  * (S4, S5) is recorded the first time the partner answers a routine request.
  */
-import { slaMet, type CloseReason, type Status } from '@jadplus/shared';
+import {
+  firstResponseMetric,
+  slaMet,
+  type CloseReason,
+  type FirstAnswer,
+  type Status,
+} from '@jadplus/shared';
 import type { Context } from 'hono';
 import { auditStatement, type AuditAction } from '../audit.js';
 import { newId } from '../crypto.js';
@@ -77,15 +83,30 @@ export function changeStatements(c: Ctx, row: FlowRow, change: Change): D1Prepar
   return statements;
 }
 
-/** S4/S5: the partner's first answer to a routine request (a visit or a quote), measured once. */
-export function firstResponseStatement(c: Ctx, row: FlowRow): D1PreparedStatement | null {
-  if (row.next_due_kind !== 'routine_response' || row.next_due_at === null || row.partner_id === null) {
-    return null;
-  }
+/**
+ * S4/S5: the provider's first answer to a routine request (a visit or a quote), measured once against the
+ * service's first deadline when that answer meets it (firstResponseMetric; ADR 0030).
+ */
+export function firstResponseStatement(
+  c: Ctx,
+  row: FlowRow,
+  answer: FirstAnswer,
+): D1PreparedStatement | null {
+  const metric = firstResponseMetric(row.next_due_kind, answer);
+  if (metric === null || row.next_due_at === null || row.partner_id === null) return null;
   const now = c.get('now');
   const met = slaMet(row.next_due_at, now);
   return c.env.DB.prepare(
     `INSERT OR IGNORE INTO sla_outcomes (id, request_id, partner_id, metric, due_at, met_at, outcome, recorded_at)
-     VALUES (?, ?, ?, 'routine_response', ?, ?, ?, ?)`,
-  ).bind(newId(), row.id, row.partner_id, row.next_due_at, met ? now : null, met ? 'met' : 'missed', now);
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    newId(),
+    row.id,
+    row.partner_id,
+    metric,
+    row.next_due_at,
+    met ? now : null,
+    met ? 'met' : 'missed',
+    now,
+  );
 }

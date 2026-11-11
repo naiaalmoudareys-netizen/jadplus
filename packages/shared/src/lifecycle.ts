@@ -81,7 +81,7 @@ const TRANSITIONS: Readonly<Partial<Record<Role, TransitionTable>>> = {
   },
   jad_admin: {
     awaiting_owner: ['submitted', 'cancelled'], // after calling the owner (A1, 48 h)
-    submitted: ['assigned', 'cancelled'],
+    submitted: ['assigned', 'cancelled', 'completed'], // completed: "handled by JAD+" (ADR 0030)
     assigned: ['assigned', 'scheduled', 'on_hold', 'cancelled', 'closed'],
     quote_sent: ['assigned', 'on_hold', 'cancelled', 'closed'],
     scheduled: ['assigned', 'in_progress', 'on_hold', 'cancelled'],

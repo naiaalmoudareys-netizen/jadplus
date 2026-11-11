@@ -1,13 +1,18 @@
 /**
- * Services and their partners (S1-S4; ADR 0025).
- * - GET  /api/admin/services                  the 12 services: listed, delivery, routing now, partners, SLA
- * - POST /api/admin/services/:code/partners   set the primary and backup partner (S3)
+ * Services and their providers (S1-S4, P6; ADR 0025, 0030).
+ * - GET  /api/admin/services                  the 12 services: listed, delivery, flow, routing now, providers,
+ *                                             SLA targets and the first deadline of a new request (S4)
+ * - POST /api/admin/services/:code/partners   set the primary and backup provider (S3): outside partners for a
+ *                                             partner service, JAD Global teams for an in-house one (ADR 0030)
  * - POST /api/admin/services/:code/listed     show or hide a service in the app (S1, S2)
- * Requests already raised keep their partner; the change applies to new requests and escalations.
+ * Requests already raised keep their provider; the change applies to new requests and escalations.
  */
 import {
   changedRanks,
   choosePartner,
+  firstResponseTarget,
+  providerFits,
+  providerKindFor,
   serviceCodeParam,
   serviceListedBody,
   servicePartnersBody,
@@ -15,6 +20,8 @@ import {
   serviceSlaTargets,
   type AdminServices,
   type PartnerRank,
+  type ProviderKind,
+  type ServiceFlow,
   type ServiceGroup,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
@@ -44,25 +51,35 @@ interface ServiceRow {
   name: string;
   grp: ServiceGroup;
   delivery: 'partner' | 'inhouse';
+  flow: ServiceFlow;
   listed: number;
 }
 
 async function loadService(db: D1Database, code: string): Promise<ServiceRow> {
   const row = await db
-    .prepare('SELECT code, name, grp, delivery, listed FROM services WHERE code = ?')
+    .prepare('SELECT code, name, grp, delivery, flow, listed FROM services WHERE code = ?')
     .bind(code)
     .first<ServiceRow>();
   if (row === null) throw new ApiError(404, 'Not found.');
   return row;
 }
 
-async function requireActivePartner(db: D1Database, id: string | null): Promise<void> {
+/** An active provider of the kind the service takes (ADR 0030), or 422. */
+async function requireFittingProvider(db: D1Database, service: ServiceRow, id: string | null): Promise<void> {
   if (id === null) return;
   const row = await db
-    .prepare('SELECT status FROM partners WHERE id = ?')
+    .prepare('SELECT status, kind FROM partners WHERE id = ?')
     .bind(id)
-    .first<{ status: string }>();
+    .first<{ status: string; kind: ProviderKind }>();
   if (row?.status !== 'active') throw new ApiError(422, 'Choose an active partner.');
+  if (!providerFits(service.delivery, row.kind)) {
+    throw new ApiError(
+      422,
+      service.delivery === 'inhouse'
+        ? 'This service is delivered by a JAD Global team: choose one.'
+        : 'This service is delivered by an outside partner: choose one.',
+    );
+  }
 }
 
 export function platformServiceRoutes(): Hono<AppEnv> {
@@ -71,23 +88,32 @@ export function platformServiceRoutes(): Hono<AppEnv> {
   r.get('/services', requireRole(...READERS), async (c) => {
     const db = c.env.DB;
     const { results } = await db
-      .prepare('SELECT code, name, grp, delivery, listed FROM services ORDER BY sort_order, name')
+      .prepare('SELECT code, name, grp, delivery, flow, listed FROM services ORDER BY sort_order, name')
       .all<ServiceRow>();
     const services: AdminServices['services'] = [];
     for (const s of results) {
       const { primary, backup } = await servicePartners(db, s.code);
-      const takes = s.delivery === 'partner' ? choosePartner(primary, backup) : null;
+      const fit = <P extends { kind: ProviderKind }>(p: P | null) =>
+        p !== null && providerFits(s.delivery, p.kind) ? p : null;
+      const takes = choosePartner(fit(primary), fit(backup));
+      const first = firstResponseTarget(s.code);
       services.push({
         code: s.code,
         name: s.name,
         group: s.grp,
         delivery: s.delivery,
+        flow: s.flow,
+        providerKind: providerKindFor(s.delivery),
         listed: s.listed === 1,
         routing: serviceRouting(s.delivery, takes !== null),
         primary,
         backup,
         sla: [...serviceSlaTargets(s.code)],
         plannedSla: PLANNED_SLA[s.code] ?? null,
+        firstResponse:
+          first === null
+            ? null
+            : { kind: first.kind, minutes: first.minutes, clock: first.clock, text: first.text },
       });
     }
     return c.json({ services });
@@ -99,10 +125,8 @@ export function platformServiceRoutes(): Hono<AppEnv> {
     const db = c.env.DB;
     const now = c.get('now');
     const service = await loadService(db, code);
-    if (service.delivery !== 'partner')
-      throw new ApiError(422, 'This service is delivered by the JAD+ team.');
-    await requireActivePartner(db, body.primaryId);
-    await requireActivePartner(db, body.backupId);
+    await requireFittingProvider(db, service, body.primaryId);
+    await requireFittingProvider(db, service, body.backupId);
     const current = await servicePartners(db, code);
     const next: Record<PartnerRank, string | null> = { primary: body.primaryId, backup: body.backupId };
     const ranks = changedRanks(

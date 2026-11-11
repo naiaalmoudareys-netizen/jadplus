@@ -1,24 +1,27 @@
 /**
  * Routine (non-emergency) requests (BUILD_SPEC S1-S4, R1, R2, A1, U6; ADR 0012, 0021).
  *
- * - GET  /api/services   the 12-service catalogue, each with who takes a request now: its partner, the JAD+
- *                        team, or nobody yet ("coming soon", S2: no promise)
+ * - GET  /api/services   the 12-service catalogue, each with its flow (ADR 0030) and who takes a request now:
+ *                        its outside partner, its JAD Global team, or nobody yet ("coming soon", S2, P6)
  * - POST /api/requests   an owner raises a request for one of their units, or a tenant for their current home.
- *                        An owner's request goes straight to the service's partner (primary, or backup when the
- *                        primary is suspended) with the 4-working-hour response clock (S4), or to the JAD+ team.
+ *                        An owner's request goes straight to the service's provider (primary, or backup when the
+ *                        primary is suspended) with the service's first-response clock (S4, service-targets.ts).
+ *                        In-house services go to a JAD Global team assigned like a partner (ADR 0030).
  *                        A tenant's request first waits for the owner's approval (A1, approval.ts), and a
  *                        tenant may request repairs (maintenance) only: everything else is the owner's (R2).
  */
 import {
-  MAINTENANCE_SLA,
-  addWorkingMinutes,
   choosePartner,
   dubaiDate,
+  firstResponseDue,
   preferredDays,
+  providerFits,
   raiseRequestBody,
   serviceOpenTo,
   serviceRouting,
+  type ProviderKind,
   type ServiceDelivery,
+  type ServiceFlow,
   type ServiceRouting,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
@@ -32,7 +35,7 @@ import { loadCalendar } from '../calendar.js';
 import { parseJsonBody } from '../validate.js';
 import { place } from './emergency.js';
 import { inboxStatements, partnerInboxStatement } from './inbox.js';
-import { eventStatement, newRef, servicePartners } from './store.js';
+import { eventStatement, newRef, servicePartners, type ServicePartner } from './store.js';
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -42,6 +45,7 @@ interface ServiceRow {
   name: string;
   grp: string;
   delivery: ServiceDelivery;
+  flow: ServiceFlow;
   blurb: string;
 }
 
@@ -51,15 +55,22 @@ export interface Route {
   readonly routing: ServiceRouting;
 }
 
-/** Who takes a request for this service now (S2, S3): its partner, the JAD+ team, or nobody yet. */
+const SERVICE_COLUMNS = 'code, name, grp, delivery, flow, blurb';
+
+/**
+ * Who takes a request for this service now (S2, S3, P6; ADR 0030): its active primary or backup provider of the
+ * right kind (an outside partner, or a JAD Global team for an in-house service), or nobody yet.
+ */
 export async function routeService(db: D1Database, code: string): Promise<Route | null> {
   const service = await db
-    .prepare('SELECT code, name, grp, delivery, blurb FROM services WHERE code = ? AND listed = 1')
+    .prepare(`SELECT ${SERVICE_COLUMNS} FROM services WHERE code = ? AND listed = 1`)
     .bind(code)
     .first<ServiceRow>();
   if (service === null) return null;
   const { primary, backup } = await servicePartners(db, service.code);
-  const partner = service.delivery === 'partner' ? choosePartner(primary, backup) : null;
+  // The admin route only assigns a fitting kind; this keeps a mismatched row from ever taking work.
+  const fit = (p: ServicePartner | null) => (p !== null && providerFits(service.delivery, p.kind) ? p : null);
+  const partner = choosePartner(fit(primary), fit(backup));
   return { service, partner, routing: serviceRouting(service.delivery, partner !== null) };
 }
 
@@ -69,18 +80,17 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
   r.get('/services', requireRole('owner', 'tenant'), async (c) => {
     const db = c.env.DB;
     const { results } = await db
-      .prepare(
-        'SELECT code, name, grp, delivery, blurb FROM services WHERE listed = 1 ORDER BY sort_order, name',
-      )
+      .prepare(`SELECT ${SERVICE_COLUMNS} FROM services WHERE listed = 1 ORDER BY sort_order, name`)
       .all<ServiceRow>();
-    // Services with at least one active partner assigned (primary or backup).
+    // Active providers assigned now (primary or backup), with their kind (ADR 0030).
     const staffed = await db
       .prepare(
-        `SELECT DISTINCT sp.service_code FROM service_partners sp JOIN partners p ON p.id = sp.partner_id
+        `SELECT sp.service_code, p.kind FROM service_partners sp JOIN partners p ON p.id = sp.partner_id
          WHERE sp.ended_at IS NULL AND p.status = 'active'`,
       )
-      .all<{ service_code: string }>();
-    const withPartner = new Set(staffed.results.map((s) => s.service_code));
+      .all<{ service_code: string; kind: ProviderKind }>();
+    const staffedFor = (s: ServiceRow) =>
+      staffed.results.some((p) => p.service_code === s.code && providerFits(s.delivery, p.kind));
     const role = c.get('auth').role === 'tenant' ? 'tenant' : 'owner';
     return c.json({
       // R2: a tenant sees only the services a tenant may request (repairs).
@@ -91,7 +101,8 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           name: s.name,
           group: s.grp,
           blurb: s.blurb,
-          routing: serviceRouting(s.delivery, withPartner.has(s.code)),
+          flow: s.flow,
+          routing: serviceRouting(s.delivery, staffedFor(s)),
         })),
     });
   });
@@ -122,12 +133,10 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     const tenant = actor.role === 'tenant';
     const partner = tenant ? null : route.partner;
     const status = tenant ? 'awaiting_owner' : partner === null ? 'submitted' : 'assigned';
+    // S4: the service's first deadline (ADR 0030); education has none.
     const due = tenant
       ? { at: now + 24 * HOUR, kind: 'owner_approval' }
-      : {
-          at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, cal),
-          kind: 'routine_response',
-        };
+      : firstResponseDue(service.code, now, cal);
 
     const id = newId();
     const ref = newRef();
@@ -152,8 +161,8 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           body.description,
           status,
           partner?.id ?? null,
-          due.at,
-          due.kind,
+          due?.at ?? null,
+          due?.kind ?? null,
           body.preferredDate,
           body.preferredSlot,
           now,
@@ -202,7 +211,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
       service: service.code,
       routing,
       awaitingOwner: tenant,
-      dueInMin: Math.round((due.at - now) / MIN),
+      dueInMin: due === null ? null : Math.round((due.at - now) / MIN),
     });
     return c.json(
       {

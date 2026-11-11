@@ -29,21 +29,26 @@ const tap = {
 };
 
 describe('service catalogue (S1, S2)', () => {
-  it('S1/S2: 12 services; a partner service without a partner is "coming soon"; in-house goes to JAD+', async () => {
+  it('S1/S2/P6: 12 services with their flow; without a provider (partner or JAD Global team) "coming soon"', async () => {
     const w = await world();
     const res = await w.h.request('/api/services', { token: w.ownerToken });
     const { services } = servicesResponse.parse(await res.json());
     expect(services).toHaveLength(12);
     const routing = Object.fromEntries(services.map((s) => [s.code, s.routing]));
-    expect(routing).toMatchObject({ maintenance: 'partner', snagging: 'coming_soon', handover: 'jad' });
+    expect(routing).toMatchObject({
+      maintenance: 'partner',
+      snagging: 'coming_soon',
+      handover: 'coming_soon',
+    });
+    expect(services.find((s) => s.code === 'valuation')?.flow).toBe('report');
   });
 
   it('the catalogue in the database mirrors services.ts (no drift)', () => {
     const rows = migratedDb()
-      .prepare('SELECT code, name, grp, delivery FROM services ORDER BY sort_order')
+      .prepare('SELECT code, name, grp, delivery, flow FROM services ORDER BY sort_order')
       .all();
     expect(rows).toEqual(
-      SERVICES.map((s) => ({ code: s.code, name: s.name, grp: s.group, delivery: s.delivery })),
+      SERVICES.map((s) => ({ code: s.code, name: s.name, grp: s.group, delivery: s.delivery, flow: s.flow })),
     );
   });
 });
@@ -89,16 +94,11 @@ describe('raising a routine request (R1, S3, S4)', () => {
     expect(requestRaisedResponse.parse(await (await raise(w, tap)).json()).sentTo).toBe('Backup Fixers LLC');
   });
 
-  it('an in-house service goes to the JAD+ team; the owner sees it with its service name', async () => {
+  it('P6: an in-house service with no JAD Global team assigned is "coming soon" (ADR 0030)', async () => {
     const w = await world();
     const res = await raise(w, { ...tap, serviceCode: 'valuation', description: 'Value my unit please.' });
-    expect(requestRaisedResponse.parse(await res.json()).sentTo).toBe('the JAD+ team');
-    const { requests } = myRequestsResponse.parse(
-      await (await w.h.request('/api/requests', { token: w.ownerToken })).json(),
-    );
-    expect(requests.map((r) => [r.serviceName, r.status, r.partnerName])).toEqual([
-      ['Property Valuation', 'submitted', null],
-    ]);
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: 'coming_soon' });
   });
 
   it('S2: a "coming soon" service cannot be requested', async () => {
