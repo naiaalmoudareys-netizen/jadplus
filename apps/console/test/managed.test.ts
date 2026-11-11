@@ -1,7 +1,6 @@
-/** Managed units and the office menu in the console (ADR 0034; O4, A1). */
-import type { PartnerCapabilities } from '@jadplus/shared';
+/** Managed units, the office menu and the office header in the console (ADR 0034, 0036; O4, A1). */
+import { workspaceFor, type PartnerWorkspace, type WorkspaceInput } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
-import { officeShows, showsSnagsToFix } from '../src/lib/capabilities';
 import {
   apiRowToLine,
   parseBulkLines,
@@ -9,43 +8,116 @@ import {
   statementFileName,
   statementProblem,
 } from '../src/lib/managed';
-import { formatRoute, navFor, parseHash, routeAllowed } from '../src/lib/router';
+import { navFor, navGroups, officeRouteAllowed } from '../src/lib/nav';
+import { formatRoute, parseHash, routeAllowed } from '../src/lib/router';
+import { officeHeader, workspaceSummary } from '../src/lib/workspace';
 
-const caps = (services: string[], managesUnits = false): PartnerCapabilities => ({
-  kind: 'jad_group',
+const input = (kind: WorkspaceInput['kind'], services: string[], managesUnits = false): WorkspaceInput => ({
+  kind,
   services,
+  inHand: [],
   managesUnits,
 });
-const labels = (c: PartnerCapabilities | null) => navFor('partner_admin', c).map((n) => n.label);
+const PM = input('jad_group', ['handover', 'property-management'], true);
+const RE = input('jad_group', ['leasing', 'resale', 'valuation', 'education']);
+const FIXERS = input('external', [
+  'maintenance',
+  'snagging',
+  'mortgage',
+  'furnishing',
+  'interior-design',
+  'golden-visa',
+]);
+const labels = (i: WorkspaceInput) => navFor('partner_admin', workspaceFor(i).pages).map((n) => n.label);
+const office = (name: string, i: WorkspaceInput): PartnerWorkspace => ({
+  id: 'p-1',
+  name,
+  kind: i.kind,
+  managesUnits: i.managesUnits,
+  workspace: workspaceFor(i),
+});
 
-describe('the partner office menu follows what the company holds (ADR 0034)', () => {
-  it('hides Handovers, Education and Managed units until the capabilities are known', () => {
-    expect(labels(null)).not.toContain('Handovers');
-    expect(labels(null)).not.toContain('Education');
-    expect(labels(null)).not.toContain('Managed units');
-    expect(labels(null)).toContain('Jobs');
-    expect(showsSnagsToFix(null)).toBe(false);
+describe('each office menu is exactly its workspace (ADR 0036)', () => {
+  it('nothing shows until the workspace is known', () => {
+    expect(navFor('partner_admin', null)).toEqual([]);
   });
 
-  it('an outside maintenance partner sees none of the in-house pages', () => {
-    const c: PartnerCapabilities = { ...caps(['maintenance']), kind: 'external' };
-    expect(labels(c)).not.toContain('Handovers');
-    expect(labels(c)).not.toContain('Managed units');
-    expect(showsSnagsToFix(c)).toBe(false);
+  it('Harbor Property Management: handovers, snags to fix and managed units, grouped', () => {
+    expect(
+      navGroups('partner_admin', workspaceFor(PM).pages).map((g) => [g.label, g.items.map((n) => n.label)]),
+    ).toEqual([
+      ['Today', ['Overview', 'Dispatch']],
+      ['Work', ['Jobs', 'Consultations', 'Inspections & reports', 'Handovers', 'Snags to fix', 'Messages']],
+      ['Clients', ['Managed units']],
+      ['Company', ['Team', 'Performance', 'Documents']],
+    ]);
   });
 
-  it('each team sees its own pages; Snags to fix goes with the handover service', () => {
-    expect(labels(caps(['handover']))).toContain('Handovers');
-    expect(showsSnagsToFix(caps(['handover']))).toBe(true);
-    expect(labels(caps(['education']))).toEqual(expect.arrayContaining(['Education']));
-    expect(labels(caps(['education']))).not.toContain('Handovers');
-    expect(officeShows(caps(['property-management']), 'managed_units')).toBe(true);
-    expect(officeShows(caps([], true), 'managed_units')).toBe(true);
-    expect(officeShows(caps(['leasing']), 'managed_units')).toBe(false);
+  it('Harbor Real Estate: consultations, reports and education; no dispatch, jobs, quotes or invoices', () => {
+    expect(labels(RE)).toEqual([
+      'Overview',
+      'Consultations',
+      'Inspections & reports',
+      'Messages',
+      'Education',
+      'Team',
+      'Documents',
+    ]);
   });
 
-  it('keeps JAD+ Admin’s menu as it is', () => {
-    expect(navFor('jad_admin', caps([])).map((n) => n.label)).toContain('Handovers');
+  it('Demo Fixers: home services with quotes, after-hours, rate card and invoices; no in-house pages', () => {
+    const l = labels(FIXERS);
+    expect(l).toEqual(
+      expect.arrayContaining(['Dispatch', 'Jobs', 'Quotes', 'After-hours', 'Rate card', 'Invoices']),
+    );
+    for (const page of ['Handovers', 'Snags to fix', 'Managed units', 'Education'])
+      expect(l).not.toContain(page);
+  });
+
+  it('an office cannot open a page outside its workspace, even by typing the address', () => {
+    const re = workspaceFor(RE).pages;
+    expect(officeRouteAllowed({ name: 'dispatch', date: null }, re)).toBe(false);
+    expect(officeRouteAllowed({ name: 'handover', id: 'h1' }, re)).toBe(false);
+    expect(officeRouteAllowed({ name: 'education_session', id: 's1' }, re)).toBe(true);
+    expect(officeRouteAllowed({ name: 'request', id: 'r1' }, re)).toBe(true);
+    expect(officeRouteAllowed({ name: 'invoices' }, workspaceFor(PM).pages)).toBe(false);
+  });
+
+  it('the header names the company, its kind, its workspace and its services as chips', () => {
+    const h = officeHeader(office('Demo Fixers LLC', FIXERS));
+    expect(h.company).toBe('Demo Fixers LLC');
+    expect(h.kind.label).toBe('Partner');
+    expect(h.title).toBe('Maintenance & home services');
+    expect(h.also).toBe('Also: Finance & residency advisory');
+    expect(h.chips).toEqual([
+      'Maintenance',
+      'Snagging & Inspection',
+      'Mortgage & Finance',
+      'Furnishing',
+      'Interior Design',
+      'Golden Visa',
+    ]);
+    const pm = officeHeader(office('Harbor Property Management (demo)', PM));
+    expect([pm.kind.label, pm.title, pm.also]).toEqual([
+      'JAD Global team',
+      'Property management & handover',
+      null,
+    ]);
+  });
+
+  it('JAD+ Admin reads each provider’s workspace and the pages its console shows', () => {
+    expect(workspaceSummary(RE)).toEqual({
+      title: 'Sales & leasing advisory',
+      pages: [
+        'Overview',
+        'Consultations',
+        'Inspections & reports',
+        'Messages',
+        'Education',
+        'Team',
+        'Documents',
+      ],
+    });
     expect(navFor('jad_admin').map((n) => n.label)).not.toContain('Managed units');
   });
 

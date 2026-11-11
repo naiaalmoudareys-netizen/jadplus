@@ -43,11 +43,27 @@ You need two windows, both started from the repository folder (`C:\dev\jadplus`)
    pnpm --filter @jadplus/console dev
    ```
 
-4. Open http://localhost:5173 and sign in with a demo account:
-   - `admin.demo@jadplus.ae`: JAD+ Admin
-   - `office.demo@jadplus.ae`: Partner office of the demo partner
-   - `harbor.re.demo@jadplus.ae`, `harbor.pm.demo@jadplus.ae`: offices of the two demo JAD Global teams
-     (Harbor Real Estate, Harbor Property Management; ADR 0030)
+4. Open http://localhost:5173 and sign in with a demo account. Each partner office sees its own workspace
+   (ADR 0036): the header names the company, its kind and the services it handles, and the menu holds exactly
+   its pages.
+   - `admin.demo@jadplus.ae`: **JAD+ Admin**, every page, grouped: Today (Overview, Needs action), Requests
+     (Service requests, Documents & account, Handovers, Education), People & places (People, Buildings,
+     Offers), Providers (Partners, Services, Invoices), Control (On-call, Reports, Audit log, Staff, Settings).
+     Each partner's page says which workspace it has and which pages its console shows.
+   - `harbor.pm.demo@jadplus.ae`: Harbor Property Management (demo), a JAD Global team, workspace
+     **Property management & handover**: Overview (handovers in progress, key collections this week, snags open
+     and reopened, managed units, tenant repairs to approve, statements due), Dispatch, Jobs, Consultations
+     (property management), Inspections & reports (soft snagging), Handovers, Snags to fix, Messages, Managed
+     units, Team, Performance, Documents. No quotes, invoices, rate card or after-hours.
+   - `harbor.re.demo@jadplus.ae`: Harbor Real Estate (demo), a JAD Global team, workspace **Sales & leasing
+     advisory**: Overview (consultations by stage, first calls due and overdue, valuation reports due, next
+     investor session and seats, books to send), Consultations (leasing and resale pipelines), Inspections &
+     reports (valuations), Messages, Education, Team, Documents. No dispatch, jobs, quotes, invoices or rate card.
+   - `office.demo@jadplus.ae`: Demo Fixers LLC, an outside partner, workspace **Maintenance & home services**
+     (also finance & residency advisory: mortgage, Golden Visa): Overview (emergencies to acknowledge, visits
+     today, jobs without a technician, quotes waiting, overdue, the month against JAD+ targets, who is away,
+     then reports and consultations), Dispatch, Jobs, Consultations, Inspections & reports (professional
+     snagging), Quotes, Messages, Team, Performance, After-hours, Documents, Rate card, Invoices.
 
    No email is sent locally: the 6-digit code is printed in the API window.
 

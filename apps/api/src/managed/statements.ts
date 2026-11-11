@@ -25,6 +25,7 @@ import {
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
@@ -80,47 +81,52 @@ async function readableArrangement(c: Ctx, id: string): Promise<ManagedRow> {
 export function managedStatementRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
 
-  r.post('/partner/managed-units/:id/statements', requireRole('partner_admin'), async (c) => {
-    const { id } = parseParams(c, managedIdParam);
-    const { month } = parseQuery(c, statementUploadQuery);
-    // Ended or past arrangements are refused by statementMonthAllowed; the office must be the managing team.
-    const m = await officeArrangement(c, id, true);
-    if (!statementMonthAllowed(month, facts(m), dubaiDate(c.get('now')))) {
-      throw new ApiError(400, 'Choose a month of the management period, up to this month.');
-    }
-    const declared = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
-    const bytes = new Uint8Array(await c.req.arrayBuffer());
-    if (bytes.length === 0 || bytes.length > STATEMENT_MAX_BYTES)
-      throw new ApiError(413, 'Statements can be up to 20 MB.');
-    if (declared !== 'application/pdf' || !isPdf(bytes)) throw new ApiError(415, 'Please upload a PDF.');
-    const db = c.env.DB;
-    const statementId = newId();
-    const key = `managed/${m.id}/statements/${statementId}.pdf`;
-    await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: 'application/pdf' } });
-    await db.batch([
-      db
-        .prepare(
-          `INSERT INTO managed_statements (id, managed_unit_id, month, r2_key, byte_size, sha256, uploaded_by, uploaded_at)
+  r.post(
+    '/partner/managed-units/:id/statements',
+    requireRole('partner_admin'),
+    workspacePage('managed_units'),
+    async (c) => {
+      const { id } = parseParams(c, managedIdParam);
+      const { month } = parseQuery(c, statementUploadQuery);
+      // Ended or past arrangements are refused by statementMonthAllowed; the office must be the managing team.
+      const m = await officeArrangement(c, id, true);
+      if (!statementMonthAllowed(month, facts(m), dubaiDate(c.get('now')))) {
+        throw new ApiError(400, 'Choose a month of the management period, up to this month.');
+      }
+      const declared = (c.req.header('content-type') ?? '').split(';')[0]?.trim().toLowerCase();
+      const bytes = new Uint8Array(await c.req.arrayBuffer());
+      if (bytes.length === 0 || bytes.length > STATEMENT_MAX_BYTES)
+        throw new ApiError(413, 'Statements can be up to 20 MB.');
+      if (declared !== 'application/pdf' || !isPdf(bytes)) throw new ApiError(415, 'Please upload a PDF.');
+      const db = c.env.DB;
+      const statementId = newId();
+      const key = `managed/${m.id}/statements/${statementId}.pdf`;
+      await c.env.MEDIA.put(key, bytes, { httpMetadata: { contentType: 'application/pdf' } });
+      await db.batch([
+        db
+          .prepare(
+            `INSERT INTO managed_statements (id, managed_unit_id, month, r2_key, byte_size, sha256, uploaded_by, uploaded_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .bind(
-          statementId,
-          m.id,
-          month,
-          key,
-          bytes.length,
-          await digest(bytes),
-          c.get('auth').userId,
-          c.get('now'),
-        ),
-      managedAudit(c, 'managed_statement_uploaded', 'managed_unit', m.id, { month, bytes: bytes.length }),
-      // The owner is told once per month (a corrected upload for the same month is not announced again).
-      m.request_id === null
-        ? statementReadyStatement(db, { userId: m.owner_user_id, period: month, at: c.get('now') })
-        : statementReadyStatement(db, { requestId: m.request_id, period: month, at: c.get('now') }),
-    ]);
-    return c.json({ id: statementId, month }, 201);
-  });
+          )
+          .bind(
+            statementId,
+            m.id,
+            month,
+            key,
+            bytes.length,
+            await digest(bytes),
+            c.get('auth').userId,
+            c.get('now'),
+          ),
+        managedAudit(c, 'managed_statement_uploaded', 'managed_unit', m.id, { month, bytes: bytes.length }),
+        // The owner is told once per month (a corrected upload for the same month is not announced again).
+        m.request_id === null
+          ? statementReadyStatement(db, { userId: m.owner_user_id, period: month, at: c.get('now') })
+          : statementReadyStatement(db, { requestId: m.request_id, period: month, at: c.get('now') }),
+      ]);
+      return c.json({ id: statementId, month }, 201);
+    },
+  );
 
   r.get(
     '/managed-units/:id/statements/:statementId/file',

@@ -39,6 +39,7 @@ const DAY = 24 * 60 * MIN;
 
 interface QueueRow extends LocationRow {
   service_name: string | null;
+  service_code: string;
   preferred_date: string | null;
   preferred_slot: VisitSlot | null;
   id: string;
@@ -81,7 +82,7 @@ export function partnerRoutes(): Hono<AppEnv> {
     const { view } = parseQuery(c, partnerJobsQuery);
     const open = [...OPEN_STATUSES];
     const columns = `r.id, r.ref, r.is_emergency, r.emergency_type, r.status, r.description, r.next_due_at,
-              (SELECT name FROM services WHERE code = r.service_code) AS service_name,
+              (SELECT name FROM services WHERE code = r.service_code) AS service_name, r.service_code,
               r.next_due_kind, r.technician_id, r.arrival_window_start, r.arrival_window_end, r.created_at,
               r.preferred_date, r.preferred_slot,
               ${LOCATION_COLUMNS}`;
@@ -110,6 +111,7 @@ export function partnerRoutes(): Hono<AppEnv> {
         emergency: r.is_emergency === 1,
         emergencyType: r.emergency_type,
         serviceName: r.service_name,
+        serviceCode: r.service_code,
         status: r.status,
         description: r.description,
         nextDueAt: r.next_due_at,

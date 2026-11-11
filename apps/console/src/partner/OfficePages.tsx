@@ -1,12 +1,14 @@
 /**
- * Every partner office page by route (ADR 0023, 0025). Loaded on its own only when a partner office signs in,
- * so the office never downloads the JAD+ Admin screens.
+ * Every partner office page by route (ADR 0023, 0025, 0036). Loaded on its own only when a partner office signs
+ * in, so the office never downloads the JAD+ Admin screens. The app opens only its workspace's pages.
  */
 import type { ReactNode } from 'react';
 import type { Route } from '../lib/router';
 import { AfterHours } from './AfterHours';
+import { Consultations } from './Consultations';
 import { Dispatch } from './Dispatch';
 import { Documents } from './Documents';
+import { Inspections } from './Inspections';
 import { OfficeInvoices } from './Invoices';
 import { JobPage } from './JobPage';
 import { JobsBoard } from './JobsBoard';
@@ -17,6 +19,7 @@ import { OfficeOverview } from './Overview';
 import { Performance } from './Performance';
 import { Quotes } from './Quotes';
 import { RateCard } from './RateCard';
+import { SnagsToFix } from './SnagsToFix';
 import { Team } from './Team';
 import { Technician } from './Technician';
 import { Education } from '../journey/Education';
@@ -65,6 +68,12 @@ export default function OfficePage({ route }: { route: Route }): ReactNode {
       return <ManagedUnits />;
     case 'managed_unit':
       return <ManagedUnit id={route.id} />;
+    case 'consultations':
+      return <Consultations />;
+    case 'inspections':
+      return <Inspections />;
+    case 'snags':
+      return <SnagsToFix />;
     default:
       return null;
   }

@@ -171,7 +171,7 @@ export function Dispatch({ date }: { date: string | null }): ReactNode {
   };
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Dispatch">
+      <PageHeader title="Dispatch">
         <div className="row-actions">
           <button
             type="button"

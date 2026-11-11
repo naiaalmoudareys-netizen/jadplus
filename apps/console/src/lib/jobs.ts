@@ -2,7 +2,7 @@
  * The partner office's jobs board (ADR 0023; R3, E4, S4): open jobs split into "Needs you now", "Upcoming" and
  * "Waiting on the owner", each with the reason it is there.
  */
-import { EMERGENCY_TYPE_LABELS, type PartnerJob, type RequestClock } from '@jadplus/shared';
+import { EMERGENCY_TYPE_LABELS, SERVICES, type PartnerJob, type RequestClock } from '@jadplus/shared';
 import { dateTime, deadlineText, duration, humanize, type Tone } from './format';
 
 const HOUR = 3_600_000;
@@ -17,7 +17,23 @@ export const BOARD_TITLES: Readonly<Record<BoardColumn, string>> = {
   waiting: 'Waiting on the owner',
 };
 
+/** What each column will show, for its empty state (ADR 0036). */
+export const COLUMN_EMPTY: Readonly<Record<BoardColumn, string>> = {
+  now: 'Emergencies, overdue jobs and jobs without a technician appear here.',
+  upcoming: 'Booked visits and work on time appear here.',
+  waiting: 'Quotes and work waiting for the owner or resident appear here.',
+};
+
 const BOARD_ORDER: readonly BoardColumn[] = ['now', 'upcoming', 'waiting'];
+
+const CONSULTATIONS: ReadonlySet<string> = new Set(
+  SERVICES.filter((s) => s.flow === 'consultation').map((s) => s.code),
+);
+
+/** ADR 0036: home visits and inspections go on the jobs board; consultations have their own board. */
+export function onJobsBoard(job: Pick<PartnerJob, 'serviceCode'>): boolean {
+  return !CONSULTATIONS.has(job.serviceCode);
+}
 
 export interface Placement {
   readonly column: BoardColumn;

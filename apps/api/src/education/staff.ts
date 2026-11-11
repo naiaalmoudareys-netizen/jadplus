@@ -23,7 +23,9 @@ import {
 } from '@jadplus/shared';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
+import { every } from 'hono/combine';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
@@ -73,8 +75,11 @@ async function liveSession(c: Ctx, id: string): Promise<SessionRow> {
 export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
   // Per route, not r.use('*'): these sub-apps are mounted at /api/partner and /api/admin beside other routes.
+  // ADR 0036: in the office, only a company whose workspace has Education (it holds the education service).
   const read: MiddlewareHandler<AppEnv> =
-    scope === 'admin' ? requireRole('jad_admin', 'jad_viewer') : requireRole('partner_admin');
+    scope === 'admin'
+      ? requireRole('jad_admin', 'jad_viewer')
+      : every(requireRole('partner_admin'), workspacePage('education'));
 
   r.get('/education/sessions', read, async (c) => {
     const canManage = await mayManage(c, scope);

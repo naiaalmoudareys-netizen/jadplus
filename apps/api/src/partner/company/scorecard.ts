@@ -23,6 +23,7 @@ import {
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
+import { workspacePage } from '../workspace.js';
 import type { AppEnv } from '../../env.js';
 import { LOCATION_JOIN } from '../../requests/views.js';
 import { parseQuery } from '../../validate.js';
@@ -132,9 +133,9 @@ const CSV_HEADER = [
 ];
 
 export function registerScorecard(r: Hono<AppEnv>): void {
-  const office = requireRole('partner_admin');
+  const office = [requireRole('partner_admin'), workspacePage('performance')] as const;
 
-  r.get('/scorecard', office, async (c) => {
+  r.get('/scorecard', ...office, async (c) => {
     const { month } = parseQuery(c, monthQuery);
     const partnerId = companyOf(c);
     const row = await c.env.DB.prepare('SELECT name FROM partners WHERE id = ?')
@@ -145,7 +146,7 @@ export function registerScorecard(r: Hono<AppEnv>): void {
     );
   });
 
-  r.get('/export.csv', office, async (c) => {
+  r.get('/export.csv', ...office, async (c) => {
     const { month: asked } = parseQuery(c, monthQuery);
     const month = asked ?? monthOf(c.get('now'));
     const partnerId = companyOf(c);

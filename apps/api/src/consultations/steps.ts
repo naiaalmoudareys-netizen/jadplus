@@ -36,6 +36,7 @@ import {
 import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import { loadCalendar } from '../calendar.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
@@ -139,8 +140,10 @@ function present<T>(x: T | null): x is T {
 
 export function consultationStepRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
+  // ADR 0036: the office of a company whose workspace has consultations (per route: this sub-app is mounted at /api).
+  const office = [requireRole('partner_admin'), workspacePage('consultations')] as const;
 
-  r.post('/partner/jobs/:id/consultation/contact-made', requireRole('partner_admin'), async (c) => {
+  r.post('/partner/jobs/:id/consultation/contact-made', ...office, async (c) => {
     const { id } = parseParams(c, requestIdParam);
     const body = await parseJsonBody(c, contactMadeBody);
     const l = await loadForStep(c, id, 'contact_made');
@@ -172,7 +175,7 @@ export function consultationStepRoutes(): Hono<AppEnv> {
     return c.json({ id, status: 'in_progress' });
   });
 
-  r.post('/partner/jobs/:id/consultation/stage', requireRole('partner_admin'), async (c) => {
+  r.post('/partner/jobs/:id/consultation/stage', ...office, async (c) => {
     const { id } = parseParams(c, requestIdParam);
     const body = await parseJsonBody(c, consultationStageBody);
     const l = await loadForStep(c, id, 'move_stage');
@@ -207,7 +210,7 @@ export function consultationStepRoutes(): Hono<AppEnv> {
     return c.json({ id, status: 'in_progress' });
   });
 
-  r.post('/partner/jobs/:id/consultation/close', requireRole('partner_admin'), async (c) => {
+  r.post('/partner/jobs/:id/consultation/close', ...office, async (c) => {
     const { id } = parseParams(c, requestIdParam);
     const body = await parseJsonBody(c, closeConsultationBody);
     const l = await loadForStep(c, id, 'close');

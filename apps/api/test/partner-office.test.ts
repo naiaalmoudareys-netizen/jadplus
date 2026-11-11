@@ -36,13 +36,15 @@ describe('partner office: overview', () => {
     const token = await office(w);
     await emergency(w);
     w.h.clock = NOW + 5 * 60_000;
-    const body = partnerOverviewResponse.parse(await (await get(w, '/api/partner/overview', token)).json());
-    expect(body.today.emergencies).toHaveLength(1);
-    expect(body.today.emergencies[0]?.minutesLeft).toBe(10);
-    expect(body.today.unassigned).toBe(1);
-    expect(body.thisMonth.month).toBe('2026-11');
-    expect(body.lastMonth.month).toBe('2026-10');
-    expect(body.targets.averageRating).toBe(4);
+    const { visits: body } = partnerOverviewResponse.parse(
+      await (await get(w, '/api/partner/overview', token)).json(),
+    );
+    expect(body?.today.emergencies).toHaveLength(1);
+    expect(body?.today.emergencies[0]?.minutesLeft).toBe(10);
+    expect(body?.today.unassigned).toBe(1);
+    expect(body?.thisMonth.month).toBe('2026-11');
+    expect(body?.lastMonth.month).toBe('2026-10');
+    expect(body?.targets.averageRating).toBe(4);
   });
 
   it('S7: missing licence and insurance are flagged; S6: a missed emergency warns', async () => {
@@ -83,7 +85,7 @@ describe('partner office: overview', () => {
     const other = await office(w, 'p-backup', 'office.two@example.com');
     await emergency(w);
     const body = partnerOverviewResponse.parse(await (await get(w, '/api/partner/overview', other)).json());
-    expect(body.today.emergencies).toEqual([]);
+    expect(body.visits?.today.emergencies).toEqual([]);
   });
 });
 
@@ -116,7 +118,7 @@ describe('partner office: dispatch', () => {
     const overview = partnerOverviewResponse.parse(
       await (await get(w, '/api/partner/overview', token)).json(),
     );
-    expect(overview.unavailableToday).toEqual([
+    expect(overview.visits?.unavailableToday).toEqual([
       { technicianId: 't-primary', name: 'Team member', reason: 'sick', until: '2026-11-11' },
     ]);
 

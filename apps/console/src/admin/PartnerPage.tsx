@@ -2,11 +2,14 @@
  * One partner, for JAD+ Admin (ADR 0023, 0025, 0030; S5-S10, P1, P3): its kind (outside partner or JAD Global
  * team), standing (with suspend / reinstate), the verified licence and insurance, uploads waiting to be
  * verified, proposed rate cards and the monthly scorecard. A viewer reads everything and changes nothing.
+ * ADR 0036: its workspace and the pages its console shows, so JAD+ Admin knows what the provider sees.
  */
 import { adminPartnersResponse } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { documentLines } from '../lib/documents';
+import { serviceName } from '../lib/labels';
 import { PROVIDER_KIND_LABELS } from '../lib/providers';
+import { workspaceSummary } from '../lib/workspace';
 import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Fact, Loaded, Notice, PageHeader, Tag } from '../ui/parts';
@@ -28,6 +31,7 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
         const partner = partners.find((p) => p.id === id);
         if (partner === undefined) return <Notice tone="bad">This partner was not found.</Notice>;
         const standing = STANDING[partner.status];
+        const ws = workspaceSummary(partner);
         return (
           <>
             <PageHeader eyebrow="Partner" title={partner.name}>
@@ -46,6 +50,15 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
                   )}
                 </Fact>
                 <Fact label="Kind">{PROVIDER_KIND_LABELS[partner.kind].label}</Fact>
+                <Fact label="Workspace">
+                  {ws.title}
+                  <span className="block hint">Its console shows: {ws.pages.join(' · ')}</span>
+                </Fact>
+                <Fact label="Services">
+                  {partner.services.length === 0
+                    ? 'None assigned'
+                    : partner.services.map(serviceName).join(', ')}
+                </Fact>
                 <Fact label="Technicians">{partner.technicians}</Fact>
                 <Fact label="Open jobs">{partner.openJobs}</Fact>
                 <Fact label="Verified documents">

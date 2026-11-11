@@ -22,8 +22,11 @@ const monthFigures = z.object({
   repeatVisits: int,
 });
 
-/** GET /api/partner/overview */
-export const partnerOverviewResponse = z.object({
+/**
+ * The home-services part of GET /api/partner/overview (ADR 0025, 0036): today's emergencies and visits, this
+ * month against last month and JAD+'s targets, and who is away today.
+ */
+export const visitsOverview = z.object({
   today: z.object({
     /** Emergencies not yet acknowledged, with minutes left on the 15-minute clock (E4; negative = late). */
     emergencies: z.array(z.object({ id: z.string(), ref: z.string(), minutesLeft: int })),
@@ -35,13 +38,6 @@ export const partnerOverviewResponse = z.object({
   thisMonth: monthFigures,
   lastMonth: monthFigures,
   targets,
-  alerts: z.array(
-    z.object({
-      kind: z.enum(['document', 'low_rating', 'missed_emergencies', 'breach']),
-      level: z.enum(['warning', 'flagged']),
-      text: z.string(),
-    }),
-  ),
   unavailableToday: z.array(
     z.object({
       technicianId: z.string(),
@@ -51,7 +47,15 @@ export const partnerOverviewResponse = z.object({
     }),
   ),
 });
-export type PartnerOverview = z.infer<typeof partnerOverviewResponse>;
+export type VisitsOverview = z.infer<typeof visitsOverview>;
+
+/** Warnings for the whole company: documents expiring or lapsed, being close to the S6 review line. */
+export const overviewAlert = z.object({
+  kind: z.enum(['document', 'low_rating', 'missed_emergencies', 'breach']),
+  level: z.enum(['warning', 'flagged']),
+  text: z.string(),
+});
+export type OverviewAlert = z.infer<typeof overviewAlert>;
 
 /** GET/PUT /api/partner/technicians/:id/skills */
 export const technicianSkillsResponse = z.object({

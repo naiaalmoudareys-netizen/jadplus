@@ -32,7 +32,8 @@ describe('monthly statements (O4)', () => {
       415,
     );
     expect((await upload(w, id, w.harbor, '2026-11', pdf(), 'image/png')).status).toBe(415);
-    expect((await upload(w, id, w.otherTeam, '2026-11', pdf())).status).toBe(404);
+    // ADR 0036: a team without Managed units in its workspace is refused outright.
+    expect((await upload(w, id, w.otherTeam, '2026-11', pdf())).status).toBe(403);
     expect((await upload(w, id, w.ownerToken, '2026-11', pdf())).status).toBe(403);
     const big = await upload(w, id, w.harbor, '2026-11', pdf(20 * 1024 * 1024 + 1));
     expect(big.status).toBe(413);

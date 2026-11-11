@@ -22,6 +22,7 @@ import { SKILL_LABELS, UNAVAILABLE_LABELS } from '../lib/labels';
 import { unavailableAddedResponse } from '../lib/office-schemas';
 import { ConfirmButton, useAction } from '../ui/actions';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
+import { useWorkspace } from '../ui/workspace';
 import { Empty, Link, Loaded, Notice, PageHeader, Section } from '../ui/parts';
 import { TechnicianNumbers } from './TeamNumbers';
 
@@ -198,54 +199,58 @@ function Away({ id, now }: { id: string; now: number }): ReactNode {
 export function Technician({ id }: { id: string }): ReactNode {
   const { api } = useConsole();
   const now = useNow();
+  // ADR 0036: the day plan exists only in a workspace with Dispatch (home visits).
+  const dispatches = useWorkspace()?.workspace.pages.includes('dispatch') === true;
   const { state, reload } = useLoad(
     () =>
       Promise.all([
         api.get('/api/partner/team', partnerTeamResponse),
         api.get(apiPath('partner', 'technicians', id, 'skills'), technicianSkillsResponse),
-        api.get('/api/partner/dispatch', dispatchResponse),
+        dispatches ? api.get('/api/partner/dispatch', dispatchResponse) : Promise.resolve(null),
       ]),
-    id,
+    `${id}:${String(dispatches)}`,
   );
   return (
     <Loaded state={state} reload={reload}>
       {([team, skills, plan]) => {
         const member = team.technicians.find((t) => t.id === id);
-        const day = plan.technicians.find((t) => t.id === id);
+        const day = plan?.technicians.find((t) => t.id === id);
         const visits = day?.visits ?? [];
         return (
           <>
-            <PageHeader eyebrow="Partner office · Team" title={member?.name ?? 'Technician'}>
+            <PageHeader eyebrow="Team" title={member?.name ?? 'Technician'}>
               <Link to={{ name: 'team' }}>Back to the team</Link>
             </PageHeader>
             {member === undefined ? (
               <Notice tone="warn">This technician is no longer on your team.</Notice>
             ) : null}
-            <div className="columns">
-              <Section title="Skills">
-                <p className="hint">Dispatch suggests technicians with the skill a job needs.</p>
-                <Skills id={id} initial={skills.skills} onSaved={reload} />
-              </Section>
-              <Section title="Visits today" count={visits.length}>
-                {day !== undefined && !day.available ? (
-                  <Notice tone="warn">Away today, so not suggested for new jobs.</Notice>
-                ) : null}
-                {visits.length === 0 ? (
-                  <Empty>No visits booked today.</Empty>
-                ) : (
-                  <ul className="plain">
-                    {visits.map((v) => (
-                      <li key={v.requestId}>
-                        <Link to={{ name: 'request', id: v.requestId }}>
-                          <span className="ref">{v.ref}</span> {v.service ?? 'Service request'}
-                        </Link>{' '}
-                        <span className="muted">{windowText(v.windowStart, v.windowEnd, now)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Section>
-            </div>
+            {plan === null ? null : (
+              <div className="columns">
+                <Section title="Skills">
+                  <p className="hint">Dispatch suggests technicians with the skill a job needs.</p>
+                  <Skills id={id} initial={skills.skills} onSaved={reload} />
+                </Section>
+                <Section title="Visits today" count={visits.length}>
+                  {day !== undefined && !day.available ? (
+                    <Notice tone="warn">Away today, so not suggested for new jobs.</Notice>
+                  ) : null}
+                  {visits.length === 0 ? (
+                    <Empty>No visits booked today.</Empty>
+                  ) : (
+                    <ul className="plain">
+                      {visits.map((v) => (
+                        <li key={v.requestId}>
+                          <Link to={{ name: 'request', id: v.requestId }}>
+                            <span className="ref">{v.ref}</span> {v.service ?? 'Service request'}
+                          </Link>{' '}
+                          <span className="muted">{windowText(v.windowStart, v.windowEnd, now)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Section>
+              </div>
+            )}
             {member === undefined ? null : <TechnicianNumbers id={id} />}
             <Away id={id} now={now} />
           </>

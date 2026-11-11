@@ -95,7 +95,7 @@ export function AfterHours(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="After-hours" />
+      <PageHeader title="After-hours" />
       <Loaded state={state} reload={reload}>
         {([{ weeks }, team]) => {
           const first = weeks[0]?.weekStarting;

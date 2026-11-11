@@ -40,6 +40,7 @@ import { partnerFlowRoutes } from './requests/partner-flow.js';
 import { partnerVisitRoutes } from './requests/partner-visit.js';
 import { partnerStatsRoutes } from './partner/stats.js';
 import { partnerOfficeRoutes } from './partner/office.js';
+import { workspaceRoutes } from './partner/workspace.js';
 import { adminConsoleRoutes } from './admin/console.js';
 import { adminOpsRoutes } from './admin/ops.js';
 import { adminPlatformRoutes } from './admin/platform.js';
@@ -143,6 +144,8 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/partner', partnerStatsRoutes());
   app.route('/api/partner', partnerOfficeRoutes());
   app.route('/api/partner', partnerCompanyRoutes());
+  // Provider workspaces (ADR 0036): the office's title, services and pages.
+  app.route('/api/partner', workspaceRoutes());
   app.route('/api', inboxRoutes());
   app.route('/api', residentBuildingRoutes());
   app.route('/api', approvalRoutes());

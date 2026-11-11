@@ -19,7 +19,7 @@ export function ManagedUnits(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Managed units" />
+      <PageHeader title="Managed units" />
       <Loaded state={state} reload={reload}>
         {({ units }) => (
           <Section title="Units you manage" count={units.length}>

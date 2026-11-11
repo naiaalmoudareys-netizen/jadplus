@@ -9,6 +9,7 @@
 import { OPEN_STATUSES, snagPhotoParam } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseParams } from '../validate.js';
@@ -51,7 +52,7 @@ export function snagViewRoutes(): Hono<AppEnv> {
     },
   );
 
-  r.get('/partner/snags', provider, async (c) => {
+  r.get('/partner/snags', provider, workspacePage('snags', 'inspections'), async (c) => {
     const db = c.env.DB;
     const partnerId = c.get('auth').partnerId;
     if (partnerId === null) return c.json({ snags: [] });

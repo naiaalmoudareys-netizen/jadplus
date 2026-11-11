@@ -11,6 +11,7 @@ import './styles/pages.css';
 import './styles/admin.css';
 import './styles/platform.css';
 import './styles/office.css';
+import './styles/workspace.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';

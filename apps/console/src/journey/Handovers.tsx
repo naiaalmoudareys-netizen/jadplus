@@ -95,10 +95,7 @@ export function Handovers(): ReactNode {
   );
   return (
     <>
-      <PageHeader
-        eyebrow={session.role === 'partner_admin' ? 'Partner office' : 'JAD+ Admin'}
-        title="Handovers"
-      />
+      <PageHeader title="Handovers" />
       <Loaded state={state} reload={reload}>
         {({ handovers, waiting }) => (
           <>

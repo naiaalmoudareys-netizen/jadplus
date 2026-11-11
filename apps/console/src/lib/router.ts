@@ -1,17 +1,10 @@
 /**
  * A small typed router on the address hash (ADR 0023, 0025): "#/requests?q=JAD&status=assigned". No router
- * library: every page a person may open is decided here, by role (deny by default, C-AZ-1). The API checks
- * every call again; this only keeps people on their own pages.
+ * library: every page a person may open is decided here, by role (deny by default, C-AZ-1), and for a partner
+ * office also by its workspace (nav.ts, ADR 0036). The API checks every call again; this only keeps people on
+ * their own pages.
  */
-import {
-  DESK_STATUSES,
-  STATUSES,
-  type DeskStatus,
-  type PartnerCapabilities,
-  type Status,
-  type UserRole,
-} from '@jadplus/shared';
-import { isGatedOfficePage, officeShows } from './capabilities';
+import { DESK_STATUSES, STATUSES, type DeskStatus, type Status, type UserRole } from '@jadplus/shared';
 
 export type Route =
   // JAD+ Admin
@@ -55,6 +48,10 @@ export type Route =
   | { readonly name: 'performance'; readonly month: string | null }
   // Partner office of a property management team (ADR 0034)
   | { readonly name: 'managed_units' }
+  // Partner office work boards (ADR 0036)
+  | { readonly name: 'consultations' }
+  | { readonly name: 'inspections' }
+  | { readonly name: 'snags' }
   | { readonly name: 'managed_unit'; readonly id: string }
   | { readonly name: 'not_found' };
 
@@ -96,6 +93,9 @@ const SIMPLE: Readonly<Record<string, SimpleName>> = {
   'rate-card': 'rate_card',
   'after-hours': 'after_hours',
   'managed-units': 'managed_units',
+  consultations: 'consultations',
+  inspections: 'inspections',
+  'snags-to-fix': 'snags',
 };
 const PATH_OF: Readonly<Partial<Record<RouteName, string>>> = Object.fromEntries(
   Object.entries(SIMPLE).map(([path, name]) => [name, path]),
@@ -172,7 +172,9 @@ export function parseHash(hash: string): Route {
     }
     default: {
       const name = SIMPLE[first];
-      return name === undefined ? { name: 'not_found' } : { name };
+      // Safe: a SimpleName is by definition a route carrying nothing but its name (NameOnly above); TypeScript
+      // stops checking that member by member once the union has more than 25 routes.
+      return name === undefined ? { name: 'not_found' } : ({ name } as Route);
     }
   }
 }
@@ -271,6 +273,9 @@ const OFFICE_PAGES: ReadonlySet<RouteName> = new Set<RouteName>([
   'education_session',
   'managed_units',
   'managed_unit',
+  'consultations',
+  'inspections',
+  'snags',
 ]);
 
 /** Pages each console role may open. Phone-app roles have none. */
@@ -284,60 +289,6 @@ export function routeAllowed(route: Route, role: UserRole): boolean {
 /** Where a role starts, and where it lands when it opens a page it may not see. */
 export function homeRoute(role: UserRole): Route {
   return role === 'partner_admin' ? { name: 'office' } : { name: 'overview' };
-}
-
-export interface NavItem {
-  readonly label: string;
-  readonly route: Route;
-}
-
-const ADMIN_NAV: readonly NavItem[] = [
-  { label: 'Overview', route: { name: 'overview' } },
-  { label: 'Needs action', route: { name: 'attention' } },
-  { label: 'Service requests', route: { name: 'requests', q: '', status: null } },
-  { label: 'People', route: { name: 'people', q: '' } },
-  { label: 'Documents & account', route: { name: 'desk', status: null } },
-  { label: 'Partners', route: { name: 'partners' } },
-  { label: 'Services', route: { name: 'services' } },
-  { label: 'Buildings', route: { name: 'buildings' } },
-  { label: 'Offers', route: { name: 'offers' } },
-  { label: 'Handovers', route: { name: 'handovers' } },
-  { label: 'Education', route: { name: 'education' } },
-  { label: 'On-call', route: { name: 'on_call' } },
-  { label: 'Reports', route: { name: 'reports', month: null } },
-  { label: 'Audit log', route: { name: 'audit' } },
-  { label: 'Staff', route: { name: 'staff' } },
-  { label: 'Settings', route: { name: 'settings' } },
-  { label: 'Invoices', route: { name: 'invoices' } },
-];
-
-const OFFICE_NAV: readonly NavItem[] = [
-  { label: 'Overview', route: { name: 'office' } },
-  { label: 'Dispatch', route: { name: 'dispatch', date: null } },
-  { label: 'Jobs', route: { name: 'jobs' } },
-  { label: 'Messages', route: { name: 'messages' } },
-  { label: 'Quotes', route: { name: 'quotes' } },
-  { label: 'Team', route: { name: 'team' } },
-  { label: 'Documents', route: { name: 'documents' } },
-  { label: 'Rate card', route: { name: 'rate_card' } },
-  { label: 'After-hours', route: { name: 'after_hours' } },
-  { label: 'Performance', route: { name: 'performance', month: null } },
-  { label: 'Invoices', route: { name: 'invoices' } },
-  { label: 'Handovers', route: { name: 'handovers' } },
-  { label: 'Education', route: { name: 'education' } },
-  { label: 'Managed units', route: { name: 'managed_units' } },
-];
-
-/**
- * The left navigation for each role: only pages the role may open. A partner office sees Handovers, Education
- * and Managed units only when its company holds the service (`caps`, ADR 0034; hidden while unknown).
- */
-export function navFor(role: UserRole, caps: PartnerCapabilities | null = null): readonly NavItem[] {
-  if (role === 'jad_admin' || role === 'jad_viewer') {
-    return ADMIN_NAV.filter((n) => routeAllowed(n.route, role));
-  }
-  if (role !== 'partner_admin') return [];
-  return OFFICE_NAV.filter((n) => !isGatedOfficePage(n.route.name) || officeShows(caps, n.route.name));
 }
 
 /** The list page an item page belongs to, for the navigation highlight. */

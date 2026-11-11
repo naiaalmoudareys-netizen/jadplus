@@ -100,11 +100,8 @@ describe('investor education: sessions (O5)', () => {
     );
     expect(asTeam).toMatchObject({ canManage: true });
     expect(asTeam.sessions).toHaveLength(2);
-    expect(
-      staffSessionsResponse.parse(
-        await (await w.h.request('/api/partner/education/sessions', { token: w.otherOffice })).json(),
-      ),
-    ).toEqual({ canManage: false, sessions: [] });
+    // ADR 0036: an office whose workspace has no Education is refused outright.
+    expect((await w.h.request('/api/partner/education/sessions', { token: w.otherOffice })).status).toBe(403);
     expect(
       (await w.h.request(`/api/partner/education/sessions/${id}/bookings`, { token: w.otherOffice })).status,
     ).toBe(403);

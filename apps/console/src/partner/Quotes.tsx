@@ -103,7 +103,7 @@ export function Quotes(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Quotes">
+      <PageHeader title="Quotes">
         <label className="field">
           <span className="label">Show</span>
           <select

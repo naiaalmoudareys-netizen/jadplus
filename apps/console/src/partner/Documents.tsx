@@ -149,7 +149,7 @@ export function Documents(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Documents" />
+      <PageHeader title="Documents" />
       <p className="hint page-intro">
         JAD+ checks each upload before it counts. A lapsed licence or insurance stops new jobs (S7).
       </p>

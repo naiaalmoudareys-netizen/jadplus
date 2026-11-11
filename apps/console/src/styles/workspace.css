@@ -1,0 +1,145 @@
+/* Provider workspaces (ADR 0036): grouped menu with icons, the office identity, work boards. docs/DESIGN.md. */
+.nav-group + .nav-group {
+  margin-top: 18px;
+}
+
+.nav-group-label {
+  color: var(--bronze-soft);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin: 0 12px 6px;
+}
+
+.nav-link .icon {
+  flex: none;
+  opacity: 0.85;
+}
+
+.nav-current .icon {
+  color: var(--bronze-soft);
+  opacity: 1;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.identity-company {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.identity-name {
+  color: var(--night);
+  font-weight: 600;
+}
+
+.identity-workspace .eyebrow {
+  display: inline;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--cream);
+  color: var(--ink-2);
+  border-radius: 12px;
+  padding: 1px 10px;
+  font-size: 12px;
+}
+
+.page-intro {
+  color: var(--ink-2);
+  margin: -12px 0 24px;
+  max-width: 720px;
+}
+
+.subhead {
+  margin: 20px 0 8px;
+}
+
+.open-link {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+/* Consultations pipeline: one row of stage columns per service, scrolling sideways on small screens. */
+.pipeline {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(170px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.pipeline-column {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 10px;
+  min-height: 80px;
+}
+
+.pipeline-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pipeline-card {
+  background: var(--paper);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 900px) {
+  .nav nav {
+    display: flex;
+    gap: 12px;
+  }
+
+  .nav-group + .nav-group {
+    margin-top: 0;
+  }
+
+  .nav-group-label {
+    display: none;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

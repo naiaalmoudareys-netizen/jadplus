@@ -9,9 +9,9 @@
  * - POST /managed-units/:id/tenancies/:tenancyId/end           end it now
  * - POST /managed-units/:id/requests/:requestId/approval       approve / decline a tenant's request (A1)
  * - GET  /manager-settings, PUT /manager-settings              the company's maintenance company for its units
- * - GET  /capabilities                                         what the company holds (the console menu)
  *
- * The office reaches only arrangements of its own company that are in force today; anything else is 404.
+ * The office reaches only arrangements of its own company that are in force today; anything else is 404. Every
+ * route needs Managed units in the company's workspace (ADR 0036), else 403.
  */
 import {
   dubaiDate,
@@ -47,6 +47,7 @@ import {
   type TenancyWithPerson,
 } from '../tenancies/actions.js';
 import { parseJsonBody, parseParams } from '../validate.js';
+import { workspacePage } from '../partner/workspace.js';
 import { maintenanceSetting, saveMaintenanceSetting } from './settings.js';
 import {
   MANAGED_SELECT,
@@ -112,9 +113,10 @@ async function unitTenancy(c: Ctx, m: ManagedRow, tenancyId: string): Promise<Te
 
 export function managedOfficeRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
-  const office = requireRole('partner_admin');
+  // ADR 0036: only a workspace with Managed units (property management, or units managed today).
+  const office = [requireRole('partner_admin'), workspacePage('managed_units')] as const;
 
-  r.get('/managed-units', office, async (c) => {
+  r.get('/managed-units', ...office, async (c) => {
     const partnerId = companyOf(c);
     const today = dubaiDate(c.get('now'));
     const { results } = await c.env.DB.prepare(
@@ -151,7 +153,7 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     return c.json({ units });
   });
 
-  r.get('/managed-units/:id', office, async (c) => {
+  r.get('/managed-units/:id', ...office, async (c) => {
     const { id } = parseParams(c, managedIdParam);
     const m = await officeArrangement(c, id);
     const t = await c.env.DB.prepare(
@@ -168,7 +170,7 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     });
   });
 
-  r.post('/managed-units/:id/tenancies', office, async (c) => {
+  r.post('/managed-units/:id/tenancies', ...office, async (c) => {
     const { id } = parseParams(c, managedIdParam);
     const body = await parseJsonBody(c, inviteTenantBody);
     const m = await officeArrangement(c, id);
@@ -177,7 +179,7 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     return c.json({ id: tenancyId, status: 'invited' }, 201);
   });
 
-  r.post('/managed-units/:id/tenancies/:tenancyId/extend', office, async (c) => {
+  r.post('/managed-units/:id/tenancies/:tenancyId/extend', ...office, async (c) => {
     const { id, tenancyId } = parseParams(c, managedTenancyParam);
     const body = await parseJsonBody(c, extendTenancyBody);
     const t = await unitTenancy(c, await officeArrangement(c, id), tenancyId);
@@ -185,14 +187,14 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     return c.json({ id: tenancyId, status, endsOn: body.endsOn });
   });
 
-  r.post('/managed-units/:id/tenancies/:tenancyId/end', office, async (c) => {
+  r.post('/managed-units/:id/tenancies/:tenancyId/end', ...office, async (c) => {
     const { id, tenancyId } = parseParams(c, managedTenancyParam);
     const t = await unitTenancy(c, await officeArrangement(c, id), tenancyId);
     await endTenancy(c, t, 'tenancy_ended_by_manager');
     return c.json({ id: tenancyId, status: 'revoked' });
   });
 
-  r.post('/managed-units/:id/requests/:requestId/approval', office, async (c) => {
+  r.post('/managed-units/:id/requests/:requestId/approval', ...office, async (c) => {
     const { id, requestId } = parseParams(c, requestParam);
     const body = await parseJsonBody(c, managerApprovalBody);
     const m = await officeArrangement(c, id);
@@ -215,9 +217,11 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     return c.json({ id: requestId, status });
   });
 
-  r.get('/manager-settings', office, async (c) => c.json(await maintenanceSetting(c.env.DB, companyOf(c))));
+  r.get('/manager-settings', ...office, async (c) =>
+    c.json(await maintenanceSetting(c.env.DB, companyOf(c))),
+  );
 
-  r.put('/manager-settings', office, async (c) => {
+  r.put('/manager-settings', ...office, async (c) => {
     const body = await parseJsonBody(c, maintenancePartnerBody);
     const partnerId = companyOf(c);
     const kind = await c.env.DB.prepare('SELECT kind FROM partners WHERE id = ?')
@@ -227,32 +231,6 @@ export function managedOfficeRoutes(): Hono<AppEnv> {
     if (kind?.kind !== 'jad_group') throw new ApiError(403, 'Not allowed.');
     await saveMaintenanceSetting(c, partnerId, body.partnerId);
     return c.json(await maintenanceSetting(c.env.DB, partnerId));
-  });
-
-  r.get('/capabilities', office, async (c) => {
-    const partnerId = companyOf(c);
-    const db = c.env.DB;
-    const [partner, services, managed] = await Promise.all([
-      db.prepare('SELECT kind FROM partners WHERE id = ?').bind(partnerId).first<{ kind: ProviderKind }>(),
-      db
-        .prepare(
-          'SELECT DISTINCT service_code FROM service_partners WHERE partner_id = ? AND ended_at IS NULL ORDER BY service_code',
-        )
-        .bind(partnerId)
-        .all<{ service_code: string }>(),
-      db
-        .prepare(
-          `SELECT 1 AS yes FROM managed_units m WHERE m.provider_id = ?1 AND ${managedNowSql('m', '?2')} LIMIT 1`,
-        )
-        .bind(partnerId, dubaiDate(c.get('now')))
-        .first<{ yes: number }>(),
-    ]);
-    if (partner === null) throw new ApiError(404, 'Not found.');
-    return c.json({
-      kind: partner.kind,
-      services: services.results.map((s) => s.service_code),
-      managesUnits: managed !== null,
-    });
   });
 
   return r;

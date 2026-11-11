@@ -1,6 +1,8 @@
 /**
- * The partner office, company tools (ADR 0025): overview, dispatch, messages, quotes, documents, rate card,
- * after-hours contacts, technicians' skills and availability, scorecard, feedback, export.
+ * The partner office, company tools (ADR 0025, 0036): overview, dispatch, messages, quotes, documents, rate card,
+ * after-hours contacts, technicians' skills and availability, scorecard, feedback, export, and the workspace
+ * boards (consultations, inspections and reports). Each page's endpoints also need the page in the company's
+ * workspace (ADR 0036: workspacePage).
  *
  * Mounted at /api/partner, which the technicians' routes share: roles are declared on each route, never with a
  * '*' middleware. Office tools are partner_admin only; a technician (partner) may read their own skills, days
@@ -9,6 +11,7 @@
 import { Hono } from 'hono';
 import type { AppEnv } from '../env.js';
 import { registerAfterHours } from './company/after-hours.js';
+import { registerBoards } from './company/boards.js';
 import { registerDispatch } from './company/dispatch.js';
 import { registerDocuments } from './company/documents.js';
 import { registerLists } from './company/lists.js';
@@ -27,5 +30,6 @@ export function partnerCompanyRoutes(): Hono<AppEnv> {
   registerRateCard(r);
   registerAfterHours(r);
   registerScorecard(r);
+  registerBoards(r);
   return r;
 }

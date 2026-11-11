@@ -5,20 +5,26 @@ import { STATUS_LABELS, statusTone, type Tone } from '../lib/format';
 import { formatRoute, type Route } from '../lib/router';
 import type { Status } from '@jadplus/shared';
 import type { Load } from './hooks';
+import { useWorkspace } from './workspace';
 
+/**
+ * A page's header: the eyebrow names where the page belongs (ADR 0036: the office's workspace title, or
+ * "JAD+ Admin", unless the page names something more precise), the title names the page.
+ */
 export function PageHeader({
   eyebrow,
   title,
   children,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   children?: ReactNode;
 }): ReactNode {
+  const ws = useWorkspace();
   return (
     <header className="page-header">
       <div>
-        <p className="eyebrow">{eyebrow}</p>
+        <p className="eyebrow">{eyebrow ?? ws?.workspace.title ?? 'JAD+ Admin'}</p>
         <h1 className="title">{title}</h1>
       </div>
       {children}
@@ -157,9 +163,14 @@ export function Figure({ label, value, note }: { label: string; value: string; n
   );
 }
 
-/** What a list shows when there is nothing in it. */
-export function Empty({ children }: { children: ReactNode }): ReactNode {
-  return <p className="muted empty">{children}</p>;
+/** What a list shows when there is nothing in it; `explain` says what will appear there (ADR 0036). */
+export function Empty({ children, explain }: { children: ReactNode; explain?: string }): ReactNode {
+  return (
+    <div className="empty">
+      <p className="muted">{children}</p>
+      {explain === undefined ? null : <p className="hint">{explain}</p>}
+    </div>
+  );
 }
 
 /** A card with a section title, an optional count and optional buttons on the right. */

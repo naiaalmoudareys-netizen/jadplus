@@ -20,6 +20,7 @@ import {
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
+import { workspacePage } from '../workspace.js';
 import type { AppEnv } from '../../env.js';
 import { parseQuery } from '../../validate.js';
 import { OPEN_SQL, companyOf } from './common.js';
@@ -37,7 +38,7 @@ function speaker(role: UserRole): 'resident' | 'partner' | 'jad' {
 export function registerLists(r: Hono<AppEnv>): void {
   const office = requireRole('partner_admin');
 
-  r.get('/messages', office, async (c) => {
+  r.get('/messages', office, workspacePage('messages'), async (c) => {
     const { results } = await c.env.DB.prepare(
       `SELECT r.id, r.ref, r.status, ${SERVICE}, m.body, m.at, m.author_role,
          (SELECT count(*) FROM request_messages x WHERE x.request_id = r.id) AS n
@@ -74,7 +75,7 @@ export function registerLists(r: Hono<AppEnv>): void {
     });
   });
 
-  r.get('/quotes', office, async (c) => {
+  r.get('/quotes', office, workspacePage('quotes'), async (c) => {
     const { status } = parseQuery(c, partnerQuotesQuery);
     const partnerId = companyOf(c);
     const now = c.get('now');
@@ -134,7 +135,7 @@ export function registerLists(r: Hono<AppEnv>): void {
     });
   });
 
-  r.get('/feedback', office, async (c) => {
+  r.get('/feedback', office, workspacePage('performance'), async (c) => {
     const { month: asked } = parseQuery(c, monthQuery);
     const month = asked ?? monthOf(c.get('now'));
     const { start, end } = monthRange(month);

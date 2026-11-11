@@ -75,8 +75,9 @@ export const partnerJobsResponse = z.object({
       ref: z.string(),
       emergency: z.boolean(),
       emergencyType: emergencyType.nullable(),
-      /** The service, e.g. "Maintenance" or "Furnishing". */
+      /** The service, e.g. "Maintenance" or "Furnishing", and its code (the console's boards sort by it). */
       serviceName: z.string().nullable(),
+      serviceCode: z.string(),
       status: z.enum(STATUSES),
       description: z.string(),
       nextDueAt: z.number().int().nullable(),

@@ -25,12 +25,22 @@ import {
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
+import { workspacePage } from '../workspace.js';
 import { newId } from '../../crypto.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
 import { LOCATION_JOIN } from '../../requests/views.js';
 import { parseJsonBody, parseParams, parseQuery } from '../../validate.js';
-import { OPEN_SQL, activeTeam, audit, companyOf, companyTechnician, dubaiDay, type Ctx } from './common.js';
+import {
+  NOT_CONSULTATION,
+  OPEN_SQL,
+  activeTeam,
+  audit,
+  companyOf,
+  companyTechnician,
+  dubaiDay,
+  type Ctx,
+} from './common.js';
 
 const MIN = 60_000;
 /** A sick day may be recorded up to 30 days after it started; history is shown for 90 days. */
@@ -104,7 +114,7 @@ async function dayPlan(c: Ctx, partnerId: string, date: string): Promise<Dispatc
       `SELECT r.id, r.ref, r.is_emergency, r.emergency_type, r.next_due_at, ou.building,
          (SELECT name FROM services WHERE code = r.service_code) AS service
        FROM requests r ${LOCATION_JOIN}
-       WHERE r.partner_id = ? AND r.technician_id IS NULL AND r.status IN (${OPEN_SQL})
+       WHERE r.partner_id = ? AND r.technician_id IS NULL AND r.status IN (${OPEN_SQL}) AND ${NOT_CONSULTATION}
        ORDER BY r.is_emergency DESC, r.next_due_at IS NULL, r.next_due_at, r.created_at`,
     )
     .bind(partnerId)
@@ -231,7 +241,7 @@ export function registerDispatch(r: Hono<AppEnv>): void {
     return c.json(await awayList(c, id));
   });
 
-  r.get('/dispatch', office, async (c) => {
+  r.get('/dispatch', office, workspacePage('dispatch'), async (c) => {
     const { date } = parseQuery(c, dispatchQuery);
     return c.json(await dayPlan(c, companyOf(c), date ?? dubaiDate(c.get('now'))));
   });

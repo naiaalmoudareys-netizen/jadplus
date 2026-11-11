@@ -32,6 +32,7 @@ import { auditStatement } from '../audit.js';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { managedNowSql } from '../managed/store.js';
 import { LOCATION_JOIN } from '../requests/views.js';
 import { parseJsonBody, parseParams, parseQuery } from '../validate.js';
 
@@ -232,6 +233,23 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
         'SELECT partner_id, kind, MAX(expires_on) AS expires_on FROM partner_documents GROUP BY partner_id, kind',
       )
       .all<{ partner_id: string; kind: string; expires_on: string | null }>();
+    // ADR 0036: what each company's workspace is derived from, so JAD+ Admin sees what its console contains.
+    const held = await db
+      .prepare('SELECT DISTINCT partner_id, service_code FROM service_partners WHERE ended_at IS NULL')
+      .all<{ partner_id: string; service_code: string }>();
+    const inHand = await db
+      .prepare(
+        `SELECT DISTINCT partner_id, service_code FROM requests WHERE partner_id IS NOT NULL
+         AND status IN (${open.map(() => '?').join(', ')})`,
+      )
+      .bind(...open)
+      .all<{ partner_id: string; service_code: string }>();
+    const managing = await db
+      .prepare(`SELECT DISTINCT provider_id FROM managed_units m WHERE ${managedNowSql('m', '?')}`)
+      .bind(dubaiDate(c.get('now')))
+      .all<{ provider_id: string }>();
+    const codes = (rows: readonly { partner_id: string; service_code: string }[], id: string): string[] =>
+      rows.filter((x) => x.partner_id === id).map((x) => x.service_code);
     return c.json({
       partners: results.map((p) => ({
         id: p.id,
@@ -244,6 +262,9 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
         documents: docs.results
           .filter((d) => d.partner_id === p.id)
           .map((d) => ({ kind: d.kind, expiresOn: d.expires_on })),
+        services: codes(held.results, p.id),
+        inHand: codes(inHand.results, p.id),
+        managesUnits: managing.results.some((m) => m.provider_id === p.id),
       })),
     });
   });

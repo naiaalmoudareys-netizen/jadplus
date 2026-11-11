@@ -10,6 +10,7 @@
 import { afterHoursQuery, dubaiDate, setAfterHoursBody, weekStarting, weeksFrom } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
+import { workspacePage } from '../workspace.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
 import { parseJsonBody, parseQuery } from '../../validate.js';
@@ -39,12 +40,12 @@ async function weeks(c: Ctx, from: string) {
 }
 
 export function registerAfterHours(r: Hono<AppEnv>): void {
-  r.get('/after-hours', requireRole('partner_admin', 'partner'), async (c) => {
+  r.get('/after-hours', requireRole('partner_admin', 'partner'), workspacePage('after_hours'), async (c) => {
     const { from } = parseQuery(c, afterHoursQuery);
     return c.json(await weeks(c, from ?? weekStarting(dubaiDate(c.get('now')))));
   });
 
-  r.put('/after-hours', requireRole('partner_admin'), async (c) => {
+  r.put('/after-hours', requireRole('partner_admin'), workspacePage('after_hours'), async (c) => {
     const body = await parseJsonBody(c, setAfterHoursBody);
     const partnerId = companyOf(c);
     if (body.weekStarting < weekStarting(dubaiDate(c.get('now')))) {

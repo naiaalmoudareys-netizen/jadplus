@@ -97,12 +97,13 @@ describe('handover checklist: starting (O2)', () => {
 
   it('O2/C-AZ-2: another office, a technician, owners, tenants and viewers cannot open one; only handover requests', async () => {
     const w = await setup();
-    expect((await start(w, w.otherOffice)).status).toBe(404);
+    // ADR 0036: an office whose workspace has no Handovers is refused outright.
+    expect((await start(w, w.otherOffice)).status).toBe(403);
     expect((await start(w, w.primaryToken)).status).toBe(403);
     expect((await start(w, w.ownerToken)).status).toBe(403);
     expect((await start(w, w.tenantToken)).status).toBe(403);
     expect((await start(w, w.viewer, 'admin')).status).toBe(403);
-    expect((await staffList(w, w.otherOffice)).waiting).toEqual([]);
+    expect((await w.h.request('/api/partner/handovers', { token: w.otherOffice })).status).toBe(403);
     insert(
       w.h.sqlite,
       'requests',
@@ -190,7 +191,7 @@ describe('handover checklist: steps and key collection (O2)', () => {
   it('O2/C-AZ-1/C-AZ-2: only the team that has the request, or JAD+ Admin, changes it', async () => {
     const w = await setup();
     const id = await started(w);
-    expect((await tick(w, w.otherOffice, id, 'documents')).status).toBe(404);
+    expect((await tick(w, w.otherOffice, id, 'documents')).status).toBe(403);
     expect((await tick(w, w.primaryToken, id, 'documents')).status).toBe(403);
     expect((await tick(w, w.ownerToken, id, 'documents')).status).toBe(403);
     const asViewer = await w.h.request(`/api/admin/handovers/${id}/steps`, {
@@ -206,8 +207,8 @@ describe('handover checklist: steps and key collection (O2)', () => {
     });
     expect(asAdmin.status).toBe(200);
     expect((await tick(w, w.team, id, 'documents', true, '<b>x</b>')).status).toBe(400);
-    expect((await staffList(w, w.otherOffice)).handovers).toEqual([]);
-    // Reassigning the request moves the checklist with it.
+    expect((await w.h.request('/api/partner/handovers', { token: w.otherOffice })).status).toBe(403);
+    // Reassigning the request moves the checklist with it (and the handover work into the other office's workspace).
     w.h.sqlite.prepare("UPDATE requests SET partner_id = 'p-other' WHERE id = 'req-h'").run();
     expect((await tick(w, w.team, id, 'utilities')).status).toBe(404);
     expect((await tick(w, w.otherOffice, id, 'utilities')).status).toBe(200);

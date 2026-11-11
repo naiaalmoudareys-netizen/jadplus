@@ -97,7 +97,7 @@ export function RateCard(): ReactNode {
   const { state, reload } = useLoad(() => api.get('/api/partner/rate-card', rateCardResponse), 'rate-card');
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Rate card">
+      <PageHeader title="Rate card">
         {proposing ? null : (
           <button
             type="button"

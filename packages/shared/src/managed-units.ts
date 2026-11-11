@@ -254,13 +254,3 @@ export const officeManagedUnitResponse = z.object({
   statements: z.array(statementView),
 });
 export type OfficeManagedUnitDetail = z.infer<typeof officeManagedUnitResponse>;
-
-/** GET /api/partner/capabilities: what the office's company holds, for its menu (ADR 0034). */
-export const partnerCapabilitiesResponse = z.object({
-  kind: z.enum(['external', 'jad_group']),
-  /** Services the company is assigned to now (primary or backup). */
-  services: z.array(z.string()),
-  /** Units it manages now. */
-  managesUnits: z.boolean(),
-});
-export type PartnerCapabilities = z.infer<typeof partnerCapabilitiesResponse>;

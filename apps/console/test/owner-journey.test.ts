@@ -1,4 +1,4 @@
-import type { HandoverChecklist, StaffSession } from '@jadplus/shared';
+import { workspaceFor, type HandoverChecklist, type StaffSession } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_SESSION_FORM,
@@ -11,7 +11,8 @@ import {
   staffBase,
   unitText,
 } from '../src/lib/owner-journey';
-import { formatRoute, isCurrent, navFor, parseHash, routeAllowed } from '../src/lib/router';
+import { navFor } from '../src/lib/nav';
+import { formatRoute, isCurrent, parseHash, routeAllowed } from '../src/lib/router';
 
 const NOW = Date.UTC(2026, 10, 9, 8, 0, 0);
 
@@ -55,9 +56,9 @@ describe('handover pages (O2)', () => {
       expect(routeAllowed(route, 'partner_admin')).toBe(true);
       expect(routeAllowed(route, 'owner')).toBe(false);
     }
-    // ADR 0034: the office menu shows Handovers to the handover team.
-    const team = { kind: 'jad_group' as const, services: ['handover'], managesUnits: false };
-    expect(navFor('partner_admin', team).some((n) => n.route.name === 'handovers')).toBe(true);
+    // ADR 0034, 0036: the office menu shows Handovers to the handover team.
+    const team = workspaceFor({ kind: 'jad_group', services: ['handover'], inHand: [], managesUnits: false });
+    expect(navFor('partner_admin', team.pages).some((n) => n.route.name === 'handovers')).toBe(true);
     expect(isCurrent({ name: 'handovers' }, { name: 'handover', id: 'h-1' })).toBe(true);
     expect(parseHash('#/handovers/../x').name).toBe('not_found');
   });

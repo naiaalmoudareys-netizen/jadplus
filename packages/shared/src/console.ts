@@ -93,6 +93,10 @@ export const adminPartnersResponse = z.object({
       technicians: z.number().int(),
       openJobs: z.number().int(),
       documents: z.array(z.object({ kind: z.string(), expiresOn: z.string().nullable() })),
+      /** ADR 0036: what its workspace is derived from (services held now, services of open work, managed units). */
+      services: z.array(z.string()),
+      inHand: z.array(z.string()),
+      managesUnits: z.boolean(),
     }),
   ),
 });

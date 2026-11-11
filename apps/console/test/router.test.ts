@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatRoute,
-  homeRoute,
-  isCurrent,
-  navFor,
-  parseHash,
-  routeAllowed,
-  type Route,
-} from '../src/lib/router';
+import { OFFICE_PAGES } from '@jadplus/shared';
+import { navFor, navGroups, officeRouteAllowed } from '../src/lib/nav';
+import { formatRoute, homeRoute, isCurrent, parseHash, routeAllowed, type Route } from '../src/lib/router';
 
 describe('hash router (ADR 0023, 0025)', () => {
   it('reads every page from the address hash', () => {
@@ -98,6 +92,9 @@ describe('hash router (ADR 0023, 0025)', () => {
       { name: 'rate_card' },
       { name: 'after_hours' },
       { name: 'performance', month: '2026-11' },
+      { name: 'consultations' },
+      { name: 'inspections' },
+      { name: 'snags' },
     ];
     for (const r of routes) expect(parseHash(formatRoute(r))).toEqual(r);
   });
@@ -132,50 +129,34 @@ describe('hash router (ADR 0023, 0025)', () => {
     expect(homeRoute('jad_admin')).toEqual({ name: 'overview' });
     expect(homeRoute('jad_viewer')).toEqual({ name: 'overview' });
     expect(homeRoute('partner_admin')).toEqual({ name: 'office' });
-    expect(navFor('jad_admin').map((n) => n.label)).toEqual([
-      'Overview',
-      'Needs action',
-      'Service requests',
-      'People',
-      'Documents & account',
-      'Partners',
-      'Services',
-      'Buildings',
-      'Offers',
-      'Handovers',
-      'Education',
-      'On-call',
-      'Reports',
-      'Audit log',
-      'Staff',
-      'Settings',
-      'Invoices',
+    // ADR 0036: JAD+ Admin keeps every page, grouped under section labels.
+    expect(navGroups('jad_admin').map((g) => [g.label, g.items.map((n) => n.label)])).toEqual([
+      ['Today', ['Overview', 'Needs action']],
+      ['Requests', ['Service requests', 'Documents & account', 'Handovers', 'Education']],
+      ['People & places', ['People', 'Buildings', 'Offers']],
+      ['Providers', ['Partners', 'Services', 'Invoices']],
+      ['Control', ['On-call', 'Reports', 'Audit log', 'Staff', 'Settings']],
     ]);
     expect(navFor('jad_viewer').map((n) => n.label)).not.toContain('Audit log');
     expect(navFor('jad_viewer').map((n) => n.label)).not.toContain('Staff');
-    const everything = {
-      kind: 'jad_group' as const,
-      services: ['handover', 'education', 'property-management'],
-      managesUnits: true,
-    };
-    expect(navFor('partner_admin', everything).map((n) => n.label)).toEqual([
-      'Overview',
-      'Dispatch',
-      'Jobs',
-      'Messages',
-      'Quotes',
-      'Team',
-      'Documents',
-      'Rate card',
-      'After-hours',
-      'Performance',
-      'Invoices',
-      'Handovers',
-      'Education',
-      'Managed units',
+    // A partner office sees nothing until its workspace is known, then exactly its pages, grouped.
+    expect(navFor('partner_admin')).toEqual([]);
+    expect(
+      navGroups('partner_admin', OFFICE_PAGES).map((g) => [g.label, g.items.map((n) => n.label)]),
+    ).toEqual([
+      ['Today', ['Overview', 'Dispatch']],
+      [
+        'Work',
+        ['Jobs', 'Consultations', 'Inspections & reports', 'Handovers', 'Snags to fix', 'Quotes', 'Messages'],
+      ],
+      ['Clients', ['Managed units', 'Education']],
+      ['Company', ['Team', 'Performance', 'After-hours', 'Documents', 'Rate card', 'Invoices']],
     ]);
     for (const role of ['jad_admin', 'jad_viewer', 'partner_admin'] as const) {
-      for (const item of navFor(role, everything)) expect(routeAllowed(item.route, role)).toBe(true);
+      for (const item of navFor(role, OFFICE_PAGES)) expect(routeAllowed(item.route, role)).toBe(true);
+    }
+    for (const item of navFor('partner_admin', OFFICE_PAGES)) {
+      expect(officeRouteAllowed(item.route, OFFICE_PAGES)).toBe(true);
     }
   });
 

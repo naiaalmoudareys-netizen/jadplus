@@ -122,7 +122,9 @@ p {
 }
 
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: var(--cream);
   text-decoration: none;
   padding: 10px 12px;
@@ -153,7 +155,7 @@ p {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 16px;
   padding: 12px 32px;
   border-bottom: 1px solid var(--line);

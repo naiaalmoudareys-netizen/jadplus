@@ -83,7 +83,7 @@ export function OfficeMessages(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Messages">
+      <PageHeader title="Messages">
         <button type="button" className="btn btn-outline" onClick={reload}>
           Refresh
         </button>

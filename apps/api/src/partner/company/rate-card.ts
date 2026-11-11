@@ -19,6 +19,7 @@ import {
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
+import { workspacePage } from '../workspace.js';
 import { decryptField, newId, toBytes, type Keys } from '../../crypto.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
@@ -96,9 +97,10 @@ export async function rateReason(keys: Keys, id: string, enc: unknown): Promise<
 }
 
 export function registerRateCard(r: Hono<AppEnv>): void {
-  const office = requireRole('partner_admin');
+  // ADR 0036: outside partners only (a JAD Global team has no rate card).
+  const office = [requireRole('partner_admin'), workspacePage('rate_card')] as const;
 
-  r.get('/rate-card', office, async (c) => {
+  r.get('/rate-card', ...office, async (c) => {
     const partnerId = companyOf(c);
     const db = c.env.DB;
     const { current, upcoming } = await acceptedCards(db, partnerId, dubaiDate(c.get('now')));
@@ -133,7 +135,7 @@ export function registerRateCard(r: Hono<AppEnv>): void {
     return c.json({ current, upcoming, changes });
   });
 
-  r.post('/rate-card/changes', office, async (c) => {
+  r.post('/rate-card/changes', ...office, async (c) => {
     const body = await parseJsonBody(c, rateCardChangeBody);
     const partnerId = companyOf(c);
     const db = c.env.DB;

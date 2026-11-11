@@ -28,7 +28,9 @@ import {
 } from '@jadplus/shared';
 import type { Context, MiddlewareHandler } from 'hono';
 import { Hono } from 'hono';
+import { every } from 'hono/combine';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import { loadCalendar } from '../calendar.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
@@ -79,10 +81,10 @@ async function saveWithGuard(c: Ctx, statements: D1PreparedStatement[]): Promise
 export function handoverStaffRoutes(scope: StaffScope): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
   // Per route, not r.use('*'): these sub-apps are mounted at /api/partner and /api/admin beside other routes.
-  const read: MiddlewareHandler<AppEnv> =
-    scope === 'admin' ? requireRole('jad_admin', 'jad_viewer') : requireRole('partner_admin');
-  const change: MiddlewareHandler<AppEnv> =
-    scope === 'admin' ? requireRole('jad_admin') : requireRole('partner_admin');
+  // ADR 0036: in the office, only a company whose workspace has Handovers (it holds the handover service).
+  const office = every(requireRole('partner_admin'), workspacePage('handovers'));
+  const read: MiddlewareHandler<AppEnv> = scope === 'admin' ? requireRole('jad_admin', 'jad_viewer') : office;
+  const change: MiddlewareHandler<AppEnv> = scope === 'admin' ? requireRole('jad_admin') : office;
 
   r.get('/handovers', read, async (c) => {
     const viewer = viewerOf(c, scope);

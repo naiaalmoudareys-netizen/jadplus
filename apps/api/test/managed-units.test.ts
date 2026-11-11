@@ -5,7 +5,7 @@ import {
   officeManagedUnitResponse,
   officeManagedUnitsResponse,
   ownerTenanciesResponse,
-  partnerCapabilitiesResponse,
+  partnerWorkspaceResponse,
   requestDetailResponse,
 } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
@@ -133,20 +133,18 @@ describe('setting a unit as managed (O4)', () => {
 });
 
 describe('the managing office and the tenant (O4, U5)', () => {
-  it('O4: the office invites, extends and ends; the owner reads but cannot change; other teams get 404', async () => {
+  it('O4: the office invites, extends and ends; the owner reads but cannot change; other teams are refused', async () => {
     const w = await managedWorld();
     const id = await setManaged(w);
     const list = officeManagedUnitsResponse.parse(
       await (await get(w, '/api/partner/managed-units', w.harbor)).json(),
     );
     expect(list.units[0]).toMatchObject({ id, tenantStatus: 'active', awaitingApproval: 0 });
-    expect(
-      officeManagedUnitsResponse.parse(await (await get(w, '/api/partner/managed-units', w.otherTeam)).json())
-        .units,
-    ).toEqual([]);
-    expect((await get(w, `/api/partner/managed-units/${id}`, w.otherTeam)).status).toBe(404);
+    // ADR 0036: a team without Managed units in its workspace is refused outright.
+    expect((await get(w, '/api/partner/managed-units', w.otherTeam)).status).toBe(403);
+    expect((await get(w, `/api/partner/managed-units/${id}`, w.otherTeam)).status).toBe(403);
     expect((await post(w, `/api/partner/managed-units/${id}/tenancies/ten-1/end`, w.otherTeam)).status).toBe(
-      404,
+      403,
     );
     expect((await get(w, `/api/partner/managed-units/${id}`, w.primaryToken)).status).toBe(403);
 
@@ -235,7 +233,7 @@ describe('approval by the manager (A1)', () => {
     );
     expect(list.units[0]?.awaitingApproval).toBe(1);
     const path = `/api/partner/managed-units/${id}/requests/${req}/approval`;
-    expect((await post(w, path, w.otherTeam, { decision: 'approve' })).status).toBe(404);
+    expect((await post(w, path, w.otherTeam, { decision: 'approve' })).status).toBe(403);
     expect((await post(w, path, w.harbor, { decision: 'approve' })).status).toBe(200);
     expect(rows(w, `SELECT status, partner_id FROM requests WHERE id = '${req}'`)).toEqual([
       { status: 'assigned', partner_id: 'p-vip' },
@@ -297,22 +295,25 @@ describe('approval by the manager (A1)', () => {
   });
 });
 
-describe('capabilities (the office menu)', () => {
+describe('workspace (the office menu, ADR 0036)', () => {
   it('the office learns its kind, its services and whether it manages units now', async () => {
     const w = await managedWorld();
-    const before = partnerCapabilitiesResponse.parse(
-      await (await get(w, '/api/partner/capabilities', w.harbor)).json(),
+    const before = partnerWorkspaceResponse.parse(
+      await (await get(w, '/api/partner/workspace', w.harbor)).json(),
     );
-    expect(before).toEqual({ kind: 'jad_group', services: ['property-management'], managesUnits: false });
+    expect(before).toMatchObject({ kind: 'jad_group', managesUnits: false });
+    expect(before.workspace.services.map((s) => s.code)).toEqual(['property-management']);
+    expect(before.workspace.title).toBe('Property management');
     await setManaged(w);
-    const after = partnerCapabilitiesResponse.parse(
-      await (await get(w, '/api/partner/capabilities', w.harbor)).json(),
+    const after = partnerWorkspaceResponse.parse(
+      await (await get(w, '/api/partner/workspace', w.harbor)).json(),
     );
     expect(after.managesUnits).toBe(true);
-    const maint = partnerCapabilitiesResponse.parse(
-      await (await get(w, '/api/partner/capabilities', w.primaryOffice)).json(),
+    const maint = partnerWorkspaceResponse.parse(
+      await (await get(w, '/api/partner/workspace', w.primaryOffice)).json(),
     );
-    expect(maint).toEqual({ kind: 'external', services: ['maintenance'], managesUnits: false });
-    expect((await get(w, '/api/partner/capabilities', w.primaryToken)).status).toBe(403);
+    expect(maint).toMatchObject({ kind: 'external', managesUnits: false });
+    expect(maint.workspace.title).toBe('Maintenance & home services');
+    expect((await get(w, '/api/partner/workspace', w.primaryToken)).status).toBe(403);
   });
 });

@@ -33,6 +33,7 @@ import {
 } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
+import { workspacePage } from '../partner/workspace.js';
 import { encryptField, newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
@@ -86,9 +87,10 @@ function isUniqueClash(err: unknown): boolean {
 }
 
 export function registerPartnerInvoices(r: Hono<AppEnv>): void {
-  const office = requireRole('partner_admin');
+  // ADR 0036: outside partners only (JAD Global teams do not invoice owners through JAD+).
+  const office = [requireRole('partner_admin'), workspacePage('invoices')] as const;
 
-  r.get('/partner/invoices', office, async (c) => {
+  r.get('/partner/invoices', ...office, async (c) => {
     const { status } = parseQuery(c, partnerInvoicesQuery);
     const partnerId = companyOf(c);
     const day = today(c);
@@ -125,7 +127,7 @@ export function registerPartnerInvoices(r: Hono<AppEnv>): void {
     });
   });
 
-  r.get('/partner/invoices/ready', office, async (c) => {
+  r.get('/partner/invoices/ready', ...office, async (c) => {
     const { results } = await c.env.DB.prepare(
       `SELECT * FROM (
          SELECT r.id, r.ref,
@@ -152,7 +154,7 @@ export function registerPartnerInvoices(r: Hono<AppEnv>): void {
     });
   });
 
-  r.post('/partner/invoices', office, async (c) => {
+  r.post('/partner/invoices', ...office, async (c) => {
     const body = await parseJsonBody(c, issueInvoiceBody);
     const partnerId = companyOf(c);
     const db = c.env.DB;
@@ -242,7 +244,7 @@ export function registerPartnerInvoices(r: Hono<AppEnv>): void {
     return c.json(await partnerView(c, row, issueDate), 201);
   });
 
-  r.post('/partner/invoices/:id/paid', office, async (c) => {
+  r.post('/partner/invoices/:id/paid', ...office, async (c) => {
     const row = await ownInvoice(c);
     const body = await parseJsonBody(c, markInvoicePaidBody);
     stepAllowed(row, 'mark_paid');
@@ -265,7 +267,7 @@ export function registerPartnerInvoices(r: Hono<AppEnv>): void {
     return c.json({ id: row.id, status: 'paid' });
   });
 
-  r.post('/partner/invoices/:id/not-received', office, async (c) => {
+  r.post('/partner/invoices/:id/not-received', ...office, async (c) => {
     const row = await ownInvoice(c);
     stepAllowed(row, 'mark_not_received');
     const db = c.env.DB;
@@ -284,7 +286,7 @@ export function registerPartnerInvoices(r: Hono<AppEnv>): void {
     return c.json({ id: row.id, status: 'issued' });
   });
 
-  r.post('/partner/invoices/:id/cancel', office, async (c) => {
+  r.post('/partner/invoices/:id/cancel', ...office, async (c) => {
     const row = await ownInvoice(c);
     const body = await parseJsonBody(c, cancelInvoiceBody);
     stepAllowed(row, 'cancel');

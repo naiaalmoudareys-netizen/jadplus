@@ -232,7 +232,7 @@ export function OfficeInvoices(): ReactNode {
   };
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Invoices">
+      <PageHeader title="Invoices">
         <label className="field">
           <span className="label">Show</span>
           <select

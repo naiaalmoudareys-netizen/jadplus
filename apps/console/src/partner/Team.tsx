@@ -149,7 +149,7 @@ export function Team(): ReactNode {
   const { state, reload } = useLoad(() => api.get('/api/partner/team', partnerTeamResponse), 'team');
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Team" />
+      <PageHeader title="Team" />
       {done === null ? null : <Notice tone="good">{done}</Notice>}
       <Loaded state={state} reload={reload}>
         {({ partner, technicians }) => (

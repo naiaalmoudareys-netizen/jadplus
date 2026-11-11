@@ -23,6 +23,7 @@ const job = (over: Partial<PartnerJob> = {}): PartnerJob => ({
   emergency: true,
   emergencyType: 'water_leak',
   serviceName: 'Maintenance',
+  serviceCode: 'maintenance',
   status: 'assigned',
   description: 'Water coming through the ceiling.',
   nextDueAt: NOW + 12 * MIN,

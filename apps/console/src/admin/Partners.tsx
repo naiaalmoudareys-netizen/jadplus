@@ -3,7 +3,8 @@
  * JAD Global team, shown as a tag; JAD+ Admin adds new ones), its standing, team size, open jobs and
  * documents (red when lapsed or missing, amber within 30 days), what waits for JAD+'s decision (uploaded
  * documents, rate-card changes), and the review list from the daily check. JAD+ Admin suspends or reinstates
- * with a reason, which is audited; a viewer only reads. Each partner opens its own page.
+ * with a reason, which is audited; a viewer only reads. Each partner opens its own page. ADR 0036: each row
+ * names the provider's workspace, so JAD+ Admin knows what its console is for.
  */
 import { adminPartnersResponse, partnerStatusBody } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
@@ -12,6 +13,7 @@ import { ApiError, apiPath } from '../lib/api';
 import { documentLines } from '../lib/documents';
 import { partnerStatusChangedResponse } from '../lib/schemas';
 import { PROVIDER_KIND_LABELS } from '../lib/providers';
+import { workspaceSummary } from '../lib/workspace';
 import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, Notice, PageHeader, ReasonForm, Tag } from '../ui/parts';
@@ -129,6 +131,7 @@ function PartnerTable({
                 <span className="block">
                   <Tag tone={PROVIDER_KIND_LABELS[p.kind].tone}>{PROVIDER_KIND_LABELS[p.kind].label}</Tag>
                 </span>
+                <span className="block hint">Workspace: {workspaceSummary(p).title}</span>
               </td>
               <td>
                 <Tag tone={standing.tone}>{standing.label}</Tag>

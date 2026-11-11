@@ -43,3 +43,6 @@ export * from './sla.js';
 export * from './snags.js';
 export * from './tenancy.js';
 export * from './visits.js';
+export * from './workspace.js';
+export * from './workspace-boards.js';
+export * from './workspace-schemas.js';

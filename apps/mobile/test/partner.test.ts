@@ -13,6 +13,7 @@ function job(id: string, over: Partial<PartnerJob> = {}): PartnerJob {
     emergency: false,
     emergencyType: null,
     serviceName: 'Maintenance',
+    serviceCode: 'maintenance',
     status: 'scheduled',
     description: 'Fix the tap',
     nextDueAt: null,

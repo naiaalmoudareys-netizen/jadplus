@@ -128,10 +128,7 @@ export function Education(): ReactNode {
   );
   return (
     <>
-      <PageHeader
-        eyebrow={session.role === 'partner_admin' ? 'Partner office' : 'JAD+ Admin'}
-        title="Investor education"
-      />
+      <PageHeader title="Investor education" />
       <Loaded state={state} reload={reload}>
         {({ canManage, sessions }) =>
           session.role === 'partner_admin' && !canManage ? (

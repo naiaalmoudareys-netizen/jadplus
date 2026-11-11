@@ -188,7 +188,7 @@ export function Performance({ month }: { month: string | null }): ReactNode {
   };
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Performance">
+      <PageHeader title="Performance">
         <div className="row-actions">
           <button
             type="button"

@@ -58,6 +58,7 @@ function job(over: Partial<PartnerJob>): PartnerJob {
     emergency: false,
     emergencyType: null,
     serviceName: 'Maintenance',
+    serviceCode: 'maintenance',
     status: 'scheduled',
     description: 'Dripping tap',
     nextDueAt: NOW + DAY,

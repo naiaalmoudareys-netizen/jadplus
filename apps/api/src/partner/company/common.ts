@@ -18,6 +18,13 @@ const DUBAI_OFFSET = 4 * 3_600_000;
 /** The open statuses as an SQL list. Built from the shared status constants only, never from input. */
 export const OPEN_SQL = [...OPEN_STATUSES].map((s) => `'${s}'`).join(', ');
 
+/**
+ * SQL: request `r` is not a consultation. Consultations are a conversation, not a home visit: nobody is sent, so
+ * they stay off Dispatch and the home-services figures and live on the consultations board (ADR 0036).
+ */
+export const NOT_CONSULTATION =
+  "r.service_code NOT IN (SELECT code FROM services WHERE flow = 'consultation')";
+
 /** The company of the signed-in partner or partner office (sessions in a partner role always carry one). */
 export function companyOf(c: Ctx): string {
   const id = c.get('auth').partnerId;

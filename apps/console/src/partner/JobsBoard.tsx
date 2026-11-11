@@ -13,13 +13,10 @@ import {
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { apiPath, errorMessage } from '../lib/api';
 import { windowText } from '../lib/format';
-import { groupJobs, jobClock, jobWhat, placeText } from '../lib/jobs';
+import { COLUMN_EMPTY, groupJobs, jobClock, jobWhat, onJobsBoard, placeText } from '../lib/jobs';
 import { technicianAssignedResponse } from '../lib/schemas';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
-import { Link, Loaded, Notice, PageHeader, StatusTag, Tag } from '../ui/parts';
-import { showsSnagsToFix } from '../lib/capabilities';
-import { useCapabilities } from '../ui/capabilities';
-import { SnagsToFix } from './SnagsToFix';
+import { Empty, Link, Loaded, Notice, PageHeader, StatusTag, Tag } from '../ui/parts';
 
 type Technician = PartnerTeam['technicians'][number];
 
@@ -160,7 +157,6 @@ function JobRow({
 
 export function JobsBoard(): ReactNode {
   const { api } = useConsole();
-  const caps = useCapabilities();
   const now = useNow();
   const { state, reload } = useLoad(
     () =>
@@ -172,45 +168,48 @@ export function JobsBoard(): ReactNode {
   );
   return (
     <>
-      <PageHeader eyebrow="Partner office" title="Jobs board">
+      <PageHeader title="Jobs board">
         <button type="button" className="btn btn-outline" onClick={reload}>
           Refresh
         </button>
       </PageHeader>
-      {showsSnagsToFix(caps) ? <SnagsToFix /> : null}
       <Loaded state={state} reload={reload}>
-        {([{ jobs }, team]) => (
-          <>
-            {team.technicians.length === 0 ? (
-              <Notice tone="warn">Add technicians on the Team page before assigning jobs.</Notice>
-            ) : null}
-            <div className="board">
-              {groupJobs(jobs, now).map((g) => (
-                <section key={g.column} className="card board-column">
-                  <h2 className="section-title">
-                    {g.title} <span className="count">{g.jobs.length}</span>
-                  </h2>
-                  {g.jobs.length === 0 ? (
-                    <p className="muted">Nothing here.</p>
-                  ) : (
-                    <ul className="jobs">
-                      {g.jobs.map(({ job, reason }) => (
-                        <JobRow
-                          key={job.id}
-                          job={job}
-                          reason={reason}
-                          team={team.technicians}
-                          now={now}
-                          onAssigned={reload}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              ))}
-            </div>
-          </>
-        )}
+        {([{ jobs: all }, team]) => {
+          // ADR 0036: consultations live on the Consultations board, not here.
+          const jobs = all.filter(onJobsBoard);
+          return (
+            <>
+              {team.technicians.length === 0 ? (
+                <Notice tone="warn">Add technicians on the Team page before assigning jobs.</Notice>
+              ) : null}
+              <div className="board">
+                {groupJobs(jobs, now).map((g) => (
+                  <section key={g.column} className="card board-column">
+                    <h2 className="section-title">
+                      {g.title} <span className="count">{g.jobs.length}</span>
+                    </h2>
+                    {g.jobs.length === 0 ? (
+                      <Empty explain={COLUMN_EMPTY[g.column]}>Nothing here.</Empty>
+                    ) : (
+                      <ul className="jobs">
+                        {g.jobs.map(({ job, reason }) => (
+                          <JobRow
+                            key={job.id}
+                            job={job}
+                            reason={reason}
+                            team={team.technicians}
+                            now={now}
+                            onAssigned={reload}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </>
+          );
+        }}
       </Loaded>
     </>
   );
