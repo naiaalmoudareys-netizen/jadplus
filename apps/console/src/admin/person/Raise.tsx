@@ -5,7 +5,6 @@
  * raised it in the app.
  */
 import {
-  DEFAULT_CALENDAR,
   VISIT_SLOTS,
   adminRaiseBody,
   adminRaiseResponse,
@@ -18,6 +17,7 @@ import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { dayText } from '../../lib/format';
 import { weekdayOf } from '../../lib/dates';
 import { useAction } from '../../ui/actions';
+import { useWorkingCalendar } from '../../ui/calendar';
 import { useConsole, useLoad, useNow } from '../../ui/hooks';
 import { Link, Loaded, Notice, Section } from '../../ui/parts';
 
@@ -36,7 +36,7 @@ export function RaiseForOwner({
 }): ReactNode {
   const { api } = useConsole();
   const now = useNow();
-  const days = preferredDays(dubaiDate(now), DEFAULT_CALENDAR);
+  const days = preferredDays(dubaiDate(now), useWorkingCalendar());
   const { state, reload } = useLoad(() => api.get('/api/admin/services', adminServicesResponse), 'services');
   const [open, setOpen] = useState(false);
   const [unit, setUnit] = useState(units.length === 1 ? (units[0]?.sfUnitId ?? '') : '');

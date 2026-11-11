@@ -11,6 +11,7 @@ import { useLang } from '../i18n/I18nProvider.js';
 import { visitSlotLabel } from '../i18n/sharedLabels.js';
 import { useSessionController } from '../session/SessionProvider.js';
 import { Choice } from '../ui/Choice.js';
+import { useWorkingCalendar } from '../ui/calendar.js';
 import { useNow } from '../ui/hooks.js';
 import { Button, Eyebrow, Loading, Notice } from '../ui/kit.js';
 import { useAction } from '../ui/useAction.js';
@@ -39,7 +40,7 @@ export function BookVisit(props: {
   const [pickedDay, setDay] = useState<string | null>(null);
   const [pickedSlot, setSlot] = useState<VisitSlot | null>(null);
   const preferred = props.preferred;
-  const days = visitDays(now, preferred?.date ?? null);
+  const days = visitDays(now, preferred?.date ?? null, useWorkingCalendar());
   const day =
     (pickedDay !== null && days.includes(pickedDay) ? pickedDay : null) ??
     (preferred !== null && days.includes(preferred.date) ? preferred.date : null) ??

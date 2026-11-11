@@ -1,6 +1,7 @@
 /** JAD+ Admin operations rules (ADR 0025): month ranges, CSV, percentages, clocks after staff actions. */
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_CALENDAR,
   EMERGENCY_ACK_MINUTES,
   adminAuditQuery,
   adminDeskUpdateBody,
@@ -114,20 +115,25 @@ describe('CSV', () => {
 
 describe('staff actions', () => {
   it('E6/S6: a moved emergency must be acknowledged in 15 minutes; a routine job answered in 4 working hours', () => {
-    expect(reassignedDue(true, NOW)).toEqual({
+    expect(reassignedDue(true, NOW, DEFAULT_CALENDAR)).toEqual({
       at: NOW + EMERGENCY_ACK_MINUTES * 60_000,
       kind: 'emergency_ack',
     });
-    expect(reassignedDue(false, NOW)).toEqual({ at: NOW + 4 * HOUR, kind: 'routine_response' });
+    expect(reassignedDue(false, NOW, DEFAULT_CALENDAR)).toEqual({
+      at: NOW + 4 * HOUR,
+      kind: 'routine_response',
+    });
   });
 
   it('E13: reclassified to routine, an unanswered job gets the routine clock; emergency deadlines are dropped', () => {
-    expect(reclassifiedDue('assigned', { at: NOW, kind: 'emergency_ack' }, NOW)?.kind).toBe(
+    expect(reclassifiedDue('assigned', { at: NOW, kind: 'emergency_ack' }, NOW, DEFAULT_CALENDAR)?.kind).toBe(
       'routine_response',
     );
-    expect(reclassifiedDue('scheduled', { at: NOW, kind: 'emergency_on_site' }, NOW)).toBeNull();
+    expect(
+      reclassifiedDue('scheduled', { at: NOW, kind: 'emergency_on_site' }, NOW, DEFAULT_CALENDAR),
+    ).toBeNull();
     const visit = { at: NOW + HOUR, kind: 'visit' };
-    expect(reclassifiedDue('scheduled', visit, NOW)).toBe(visit);
+    expect(reclassifiedDue('scheduled', visit, NOW, DEFAULT_CALENDAR)).toBe(visit);
   });
 
   it('ADR 0011: the desk moves a request on; Completed and Cancelled are final', () => {

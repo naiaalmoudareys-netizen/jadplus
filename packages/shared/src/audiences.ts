@@ -9,7 +9,7 @@
  *   technician the partner named as its after-hours contact for that week.
  */
 import { placeCovers, type Place } from './admin-platform.js';
-import { DEFAULT_CALENDAR, dubaiDate, isWorkingTime, type WorkingCalendar } from './calendar.js';
+import { dubaiDate, isWorkingTime, type WorkingCalendar } from './calendar.js';
 import type { NotificationTemplate, RecipientKind } from './messages.js';
 import { weekStarting } from './oncall.js';
 
@@ -50,7 +50,7 @@ export function afterHoursWeek(
     readonly template: NotificationTemplate;
     readonly at: number;
   },
-  cal: WorkingCalendar = DEFAULT_CALENDAR,
+  cal: WorkingCalendar,
 ): string | null {
   if (alert.recipientKind !== 'partner' || !AFTER_HOURS_TEMPLATES.has(alert.template)) return null;
   if (isWorkingTime(alert.at, cal)) return null;

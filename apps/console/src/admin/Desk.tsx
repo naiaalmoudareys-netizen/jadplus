@@ -78,7 +78,7 @@ export function Desk({ status }: { status: DeskStatus | null }): ReactNode {
   const filters: readonly (DeskStatus | null)[] = [null, ...DESK_STATUSES];
   return (
     <>
-      <PageHeader eyebrow="JAD+ Admin" title="Desk">
+      <PageHeader eyebrow="JAD+ Admin" title="Documents & account requests">
         <nav className="segmented" aria-label="Status">
           {filters.map((s) => (
             <a

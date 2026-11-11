@@ -30,6 +30,7 @@ import { ApiError } from '../../errors.js';
 import { withConflictCheck } from '../../requests/concurrency.js';
 import { inboxStatements, partnerInboxStatement } from '../../requests/inbox.js';
 import { eventStatement, notificationStatement } from '../../requests/store.js';
+import { loadCalendar } from '../../calendar.js';
 import { changeStatements } from '../../requests/transition.js';
 import { parseJsonBody, parseParams } from '../../validate.js';
 import {
@@ -138,6 +139,7 @@ async function reassign(c: Ctx) {
   if (partner.id === row.partner_id) throw new ApiError(409, 'The job is already with this partner.');
   const emergency = row.is_emergency === 1;
   const note = await noteStatement(c, id, 'reassigned', body.reason);
+  const cal = await loadCalendar(db);
   await withConflictCheck(() =>
     db.batch([
       // Told before the job moves, so the old partner's assigned technician is the one told (E6).
@@ -146,7 +148,7 @@ async function reassign(c: Ctx) {
         : [partnerInboxStatement(db, { requestId: id, partnerId: row.partner_id }, 'job_moved_away', now)]),
       ...changeStatements(c, row, {
         to: 'assigned',
-        nextDue: reassignedDue(emergency, now),
+        nextDue: reassignedDue(emergency, now, cal),
         audit: 'request_reassigned_by_jad',
         detail: { from: row.partner_id, to: partner.id, emergency },
       }),
@@ -205,11 +207,12 @@ async function reclassify(c: Ctx) {
       ? null
       : { at: row.next_due_at, kind: row.next_due_kind };
   const note = await noteStatement(c, id, 'reclassified', body.reason);
+  const cal = await loadCalendar(db);
   await withConflictCheck(() =>
     db.batch([
       ...changeStatements(c, row, {
         to: row.status,
-        nextDue: reclassifiedDue(row.status, current, now),
+        nextDue: reclassifiedDue(row.status, current, now, cal),
         audit: 'request_reclassified',
         detail: { from: row.emergency_type },
       }),

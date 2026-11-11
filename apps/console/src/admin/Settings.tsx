@@ -2,16 +2,19 @@
  * JAD+ Admin "Settings" (ADR 0025): what the platform runs on, read-only: versions of the terms, make-safe and
  * marketing texts (L1, L2), the make-safe limits owners choose from (E8), the working calendar and holidays,
  * SLA targets (S4), emergency types and the AC emergency season (E14), and the app's languages. Changing any of
- * these is a code change with its own review, never a click here.
+ * these is a code change with its own review, never a click here. The one exception is the public holidays
+ * (E20, ADR 0028): JAD+ Admin adds and removes days after today in the Holidays section.
  */
 import { platformSettingsResponse, type PlatformSettings } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { weekdayName } from '../lib/dates';
-import { aed, dayText, minutesText } from '../lib/format';
+import { aed, minutesText } from '../lib/format';
 import { monthName } from '../lib/platform';
 import { SLA_METRIC_LABELS } from '../lib/labels';
+import { canChange } from '../lib/session';
 import { useConsole, useLoad } from '../ui/hooks';
 import { Fact, Loaded, PageHeader, Section } from '../ui/parts';
+import { Holidays } from './settings/Holidays';
 
 const LANGUAGE_NAMES: Readonly<Record<string, string>> = { en: 'English', ar: 'Arabic' };
 
@@ -37,19 +40,8 @@ function SettingsView({ s }: { s: PlatformSettings }): ReactNode {
             <Fact label="Hours (Dubai)">
               {s.calendar.opens} to {s.calendar.closes}
             </Fact>
+            <Fact label="Public holidays">Not working days: see Public holidays below.</Fact>
           </dl>
-          <h3 className="label">Public holidays</h3>
-          {s.calendar.holidays.length === 0 ? (
-            <p className="muted">None on file.</p>
-          ) : (
-            <ul className="plain">
-              {s.calendar.holidays.map((h) => (
-                <li key={h.date}>
-                  {dayText(h.date)} · {h.name}
-                </li>
-              ))}
-            </ul>
-          )}
         </Section>
         <Section title="Service-level targets">
           <dl className="facts">
@@ -80,7 +72,7 @@ function SettingsView({ s }: { s: PlatformSettings }): ReactNode {
 }
 
 export function Settings(): ReactNode {
-  const { api } = useConsole();
+  const { api, session } = useConsole();
   const { state, reload } = useLoad(
     () => api.get('/api/admin/settings', platformSettingsResponse),
     'settings',
@@ -88,10 +80,14 @@ export function Settings(): ReactNode {
   return (
     <>
       <PageHeader eyebrow="JAD+ Admin" title="Settings" />
-      <p className="hint page-intro">Read only: these change through a reviewed update of JAD+, not here.</p>
+      <p className="hint page-intro">
+        These are fixed rules. To change one, contact IT. The one exception is the public holidays, which JAD+
+        Admin keeps up to date below.
+      </p>
       <Loaded state={state} reload={reload}>
         {(s) => <SettingsView s={s} />}
       </Loaded>
+      <Holidays editable={canChange(session.role)} />
     </>
   );
 }

@@ -20,8 +20,10 @@ import {
   type Channel,
   type NotificationTemplate,
   type RecipientKind,
+  type WorkingCalendar,
 } from '@jadplus/shared';
 import { auditStatement } from '../audit.js';
+import { loadCalendar } from '../calendar.js';
 import { newId } from '../crypto.js';
 import type { Logger } from '../logger.js';
 
@@ -134,6 +136,7 @@ async function targetsFor(
   n: PendingNotification,
   now: number,
   log: Logger,
+  calendar: () => Promise<WorkingCalendar>,
 ): Promise<Target[]> {
   const channels = channelsFor(n.urgent === 1);
   switch (n.recipient_kind) {
@@ -159,7 +162,11 @@ async function targetsFor(
         .all<Contactable>();
       const sms: Target[] =
         channels.includes('sms') && line?.has_line === 1 ? [{ channel: 'sms', partnerId }] : [];
-      const week = afterHoursWeek({ recipientKind: 'partner', template: n.template, at: n.created_at });
+      // E20: "out of hours" includes the public holidays JAD+ Admin keeps (ADR 0028).
+      const week = afterHoursWeek(
+        { recipientKind: 'partner', template: n.template, at: n.created_at },
+        await calendar(),
+      );
       const afterHours =
         week === null ? [] : forPeople(await afterHoursPeople(db, partnerId, week), channels);
       return [...sms, ...forPeople(office.results, ['email']), ...afterHours];
@@ -181,8 +188,11 @@ export async function fanOut(db: D1Database, now: number, log: Logger, limit = 1
     )
     .bind(limit)
     .all<PendingNotification>();
+  // Read once per run, and only when an alert needs it.
+  let cal: Promise<WorkingCalendar> | null = null;
+  const calendar = (): Promise<WorkingCalendar> => (cal ??= loadCalendar(db));
   for (const n of results) {
-    const targets = await targetsFor(db, n, now, log);
+    const targets = await targetsFor(db, n, now, log, calendar);
     const statements = targets.map((t) =>
       db
         .prepare(

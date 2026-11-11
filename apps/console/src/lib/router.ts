@@ -244,9 +244,9 @@ export interface NavItem {
 const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Overview', route: { name: 'overview' } },
   { label: 'Needs action', route: { name: 'attention' } },
-  { label: 'Requests', route: { name: 'requests', q: '', status: null } },
+  { label: 'Service requests', route: { name: 'requests', q: '', status: null } },
   { label: 'People', route: { name: 'people', q: '' } },
-  { label: 'Desk', route: { name: 'desk', status: null } },
+  { label: 'Documents & account', route: { name: 'desk', status: null } },
   { label: 'Partners', route: { name: 'partners' } },
   { label: 'Services', route: { name: 'services' } },
   { label: 'Buildings', route: { name: 'buildings' } },

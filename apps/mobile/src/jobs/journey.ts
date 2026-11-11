@@ -3,7 +3,6 @@
  * windows a partner can book, reading a quote amount as typed, and how a visit and a quote are described.
  */
 import {
-  DEFAULT_CALENDAR,
   VISIT_SLOTS,
   dubaiClock,
   dubaiDate,
@@ -51,11 +50,7 @@ export function slotOpen(date: string, slot: VisitSlot, now: number): boolean {
  * The days a partner can book: today while a window is left, the next working days, and the resident's
  * preferred day (ADR 0013) when it is still bookable. Sorted, each once.
  */
-export function visitDays(
-  now: number,
-  preferred: string | null,
-  cal: WorkingCalendar = DEFAULT_CALENDAR,
-): string[] {
+export function visitDays(now: number, preferred: string | null, cal: WorkingCalendar): string[] {
   const today = dubaiDate(now);
   const days = new Set([today, ...preferredDays(today, cal)]);
   if (preferred !== null) days.add(preferred);

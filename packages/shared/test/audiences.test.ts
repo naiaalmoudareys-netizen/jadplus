@@ -1,6 +1,7 @@
 /** Who is told beyond the request's own people (ADR 0027): V1, E12, E5-E7. */
 import { describe, expect, it } from 'vitest';
 import { afterHoursWeek, contactsCovering, noticeAudience } from '../src/audiences.js';
+import { DEFAULT_CALENDAR, calendarWithHolidays } from '../src/index.js';
 import { renderMessage } from '../src/messages.js';
 
 const B = { project: 'JAD 288', building: 'Building B' };
@@ -60,34 +61,62 @@ describe('after-hours contact (E5-E7)', () => {
   const saturday = Date.UTC(2026, 10, 14, 8);
 
   it('E5-E7: out of hours, a new emergency and its reminder also go to that week’s after-hours contact', () => {
-    expect(afterHoursWeek({ recipientKind: 'partner', template: 'emergency_new_job', at: night })).toBe(
-      '2026-11-09',
-    );
-    expect(afterHoursWeek({ recipientKind: 'partner', template: 'emergency_reminder', at: saturday })).toBe(
-      '2026-11-09',
-    );
+    expect(
+      afterHoursWeek(
+        { recipientKind: 'partner', template: 'emergency_new_job', at: night },
+        DEFAULT_CALENDAR,
+      ),
+    ).toBe('2026-11-09');
+    expect(
+      afterHoursWeek(
+        { recipientKind: 'partner', template: 'emergency_reminder', at: saturday },
+        DEFAULT_CALENDAR,
+      ),
+    ).toBe('2026-11-09');
+  });
+
+  it('E20: on a public holiday JAD+ Admin added, midday counts as after hours', () => {
+    const holiday = calendarWithHolidays(['2026-11-09']);
+    expect(
+      afterHoursWeek({ recipientKind: 'partner', template: 'emergency_new_job', at: noon }, holiday),
+    ).toBe('2026-11-09');
   });
 
   it('E5-E7: during working hours the alert line and office are enough', () => {
-    expect(afterHoursWeek({ recipientKind: 'partner', template: 'emergency_new_job', at: noon })).toBeNull();
+    expect(
+      afterHoursWeek({ recipientKind: 'partner', template: 'emergency_new_job', at: noon }, DEFAULT_CALENDAR),
+    ).toBeNull();
   });
 
   it('E5-E7: only partner alerts that ask the partner to act, never on-call or resident messages', () => {
-    expect(afterHoursWeek({ recipientKind: 'on_call', template: 'emergency_on_call', at: night })).toBeNull();
-    expect(afterHoursWeek({ recipientKind: 'user', template: 'emergency_new_job', at: night })).toBeNull();
     expect(
-      afterHoursWeek({ recipientKind: 'partner', template: 'emergency_acknowledged', at: night }),
+      afterHoursWeek(
+        { recipientKind: 'on_call', template: 'emergency_on_call', at: night },
+        DEFAULT_CALENDAR,
+      ),
+    ).toBeNull();
+    expect(
+      afterHoursWeek({ recipientKind: 'user', template: 'emergency_new_job', at: night }, DEFAULT_CALENDAR),
+    ).toBeNull();
+    expect(
+      afterHoursWeek(
+        { recipientKind: 'partner', template: 'emergency_acknowledged', at: night },
+        DEFAULT_CALENDAR,
+      ),
     ).toBeNull();
   });
 
   it('E5-E7: just after midnight on Monday Dubai time belongs to the new week', () => {
     // 00:30 Dubai on Monday 16 Nov = 20:30 UTC on Sunday 15 Nov.
     expect(
-      afterHoursWeek({
-        recipientKind: 'partner',
-        template: 'emergency_new_job',
-        at: Date.UTC(2026, 10, 15, 20, 30),
-      }),
+      afterHoursWeek(
+        {
+          recipientKind: 'partner',
+          template: 'emergency_new_job',
+          at: Date.UTC(2026, 10, 15, 20, 30),
+        },
+        DEFAULT_CALENDAR,
+      ),
     ).toBe('2026-11-16');
   });
 });

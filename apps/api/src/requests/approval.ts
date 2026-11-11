@@ -7,19 +7,14 @@
  * clock starting at the approval (S4). Decline: the request closes as "owner declined". The tenant is told
  * either way (in-app). Only the owner of the unit, only while the request waits (jobflow.ts).
  */
-import {
-  DEFAULT_CALENDAR,
-  MAINTENANCE_SLA,
-  addWorkingMinutes,
-  approvalBody,
-  requestIdParam,
-} from '@jadplus/shared';
+import { MAINTENANCE_SLA, addWorkingMinutes, approvalBody, requestIdParam } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
 import { loadForAction } from './flow.js';
+import { loadCalendar } from '../calendar.js';
 import { inboxStatements, partnerInboxStatement } from './inbox.js';
 import { routeService } from './routine.js';
 import { eventStatement } from './store.js';
@@ -57,7 +52,7 @@ export function approvalRoutes(): Hono<AppEnv> {
       .first<{ service_code: string }>();
     const route = service === null ? null : await routeService(db, service.service_code);
     const partner = route?.partner ?? null;
-    const due = addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, DEFAULT_CALENDAR);
+    const due = addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, await loadCalendar(db));
     const sys = { requestId: id, at: now, actorUserId: null, actorRole: 'system' as const };
     await withConflictCheck(() =>
       db.batch([

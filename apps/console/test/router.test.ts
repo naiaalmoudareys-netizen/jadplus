@@ -135,9 +135,9 @@ describe('hash router (ADR 0023, 0025)', () => {
     expect(navFor('jad_admin').map((n) => n.label)).toEqual([
       'Overview',
       'Needs action',
-      'Requests',
+      'Service requests',
       'People',
-      'Desk',
+      'Documents & account',
       'Partners',
       'Services',
       'Buildings',

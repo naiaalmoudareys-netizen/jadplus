@@ -11,4 +11,6 @@ export const ADMIN_PLATFORM_ACTIONS = [
   'home_guide_section_removed',
   'offer_interests_viewed',
   'offer_interest_handled',
+  'holiday_added',
+  'holiday_removed',
 ] as const;

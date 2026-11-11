@@ -31,3 +31,31 @@ export function canBeOnCall(position: OnCallPosition, roles: readonly UserRole[]
   if (position === 'first') return roles.includes('jad_admin');
   return roles.includes('jad_admin') || roles.includes('jad_viewer');
 }
+
+/** E6/E7: the "Needs action" list warns about this week and the next when someone is missing on the rota. */
+export const ON_CALL_WEEKS_CHECKED = 2;
+
+export interface OnCallGap {
+  /** The Monday the week starts (YYYY-MM-DD). */
+  readonly week: string;
+  readonly missing: readonly OnCallPosition[];
+}
+
+/**
+ * E6/E7: weeks (this one and the next) where the first or second person is missing. `filled` holds the
+ * rota places taken by an active account; a week with nobody means an unacknowledged emergency reaches
+ * nobody named at JAD+.
+ */
+export function onCallGaps(
+  today: string,
+  filled: readonly { readonly week: string; readonly position: OnCallPosition }[],
+): OnCallGap[] {
+  const first = Date.parse(`${weekStarting(today)}T00:00:00Z`);
+  const gaps: OnCallGap[] = [];
+  for (let i = 0; i < ON_CALL_WEEKS_CHECKED; i += 1) {
+    const week = new Date(first + i * 7 * DAY_MS).toISOString().slice(0, 10);
+    const missing = ON_CALL_POSITIONS.filter((p) => !filled.some((f) => f.week === week && f.position === p));
+    if (missing.length > 0) gaps.push({ week, missing });
+  }
+  return gaps;
+}

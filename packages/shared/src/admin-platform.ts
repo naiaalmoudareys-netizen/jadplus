@@ -3,7 +3,7 @@
  * notices (V1) and home guide, offer interests (N2), on-call weeks (E6, E7), read-only settings.
  */
 import { z } from 'zod';
-import { DEFAULT_CALENDAR, DEFAULT_HOLIDAYS, type WorkingCalendar } from './calendar.js';
+import { DEFAULT_HOLIDAYS, DEFAULT_HOURS, type WorkingHours } from './calendar.js';
 import {
   EMERGENCY_ACK_MINUTES,
   EMERGENCY_BACKUP_MINUTES,
@@ -134,21 +134,26 @@ export function acSeasonMonths(): number[] {
 const hhmm = (minute: number): string =>
   `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
 
-/** GET /api/admin/settings: the versions, limits, calendar and targets the platform runs on (read-only). */
-export function platformSettings(cal: WorkingCalendar = DEFAULT_CALENDAR): PlatformSettings {
-  const holidays = DEFAULT_HOLIDAYS.filter(([d]) => cal.holidays.has(d)).map(([date, name]) => ({
+/**
+ * GET /api/admin/settings: the versions, limits, calendar and targets the platform runs on. All read-only,
+ * except the public holidays JAD+ Admin keeps (E20, ADR 0028), which the API passes in from its table.
+ */
+export function platformSettings(
+  holidays: readonly Readonly<{ date: string; name: string }>[] = DEFAULT_HOLIDAYS.map(([date, name]) => ({
     date,
     name,
-  }));
+  })),
+  hours: WorkingHours = DEFAULT_HOURS,
+): PlatformSettings {
   return {
     versions: { terms: TERMS_VERSION, marketing: MARKETING_VERSION, makeSafe: MAKE_SAFE_VERSION },
     makeSafeCapChoicesAed: [...MAKE_SAFE_CAP_CHOICES],
     calendar: {
-      workingDays: [...cal.hours.days],
-      weekendDays: [0, 1, 2, 3, 4, 5, 6].filter((d) => !cal.hours.days.some((w) => w === d)),
-      opens: hhmm(cal.hours.startMinute),
-      closes: hhmm(cal.hours.endMinute),
-      holidays,
+      workingDays: [...hours.days],
+      weekendDays: [0, 1, 2, 3, 4, 5, 6].filter((d) => !hours.days.some((w) => w === d)),
+      opens: hhmm(hours.startMinute),
+      closes: hhmm(hours.endMinute),
+      holidays: holidays.map((h) => ({ date: h.date, name: h.name })),
     },
     sla: {
       emergencyAckMinutes: EMERGENCY_ACK_MINUTES,
@@ -173,7 +178,7 @@ function noControlCharacters(s: string): boolean {
 }
 
 /** Plain text written by JAD+ staff: no control characters and nothing that looks like markup. */
-const plainText = (max: number) =>
+export const plainText = (max: number): z.ZodString =>
   z
     .string()
     .trim()

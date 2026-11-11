@@ -9,6 +9,8 @@ import {
   requestDetailResponse,
   requestRaisedResponse,
   servicesResponse,
+  calendarResponse,
+  type CalendarAnswer,
   preferencesResponse,
   inboxResponse,
   ownerTenanciesResponse,
@@ -152,6 +154,10 @@ export const interestedInOffer = (api: ApiClient, postId: string): Promise<unkno
 /** ADR 0011: a request to the JAD+ desk (a document or an account change). */
 export const deskRequest = (api: ApiClient, body: DeskRequestBody): Promise<unknown> =>
   api.post('/api/owner/desk-requests', body, z.unknown());
+
+/** E20 (ADR 0028): today and the public holidays from today on, as JAD+ Admin keeps them. */
+export const workingCalendar = (api: ApiClient): Promise<CalendarAnswer> =>
+  api.get('/api/calendar', calendarResponse);
 
 /** S1/S2: the service catalogue with who takes a request now. */
 export const services = async (api: ApiClient): Promise<ServiceView[]> =>

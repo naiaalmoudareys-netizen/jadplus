@@ -15,10 +15,14 @@ import {
   QUOTE_STUCK_AFTER,
   adminRequestsQuery,
   attentionOrder,
+  dubaiDate,
+  onCallGaps,
+  weekStarting,
   partnerStatusBody,
   type AdminAttention,
   type AttentionKind,
   type EmergencyType,
+  type OnCallPosition,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { z } from 'zod';
@@ -69,6 +73,34 @@ const toItem =
     since: r.since,
   });
 
+const DUBAI_OFFSET = 4 * 3_600_000;
+const POSITION_TEXT: Readonly<Record<OnCallPosition, string>> = {
+  first: 'first person',
+  second: 'second person',
+};
+
+/** E6/E7: rota places this week and next held by an active account, turned into "Needs action" items. */
+async function onCallItems(db: D1Database, now: number): Promise<Item[]> {
+  const today = dubaiDate(now);
+  const { results } = await db
+    .prepare(
+      `SELECT r.week_starting AS week, r.position FROM on_call_rota r JOIN users u ON u.id = r.user_id
+       WHERE r.week_starting >= ? AND u.status = 'active'`,
+    )
+    .bind(weekStarting(today))
+    .all<{ week: string; position: OnCallPosition }>();
+  return onCallGaps(today, results).map((g) => ({
+    kind: 'on_call_gap' as const,
+    requestId: null,
+    deskId: null,
+    ref: null,
+    what: `On-call week of ${g.week}: ${g.missing.map((p) => POSITION_TEXT[p]).join(' and ')} missing`,
+    unit: null,
+    partnerName: null,
+    since: Date.parse(`${g.week}T00:00:00Z`) - DUBAI_OFFSET,
+  }));
+}
+
 const partnerParam = z.strictObject({ id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) });
 
 export function adminConsoleRoutes(): Hono<AppEnv> {
@@ -79,7 +111,7 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
     const now = c.get('now');
     const open = [...OPEN_STATUSES].filter((s) => s !== 'awaiting_owner' && s !== 'quote_sent');
     const marks = open.map(() => '?').join(', ');
-    const [emergencies, overdue, rebook, approvals, stuck, desk] = await Promise.all([
+    const [emergencies, overdue, rebook, approvals, stuck, desk, onCall] = await Promise.all([
       db
         .prepare(
           `${BASE}, r.created_at AS since ${FROM}
@@ -122,9 +154,11 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
           "SELECT id, type, created_at FROM desk_requests WHERE status IN ('New', 'In progress') ORDER BY created_at",
         )
         .all<{ id: string; type: string; created_at: number }>(),
+      onCallItems(db, now),
     ]);
     const items: Item[] = [
       ...emergencies.results.map(toItem('emergency_unacknowledged')),
+      ...onCall,
       ...overdue.results.map(toItem('overdue')),
       ...rebook.results.map(toItem('no_access_rebook')),
       ...approvals.results.map(toItem('owner_approval_call')),

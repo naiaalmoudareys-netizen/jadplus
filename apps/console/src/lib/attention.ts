@@ -1,6 +1,6 @@
 /**
  * JAD+ Admin's "Needs action" list (ADR 0023; E4-E7, R4, A7, A1, A3, ADR 0011), grouped by kind in the order
- * of packages/shared/src/console.ts, with a plain title per group and how late each item is.
+ * of packages/shared/src/console.ts (E6, E7 on-call gaps too), with a plain title per group and how late each item is.
  */
 import { ATTENTION_KINDS, type AdminAttention, type AttentionKind } from '@jadplus/shared';
 import { ago, duration } from './format';
@@ -9,11 +9,12 @@ export type AttentionItem = AdminAttention['items'][number];
 
 export const ATTENTION_TITLES: Readonly<Record<AttentionKind, string>> = {
   emergency_unacknowledged: 'Emergencies nobody has acknowledged',
+  on_call_gap: 'On-call rota: someone missing this week or next',
   overdue: 'Requests past their deadline',
   no_access_rebook: 'No access, and no new visit within 24 hours',
   owner_approval_call: 'Tenant requests waiting 48 hours for the owner: call the owner',
   quote_stuck: 'Declined quotes with no revised quote after 3 days',
-  desk_request: 'JAD+ desk requests to handle',
+  desk_request: 'Documents & account requests to handle',
 };
 
 export interface AttentionGroup {
@@ -36,6 +37,9 @@ export function groupAttention(items: readonly AttentionItem[]): AttentionGroup[
  * it is the deadline that passed (console.ts).
  */
 export function attentionTiming(item: Pick<AttentionItem, 'kind' | 'since'>, now: number): string {
+  // An on-call gap: `since` is when the week starts.
+  if (item.kind === 'on_call_gap')
+    return item.since <= now ? 'This week' : `Starts in ${duration(item.since - now)}`;
   if (item.kind === 'emergency_unacknowledged' || item.kind === 'desk_request') {
     return `Raised ${ago(item.since, now)}`;
   }

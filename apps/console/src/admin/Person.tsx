@@ -100,7 +100,7 @@ export function Person({ id }: { id: string }): ReactNode {
             ) : null}
             <Tenancies tenancies={p.tenancies} editable={editable} onChanged={changed} />
             <div className="columns">
-              <Section title="Requests" count={p.requests.length}>
+              <Section title="Service requests" count={p.requests.length}>
                 {p.requests.length === 0 ? (
                   <Empty>No requests.</Empty>
                 ) : (
@@ -124,7 +124,7 @@ export function Person({ id }: { id: string }): ReactNode {
                   </table>
                 )}
               </Section>
-              <Section title="Desk requests" count={p.deskRequests.length}>
+              <Section title="Documents & account requests" count={p.deskRequests.length}>
                 {p.deskRequests.length === 0 ? (
                   <Empty>No desk requests.</Empty>
                 ) : (

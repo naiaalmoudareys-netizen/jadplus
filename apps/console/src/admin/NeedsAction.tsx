@@ -15,7 +15,11 @@ function Row({ item, now }: { item: AttentionItem; now: number }): ReactNode {
       <td>
         {item.requestId === null ? (
           item.deskId === null ? (
-            <span>{item.what}</span>
+            item.kind === 'on_call_gap' ? (
+              <Link to={{ name: 'on_call' }}>{item.what}</Link>
+            ) : (
+              <span>{item.what}</span>
+            )
           ) : (
             <Link to={{ name: 'desk_item', id: item.deskId }}>{item.what}</Link>
           )

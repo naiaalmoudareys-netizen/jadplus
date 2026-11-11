@@ -4,7 +4,7 @@
  * Pure rules (month ranges, CSV, percentages, clocks after a staff action) live here with tests.
  */
 import { z } from 'zod';
-import { DEFAULT_CALENDAR, addWorkingMinutes } from './calendar.js';
+import { addWorkingMinutes, type WorkingCalendar } from './calendar.js';
 import { DESK_REQUEST_TYPES, DESK_STATUSES, type DeskStatus } from './desk.js';
 import { EMERGENCY_ACK_MINUTES } from './emergency.js';
 import { ROLES, STATUSES, type Status } from './lifecycle.js';
@@ -31,12 +31,15 @@ export interface Due {
   readonly kind: string;
 }
 
-/** E6/S6: the new partner's clock after JAD+ Admin moves a job: acknowledge an emergency, or answer in 4 working hours. */
-export function reassignedDue(isEmergency: boolean, now: number): Due {
+/**
+ * E6/S6: the new partner's clock after JAD+ Admin moves a job: acknowledge an emergency, or answer in 4 working
+ * hours on `cal` (E20: the holidays JAD+ Admin keeps).
+ */
+export function reassignedDue(isEmergency: boolean, now: number, cal: WorkingCalendar): Due {
   return isEmergency
     ? { at: now + EMERGENCY_ACK_MINUTES * MIN, kind: 'emergency_ack' }
     : {
-        at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, DEFAULT_CALENDAR),
+        at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, cal),
         kind: 'routine_response',
       };
 }
@@ -45,8 +48,13 @@ export function reassignedDue(isEmergency: boolean, now: number): Due {
  * E13: an emergency reclassified as routine. Not yet answered: the routine 4-working-hour clock from now.
  * Later steps keep their clock, except an emergency deadline, which no longer applies.
  */
-export function reclassifiedDue(status: Status, current: Due | null, now: number): Due | null {
-  if (status === 'submitted' || status === 'assigned') return reassignedDue(false, now);
+export function reclassifiedDue(
+  status: Status,
+  current: Due | null,
+  now: number,
+  cal: WorkingCalendar,
+): Due | null {
+  if (status === 'submitted' || status === 'assigned') return reassignedDue(false, now, cal);
   return current?.kind.startsWith('emergency_') === true ? null : current;
 }
 

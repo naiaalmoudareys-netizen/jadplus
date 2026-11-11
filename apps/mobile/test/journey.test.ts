@@ -1,5 +1,5 @@
 /** The request journey screens (ADR 0018): visit windows a partner can book, quote amounts, wording. */
-import { visitWindowAllowed } from '@jadplus/shared';
+import { DEFAULT_CALENDAR, calendarFromAnswer, visitWindowAllowed } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
 import { jobStatusLabel } from '../src/jobs/format.js';
 import {
@@ -39,12 +39,21 @@ describe('booking a visit', () => {
   });
 
   it('offers today while a window is left, the next working days and the preferred day', () => {
-    const days = visitDays(NOW, null);
+    const days = visitDays(NOW, null, DEFAULT_CALENDAR);
     expect(days[0]).toBe('2026-11-10');
     expect(days.slice(1, 5)).toEqual(['2026-11-11', '2026-11-12', '2026-11-13', '2026-11-16']);
-    expect(visitDays(NOW + 9 * HOUR, null)[0]).toBe('2026-11-11');
-    expect(visitDays(NOW, '2026-11-14')).toContain('2026-11-14');
-    expect(visitDays(NOW, '2026-11-09')).not.toContain('2026-11-09');
+    expect(visitDays(NOW + 9 * HOUR, null, DEFAULT_CALENDAR)[0]).toBe('2026-11-11');
+    expect(visitDays(NOW, '2026-11-14', DEFAULT_CALENDAR)).toContain('2026-11-14');
+    expect(visitDays(NOW, '2026-11-09', DEFAULT_CALENDAR)).not.toContain('2026-11-09');
+  });
+
+  it('E20: a holiday JAD+ Admin added is not offered (unless it is the resident’s preferred day)', () => {
+    const cal = calendarFromAnswer({
+      today: '2026-11-10',
+      holidays: [{ date: '2026-11-12', name: 'Test day' }],
+    });
+    expect(visitDays(NOW, null, cal).slice(1, 4)).toEqual(['2026-11-11', '2026-11-13', '2026-11-16']);
+    expect(visitDays(NOW, null, calendarFromAnswer(null))).toEqual(visitDays(NOW, null, DEFAULT_CALENDAR));
   });
 });
 

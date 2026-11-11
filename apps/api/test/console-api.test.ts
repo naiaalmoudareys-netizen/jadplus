@@ -28,8 +28,11 @@ async function office(w: World): Promise<string> {
   return w.h.signIn('office@example.com', 'console');
 }
 
-const attention = async (w: World, token: string) =>
+const everything = async (w: World, token: string) =>
   adminAttentionResponse.parse(await (await w.h.request('/api/admin/attention', { token })).json()).items;
+/** Request and desk items only: the test worlds have no on-call rota, so its warnings are left out here. */
+const attention = async (w: World, token: string) =>
+  (await everything(w, token)).filter((i) => i.kind !== 'on_call_gap');
 
 describe('JAD+ Admin: needs action', () => {
   it('E4/A1: an unacknowledged emergency first; a tenant request waiting 48 h for the owner', async () => {
@@ -70,6 +73,29 @@ describe('JAD+ Admin: needs action', () => {
     expect((await attention(w, token)).map((i) => [i.kind, i.requestId])).toEqual([['no_access_rebook', id]]);
     expect((await w.h.request('/api/admin/attention', { token: w.ownerToken })).status).toBe(403);
     expect((await w.h.request('/api/admin/attention', { token: w.primaryToken })).status).toBe(403);
+  });
+
+  it('E6/E7: a week with nobody on call is listed until both places are filled by active staff', async () => {
+    const w = await world();
+    const token = await admin(w);
+    const gaps = async () =>
+      (await everything(w, token)).filter((i) => i.kind === 'on_call_gap').map((i) => i.what);
+    // NOW is in the week starting Monday 9 November 2026 (Dubai).
+    expect(await gaps()).toEqual([
+      'On-call week of 2026-11-09: first person and second person missing',
+      'On-call week of 2026-11-16: first person and second person missing',
+    ]);
+    const staffId = await w.h.addUser({ email: 'oncall@example.com', roles: ['jad_admin'] });
+    const put = w.h.sqlite.prepare(
+      'INSERT INTO on_call_rota (week_starting, position, user_id) VALUES (?, ?, ?)',
+    );
+    for (const week of ['2026-11-09', '2026-11-16']) {
+      put.run(week, 'first', staffId);
+      put.run(week, 'second', staffId);
+    }
+    expect(await gaps()).toEqual([]);
+    w.h.sqlite.prepare("UPDATE users SET status = 'frozen' WHERE id = ?").run(staffId);
+    expect((await gaps()).length).toBe(2);
   });
 
   it('R4: search by reference, unit or partner; partners list with documents', async () => {

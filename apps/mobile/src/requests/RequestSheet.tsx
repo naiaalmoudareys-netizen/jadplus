@@ -6,7 +6,6 @@
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  DEFAULT_CALENDAR,
   MAX_REQUEST_PHOTOS,
   VISIT_SLOTS,
   dubaiDate,
@@ -32,6 +31,7 @@ import { serviceName, visitSlotLabel } from '../i18n/sharedLabels.js';
 import { Choice } from '../ui/Choice.js';
 import { Button, Eyebrow, Field, Notice } from '../ui/kit.js';
 import { colors, fonts, radius, space } from '../ui/theme.js';
+import { useWorkingCalendar } from '../ui/calendar.js';
 import { PhotoAdder } from './PhotoAdder.js';
 import { pickPhoto, type PickedPhoto } from './photoPicker.js';
 
@@ -65,7 +65,7 @@ export function RequestSheet(props: {
   const [slot, setSlot] = useState<VisitSlot | null>(null);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
-  const days = preferredDays(dubaiDate(Date.now()), DEFAULT_CALENDAR);
+  const days = preferredDays(dubaiDate(Date.now()), useWorkingCalendar());
   const text = description.trim();
   const ready = day !== null && slot !== null && text !== '';
 

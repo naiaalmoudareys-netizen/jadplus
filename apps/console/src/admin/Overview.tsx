@@ -80,7 +80,7 @@ export function Overview(): ReactNode {
                 to={{ name: 'requests', q: '', status: 'awaiting_owner' }}
               />
               <Tile
-                label="Desk requests open"
+                label="Documents & account requests open"
                 value={live.openDeskRequests}
                 to={{ name: 'desk', status: null }}
               />

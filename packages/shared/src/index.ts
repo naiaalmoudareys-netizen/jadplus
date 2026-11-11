@@ -10,6 +10,7 @@ export * from './conversation.js';
 export * from './desk.js';
 export * from './emergency.js';
 export * from './escalation.js';
+export * from './holidays.js';
 export * from './inbox.js';
 export * from './invoices.js';
 export * from './jobflow.js';

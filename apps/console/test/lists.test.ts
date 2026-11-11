@@ -44,6 +44,11 @@ describe('Needs action (ADR 0023)', () => {
       'Overdue by 3 h',
     );
   });
+
+  it('E6/E7: an on-call gap says whether the week has started', () => {
+    expect(attentionTiming({ kind: 'on_call_gap', since: NOW - DAY }, NOW)).toBe('This week');
+    expect(attentionTiming({ kind: 'on_call_gap', since: NOW + 2 * DAY }, NOW)).toBe('Starts in 2 days');
+  });
 });
 
 function job(over: Partial<PartnerJob>): PartnerJob {

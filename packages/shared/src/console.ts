@@ -11,6 +11,7 @@ const HOUR = 3_600_000;
 /** What lands on JAD+ Admin's "Needs action" list, most urgent first. */
 export const ATTENTION_KINDS = [
   'emergency_unacknowledged', // E4-E7: nobody has acknowledged an emergency yet
+  'on_call_gap', // E6, E7: this week or the next has nobody (or only one person) on the JAD+ on-call rota
   'overdue', // R4: an open request is past its next deadline
   'no_access_rebook', // A7: no new visit within 24 hours of "no access"
   'owner_approval_call', // A1: a tenant's request has waited 48 hours for the owner: call the owner
@@ -45,7 +46,10 @@ export const adminAttentionResponse = z.object({
       what: z.string(),
       unit: z.string().nullable(),
       partnerName: z.string().nullable(),
-      /** Since when it needs action (the deadline that passed, or when it was raised). */
+      /**
+       * Since when it needs action (the deadline that passed, or when it was raised); for an on-call gap, when
+       * the week starts (Monday 00:00 Dubai).
+       */
       since: z.number().int(),
     }),
   ),

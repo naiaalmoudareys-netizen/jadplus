@@ -10,7 +10,6 @@
  *                        tenant may request repairs (maintenance) only: everything else is the owner's (R2).
  */
 import {
-  DEFAULT_CALENDAR,
   MAINTENANCE_SLA,
   addWorkingMinutes,
   choosePartner,
@@ -29,6 +28,7 @@ import type { Deps } from '../context.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { loadCalendar } from '../calendar.js';
 import { parseJsonBody } from '../validate.js';
 import { place } from './emergency.js';
 import { inboxStatements, partnerInboxStatement } from './inbox.js';
@@ -104,7 +104,9 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     const today = dubaiDate(now);
     const where = await place(c, deps, body, today);
     // ADR 0013: the preferred day must be one of the working days offered.
-    if (!preferredDays(today, DEFAULT_CALENDAR).includes(body.preferredDate)) {
+    // E20: the working days on the calendar JAD+ Admin keeps (holidays, ADR 0028).
+    const cal = await loadCalendar(db);
+    if (!preferredDays(today, cal).includes(body.preferredDate)) {
       throw new ApiError(400, 'Choose a working day within the next two weeks.');
     }
     if (actor.role === 'tenant' && !serviceOpenTo('tenant', body.serviceCode)) {
@@ -123,7 +125,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     const due = tenant
       ? { at: now + 24 * HOUR, kind: 'owner_approval' }
       : {
-          at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, DEFAULT_CALENDAR),
+          at: addWorkingMinutes(now, MAINTENANCE_SLA.routineResponse.minutes, cal),
           kind: 'routine_response',
         };
 

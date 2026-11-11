@@ -187,6 +187,11 @@ pnpm --filter @jadplus/mobile start   # Expo
   building management alerts queued (undelivered until providers). 768 tests. Open: invoice CSV export, E13
   misuse reporting, V1 incident linking, after-hours per-partner calendar, whether building management may get
   the unit number by SMS/email (Naya).
+- 11-Nov-2026 (cont.): Naya approved: public holidays editable by JAD+ Admin (future dates only, audited;
+  ADR 0028, migration 0025, `loadCalendar(db)` feeds clocks and preferred days, `GET /api/calendar` for the
+  apps); other Settings stay read-only with a note; console menu "Service requests" and "Documents & account"
+  (was Requests / Desk); "Needs action" warns when this week or next has someone missing on the on-call rota
+  (E6, E7). 793 tests.
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

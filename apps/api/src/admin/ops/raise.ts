@@ -6,12 +6,13 @@
  * and can cancel it as the requester. The staff member who logged it is the 'created' event's actor and in the
  * audit log.
  */
-import { DEFAULT_CALENDAR, adminRaiseBody, dubaiDate, preferredDays, reassignedDue } from '@jadplus/shared';
+import { adminRaiseBody, dubaiDate, preferredDays, reassignedDue } from '@jadplus/shared';
 import type { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
 import { newId } from '../../crypto.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
+import { loadCalendar } from '../../calendar.js';
 import { partnerInboxStatement } from '../../requests/inbox.js';
 import { routeService } from '../../requests/routine.js';
 import { eventStatement, newRef } from '../../requests/store.js';
@@ -34,7 +35,9 @@ async function raiseOnBehalf(c: Ctx) {
     .first<{ status: string }>();
   if (owner === null) throw new ApiError(404, NOT_FOUND);
   if (owner.status !== 'active') throw new ApiError(409, 'This owner’s account is frozen or closed.');
-  if (!preferredDays(today, DEFAULT_CALENDAR).includes(body.preferredDate)) {
+  // E20: the working days on the calendar JAD+ Admin keeps (holidays, ADR 0028).
+  const cal = await loadCalendar(db);
+  if (!preferredDays(today, cal).includes(body.preferredDate)) {
     throw new ApiError(400, 'Choose a working day within the next two weeks.');
   }
   const route = await routeService(db, body.serviceCode);
@@ -49,7 +52,7 @@ async function raiseOnBehalf(c: Ctx) {
     .bind(body.sfUnitId, today, today)
     .first<{ id: string }>();
   const partner = route.partner;
-  const due = reassignedDue(false, now);
+  const due = reassignedDue(false, now, cal);
   const id = newId();
   const ref = newRef();
   const sys = { requestId: id, at: now, actorUserId: null, actorRole: 'system' as const };

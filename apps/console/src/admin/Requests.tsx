@@ -29,7 +29,7 @@ export function Requests({ q, status }: { q: string; status: Status | null }): R
 
   return (
     <>
-      <PageHeader eyebrow="JAD+ Admin" title="Requests" />
+      <PageHeader eyebrow="JAD+ Admin" title="Service requests" />
       <form className="card search" onSubmit={search} role="search">
         <label className="field grow">
           <span className="label">Reference, unit or partner</span>
