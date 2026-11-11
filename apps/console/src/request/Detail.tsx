@@ -8,7 +8,7 @@ import type { RequestDetail } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { photoUrl } from '../lib/api';
 import { aed, dateTime, preferredText, windowText } from '../lib/format';
-import { placeText } from '../lib/jobs';
+import { acknowledgedFact, deadlineFact, placeText } from '../lib/jobs';
 import { Fact, StatusTag, Tag } from '../ui/parts';
 
 const VISIT_LABELS = {
@@ -64,6 +64,23 @@ export function Photos({
   );
 }
 
+/** E4, S4: whether the partner has answered, and the next deadline (partner and JAD+ staff only). */
+function ClockFacts({ d, now }: { d: RequestDetail; now: number }): ReactNode {
+  if (d.clock === null) return null;
+  const ack = acknowledgedFact(d.clock, d.request.emergency);
+  const due = deadlineFact(d.clock, now);
+  return (
+    <>
+      <Fact label={d.request.emergency ? 'Acknowledged' : 'Answered'}>
+        <Tag tone={ack.tone}>{ack.text}</Tag>
+      </Fact>
+      <Fact label="Next deadline">
+        <Tag tone={due.tone}>{due.text}</Tag>
+      </Fact>
+    </>
+  );
+}
+
 export function Summary({ d, now }: { d: RequestDetail; now: number }): ReactNode {
   const r = d.request;
   return (
@@ -78,6 +95,7 @@ export function Summary({ d, now }: { d: RequestDetail; now: number }): ReactNod
           {r.partnerName !== null && !r.partnerVerified ? <Tag tone="warn">Not verified</Tag> : null}
         </Fact>
         <Fact label="Raised">{dateTime(r.createdAt)}</Fact>
+        <ClockFacts d={d} now={now} />
         {r.preferredVisit === null ? null : (
           <Fact label="Preferred visit">{preferredText(r.preferredVisit)}</Fact>
         )}

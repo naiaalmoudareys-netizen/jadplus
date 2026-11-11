@@ -1,7 +1,7 @@
 /**
  * A partner's uploaded documents, verified by JAD+ Admin before they count (ADR 0025; S7, S10). A pending
- * upload can be opened (the PDF is fetched through the API, which audits the viewing, and shown from memory
- * in a new tab) and accepted or rejected with a reason the partner sees. Accepted copies are what the daily
+ * upload can be downloaded (the PDF is fetched through the API, which audits the viewing, and saved from
+ * memory; ui/actions.tsx says why it is not opened in a tab) and accepted or rejected with a reason the partner sees. Accepted copies are what the daily
  * partner check reads.
  */
 import {
@@ -147,7 +147,8 @@ export function PartnerDocuments({
                       <td>
                         <FileButton
                           path={apiPath('admin', 'partner-documents', u.id, 'file')}
-                          label="Open PDF"
+                          label="Download PDF"
+                          saveAs={`jadplus-${u.kind}-${u.id}.pdf`}
                         />
                       </td>
                     </tr>
@@ -158,7 +159,7 @@ export function PartnerDocuments({
           )
         }
       </Loaded>
-      <p className="hint">Opening a document is recorded in the audit log.</p>
+      <p className="hint">Downloading a document is recorded in the audit log.</p>
     </Section>
   );
 }

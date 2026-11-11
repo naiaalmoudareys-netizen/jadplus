@@ -1,7 +1,8 @@
 /**
  * The partner office's performance (ADR 0025; S5 real data only, S6, S8): the month's scorecard against JAD+'s
  * targets, service levels met per measure, ratings, repeat visits and incidents; residents' feedback without
- * names or units; the month's jobs as a CSV file; and the last 7, 30 or 90 days at a glance.
+ * names or units; the month's jobs as a CSV file; each technician's numbers (TeamNumbers); and the last 7, 30
+ * or 90 days at a glance.
  */
 import { partnerFeedbackResponse, partnerScorecardResponse, type PartnerScorecard } from '@jadplus/shared';
 import type { ReactNode } from 'react';
@@ -13,6 +14,7 @@ import { FileButton } from '../ui/actions';
 import { navigate, useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Figure, Loaded, PageHeader, Section, Tag } from '../ui/parts';
 import { RecentNumbers } from './Numbers';
+import { TeamNumbers } from './TeamNumbers';
 
 function Meets({ value }: { value: boolean | null }): ReactNode {
   if (value === null) return <Tag tone="calm">No data</Tag>;
@@ -228,6 +230,7 @@ export function Performance({ month }: { month: string | null }): ReactNode {
       <Loaded state={state} reload={reload}>
         {(s) => <Scorecard s={s} />}
       </Loaded>
+      <TeamNumbers month={shown} />
       <Feedback month={shown} />
       <RecentNumbers />
     </>

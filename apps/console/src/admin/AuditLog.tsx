@@ -1,7 +1,8 @@
 /**
  * JAD+ Admin "Audit log" (ADR 0025; C-AUD-1): every change and every view of personal data, newest first, 100
- * at a time. Filter by action, by who did it (user id), by what it was done to (id) and by Dubai dates. Opening
- * the log is itself audited. JAD+ Admin only (the API refuses viewers too).
+ * at a time. Filter by action, by who did it (user id), by what it was done to (id), by one person (exact email
+ * or mobile, looked up by the API through the blind index; names cannot be searched, ADR 0003) and by Dubai
+ * dates. Opening the log, and finding a person, is itself audited. JAD+ Admin only (the API refuses viewers too).
  */
 import { adminAuditResponse } from '@jadplus/shared';
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
@@ -51,6 +52,7 @@ function Filters({ value, onApply }: { value: AuditFilters; onApply: (f: AuditFi
         {field('action', 'Action', 'text', 'partner_suspended')}
         {field('actor', 'Done by (user id)')}
         {field('target', 'Done to (id)')}
+        {field('person', 'Person (exact email or mobile)', 'text', 'name@example.com')}
         {field('from', 'From (Dubai)', 'date')}
         {field('to', 'To (Dubai)', 'date')}
       </div>
@@ -133,6 +135,13 @@ function Results({ filters }: { filters: AuditFilters }): ReactNode {
         };
         return (
           <Section title="Entries" count={entries.length}>
+            {filters.person.trim() === '' ? null : (
+              <p className="hint">
+                {first.person === null
+                  ? 'Nobody has this email address or mobile number.'
+                  : `What ${first.person.name ?? 'this person'} did, and what was done to their account (user ${first.person.userId}).`}
+              </p>
+            )}
             {entries.length === 0 ? (
               <Empty>Nothing matches these filters.</Empty>
             ) : (

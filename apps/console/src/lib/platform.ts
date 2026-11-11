@@ -3,7 +3,14 @@
  * to one building page (E12, V1), the audit log filters as a query (C-AUD-1), and the on-call calendar's
  * weeks (E6, E7).
  */
-import { GUIDE_SECTIONS, addDays, calendarDate, type GuideSection, type Place } from '@jadplus/shared';
+import {
+  GUIDE_SECTIONS,
+  addDays,
+  auditPersonLookup,
+  calendarDate,
+  type GuideSection,
+  type Place,
+} from '@jadplus/shared';
 import { dayEnd, dayStart } from './dates';
 import { monthText } from './format';
 
@@ -58,12 +65,21 @@ export interface AuditFilters {
   readonly action: string;
   readonly actor: string;
   readonly target: string;
+  /** Exact email or mobile of one person: what they did and what was done to them (not a name: ADR 0003). */
+  readonly person: string;
   /** Dubai dates YYYY-MM-DD, both included; empty = no limit. */
   readonly from: string;
   readonly to: string;
 }
 
-export const NO_AUDIT_FILTERS: AuditFilters = { action: '', actor: '', target: '', from: '', to: '' };
+export const NO_AUDIT_FILTERS: AuditFilters = {
+  action: '',
+  actor: '',
+  target: '',
+  person: '',
+  from: '',
+  to: '',
+};
 
 const ACTION = /^[a-z_]{1,64}$/;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
@@ -75,6 +91,9 @@ export function auditFilterProblem(f: AuditFilters): string | null {
   }
   if ((f.actor !== '' && !ID.test(f.actor.trim())) || (f.target !== '' && !ID.test(f.target.trim()))) {
     return 'An id has letters, digits, "-" and "_" only.';
+  }
+  if (f.person.trim() !== '' && auditPersonLookup(f.person) === null) {
+    return 'Find a person by their exact email address or mobile number (names cannot be searched).';
   }
   if (f.from !== '' && !calendarDate.safeParse(f.from).success) return 'Choose a real "from" date.';
   if (f.to !== '' && !calendarDate.safeParse(f.to).success) return 'Choose a real "to" date.';
@@ -93,6 +112,7 @@ export function auditQuery(f: AuditFilters, before: number | null): Record<strin
     action: f.action.trim(),
     actor: f.actor.trim(),
     target: f.target.trim(),
+    person: f.person.trim(),
     from: from === null ? null : String(from),
     to: to === null ? null : String(to),
     before: before === null ? null : String(before),

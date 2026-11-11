@@ -13,10 +13,12 @@ import { useState, type ReactNode } from 'react';
 import { apiPath } from '../lib/api';
 import { STEP_LABELS, officeSteps, quoteStepLabel, type OfficeStep } from '../lib/job-steps';
 import { jobWhat } from '../lib/jobs';
+import { completionPhotoSlots } from '../lib/photos';
 import { Messages } from '../request/Messages';
 import { Photos, Summary } from '../request/Detail';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Loaded, Notice, PageHeader, Tag } from '../ui/parts';
+import { CompletionPhotos } from './job/CompletionPhotos';
 import { MakeSafe, NoAccess } from './job/DoorForms';
 import { Progress } from './job/Progress';
 import type { StepProps } from './job/shared';
@@ -100,6 +102,12 @@ function Steps({
   );
 }
 
+/** E10: finished-work photos, once the work has started and while the job is open to this office. */
+function AddPhotos({ d, onAdded }: { d: RequestDetail; onAdded: () => void }): ReactNode {
+  const slots = completionPhotoSlots(d.request.status, d.canMessage, d.completionPhotos.length);
+  return slots === 0 ? null : <CompletionPhotos jobId={d.request.id} slots={slots} onAdded={onAdded} />;
+}
+
 export function JobPage({ id }: { id: string }): ReactNode {
   const { api } = useConsole();
   const now = useNow();
@@ -123,6 +131,7 @@ export function JobPage({ id }: { id: string }): ReactNode {
           <Summary d={d} now={now} />
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />
           <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
+          <AddPhotos d={d} onAdded={reload} />
           <Messages d={d} editable onSent={reload} />
         </>
       )}

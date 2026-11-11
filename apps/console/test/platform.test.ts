@@ -79,13 +79,21 @@ describe('building pages (ADR 0025)', () => {
 describe('audit log filters (C-AUD-1)', () => {
   it('turns Dubai dates into day bounds and passes paging', () => {
     const q = auditQuery(
-      { action: ' partner_suspended ', actor: 'u1', target: '', from: '2026-11-01', to: '2026-11-10' },
+      {
+        action: ' partner_suspended ',
+        actor: 'u1',
+        target: '',
+        person: ' demo@jadplus.ae ',
+        from: '2026-11-01',
+        to: '2026-11-10',
+      },
       42,
     );
     expect(q).toEqual({
       action: 'partner_suspended',
       actor: 'u1',
       target: '',
+      person: 'demo@jadplus.ae',
       from: String(Date.UTC(2026, 9, 31, 20)),
       to: String(Date.UTC(2026, 10, 10, 20)),
       before: '42',
@@ -101,6 +109,12 @@ describe('audit log filters (C-AUD-1)', () => {
       /before/,
     );
     expect(auditFilterProblem({ ...NO_AUDIT_FILTERS, from: '2026-02-31' })).toMatch(/real/);
+  });
+
+  it('ADR 0003: a person is found by exact email or mobile, never by name', () => {
+    expect(auditFilterProblem({ ...NO_AUDIT_FILTERS, person: 'demo@jadplus.ae' })).toBeNull();
+    expect(auditFilterProblem({ ...NO_AUDIT_FILTERS, person: '+971 50 000 0000' })).toBeNull();
+    expect(auditFilterProblem({ ...NO_AUDIT_FILTERS, person: 'Layla Haddad' })).toMatch(/exact email/);
   });
 
   it('shows a detail record as lines', () => {

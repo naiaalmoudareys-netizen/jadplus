@@ -188,3 +188,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Invoices (ADR 0026): an owner said "I have paid" and the partner office has not confirmed yet. */
+.row-attention td {
+  background: var(--warn-bg);
+}

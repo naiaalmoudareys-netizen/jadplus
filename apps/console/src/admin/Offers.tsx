@@ -20,7 +20,7 @@ type Show = 'open' | 'all';
 
 function value(i: Interest, key: Column): string | number | null {
   if (key === 'owner') return i.owner.name;
-  if (key === 'post') return i.postId;
+  if (key === 'post') return i.title ?? i.postId;
   return i.at;
 }
 
@@ -68,7 +68,7 @@ function Table({
       <thead>
         <tr>
           <SortHeader label="Owner" column="owner" sorted={sorted} />
-          <SortHeader label="Post" column="post" sorted={sorted} />
+          <SortHeader label="Offer" column="post" sorted={sorted} />
           <SortHeader label="Interested" column="at" sorted={sorted} />
           <th scope="col">State</th>
           {editable ? <th scope="col">Change</th> : null}
@@ -83,7 +83,10 @@ function Table({
                 <span className="block hint">Salesforce contact {i.owner.sfContactId}</span>
               )}
             </td>
-            <td className="ref">{i.postId}</td>
+            <td>
+              {i.title ?? 'Title not recorded'}
+              <span className="block hint ref">{i.postId}</span>
+            </td>
             <td>{dateTime(i.at)}</td>
             <td>
               <StateTag i={i} />

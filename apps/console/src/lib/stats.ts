@@ -15,3 +15,17 @@ export function ratingText(rating: PartnerStats['rating']): string {
 /** The periods the office can look back over (GET /api/partner/stats?days=). */
 export const STATS_DAYS = ['7', '30', '90'] as const;
 export type StatsDays = (typeof STATS_DAYS)[number];
+
+/** How a figure compares with JAD+'s target (PARTNER_TARGETS): green on target, red below, grey with no data. */
+export function meetsTone(meets: boolean | null): 'good' | 'bad' | 'calm' {
+  if (meets === null) return 'calm';
+  return meets ? 'good' : 'bad';
+}
+
+/** The per-technician numbers' period: the month on the Performance page, or the last 30 days. */
+export type TeamPeriod = 'month' | 'recent';
+
+/** The query for GET /api/partner/technician-stats (no month = the last 30 days). */
+export function teamStatsQuery(period: TeamPeriod, month: string): Record<string, string | null> {
+  return { month: period === 'month' ? month : null };
+}

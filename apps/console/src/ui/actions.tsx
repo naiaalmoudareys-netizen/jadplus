@@ -1,15 +1,19 @@
 /**
  * Changes and files on console pages: a change that shows "Saving…" and the API's own message on failure, a
- * button that asks for an inline confirmation before a destructive change, and buttons that open or save a
- * file (a PDF, a CSV) fetched through the API with the session cookie. Files are held in memory as an object
- * URL, released shortly after use; nothing is cached (the API sends `private, no-store`).
+ * button that asks for an inline confirmation before a destructive change, and a button that saves a file (a
+ * PDF, a CSV) fetched through the API with the session cookie. Files are held in memory as an object URL,
+ * released shortly after use; nothing is cached (the API sends `private, no-store`).
+ *
+ * Files are always downloaded, never opened in a new tab: a blob: page inherits the console's CSP
+ * (`object-src 'none'`), which stops the browser's built-in PDF viewer, and browsers handle blob: tabs
+ * opened with `noopener` unevenly. A download works the same everywhere and keeps the strict CSP.
  */
 import { useState, type ReactNode } from 'react';
 import { SignedOutError, errorMessage } from '../lib/api';
 import { useConsole } from './hooks';
 import { Notice } from './parts';
 
-/** How long an object URL stays alive after a file was opened or saved. */
+/** How long an object URL stays alive after a file was saved. */
 const RELEASE_AFTER_MS = 60_000;
 
 export interface Action {
@@ -129,14 +133,7 @@ export function saveBlob(blob: Blob, filename: string): void {
   });
 }
 
-/** Opens a file (a PDF) in a new tab, from memory. */
-export function openBlob(blob: Blob): void {
-  withObjectUrl(blob, (url) => {
-    window.open(url, '_blank', 'noopener');
-  });
-}
-
-/** A button that fetches a file from the API, then opens it in a new tab or saves it. */
+/** A button that fetches a file from the API and saves it to the computer. */
 export function FileButton({
   path,
   label,
@@ -145,8 +142,8 @@ export function FileButton({
 }: {
   path: string;
   label: string;
-  /** Save under this name; without it the file opens in a new tab. */
-  saveAs?: string;
+  /** The name the file is saved under (never taken from the server). */
+  saveAs: string;
   outline?: boolean;
 }): ReactNode {
   const { api } = useConsole();
@@ -160,8 +157,7 @@ export function FileButton({
         onClick={() => {
           action.run(async () => {
             const blob = await api.file(path);
-            if (saveAs === undefined) openBlob(blob);
-            else saveBlob(blob, saveAs);
+            saveBlob(blob, saveAs);
           });
         }}
       >

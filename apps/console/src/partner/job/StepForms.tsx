@@ -269,7 +269,9 @@ export function WorkDone({ jobId, onDone, onCancel }: StepProps): ReactNode {
           }}
         />
       </label>
-      <p className="hint wide">Photos of the finished work are added by the technician in the JAD+ app.</p>
+      <p className="hint wide">
+        Add photos of the finished work on this page (or the technician adds them in the JAD+ app).
+      </p>
     </StepShell>
   );
 }

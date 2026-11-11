@@ -2,8 +2,8 @@
  * The partner office's jobs board (ADR 0023; R3, E4, S4): open jobs split into "Needs you now", "Upcoming" and
  * "Waiting on the owner", each with the reason it is there.
  */
-import { EMERGENCY_TYPE_LABELS, type PartnerJob } from '@jadplus/shared';
-import { duration } from './format';
+import { EMERGENCY_TYPE_LABELS, type PartnerJob, type RequestClock } from '@jadplus/shared';
+import { dateTime, deadlineText, duration, humanize, type Tone } from './format';
 
 const HOUR = 3_600_000;
 /** A deadline this close counts as "now". */
@@ -85,4 +85,46 @@ export function jobWhat(job: Pick<PartnerJob, 'emergency' | 'emergencyType' | 's
 export function placeText(location: PartnerJob['location']): string {
   if (location === null) return 'Unit details with JAD+';
   return [location.unitName, location.building, location.project].filter((x) => x !== null).join(' · ');
+}
+
+/** What the next deadline on a request is for (requests.next_due_kind). */
+const DUE_KIND_LABELS: Readonly<Record<string, string>> = {
+  emergency_ack: 'Acknowledge the emergency',
+  emergency_on_site: 'Technician on site',
+  routine_response: 'Answer the request',
+  routine_visit: 'Visit the unit',
+  quote_after_visit: 'Send the quote',
+  rebook_after_no_access: 'Book a new visit after no access',
+};
+
+export function dueKindText(kind: string): string {
+  return DUE_KIND_LABELS[kind] ?? humanize(kind);
+}
+
+type Clock = Pick<RequestClock, 'acknowledgedAt' | 'nextDueAt' | 'nextDueKind' | 'paused'>;
+
+/**
+ * The request page's "Next deadline" (S4, R3, R4): what is due and the time left, e.g. "Visit the unit: due in
+ * 3 h (12 Nov 2026, 14:00)". The clock stops while waiting on the owner or on hold (A6).
+ */
+export function deadlineFact(clock: Clock, now: number): { text: string; tone: Tone } {
+  if (clock.paused) return { text: 'Clock paused: waiting on the owner or on hold', tone: 'calm' };
+  if (clock.nextDueAt === null || clock.nextDueKind === null) return { text: 'Nothing due', tone: 'calm' };
+  const left = deadlineText(clock.nextDueAt, now) ?? '';
+  const late = clock.nextDueAt < now;
+  return {
+    text: `${dueKindText(clock.nextDueKind)}: ${left.charAt(0).toLowerCase()}${left.slice(1)} (${dateTime(clock.nextDueAt)})`,
+    tone: late ? 'bad' : clock.nextDueAt - now <= DUE_SOON_MS ? 'warn' : 'good',
+  };
+}
+
+/** "Acknowledged" (E4) for an emergency; for a routine request the first answer is booking the visit (S4). */
+export function acknowledgedFact(clock: Clock, emergency: boolean): { text: string; tone: Tone } {
+  if (clock.acknowledgedAt === null) {
+    return { text: emergency ? 'Not acknowledged yet' : 'No visit booked yet', tone: 'warn' };
+  }
+  return {
+    text: `${emergency ? 'Acknowledged' : 'Visit first booked'} ${dateTime(clock.acknowledgedAt)}`,
+    tone: 'good',
+  };
 }

@@ -1,6 +1,6 @@
 /**
- * One technician of the company (ADR 0025; R3, E17): the skills dispatch suggestions are based on, the days
- * they are away (leave, sickness, training), and their visits today. Only the office changes these; the
+ * One technician of the company (ADR 0025; R3, E17, S5): the skills dispatch suggestions are based on, the days
+ * they are away (leave, sickness, training), their visits today and their numbers over the last 30 days. Only the office changes these; the
  * technician sees them in the app.
  */
 import {
@@ -23,6 +23,7 @@ import { unavailableAddedResponse } from '../lib/office-schemas';
 import { ConfirmButton, useAction } from '../ui/actions';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, Notice, PageHeader, Section } from '../ui/parts';
+import { TechnicianNumbers } from './TeamNumbers';
 
 type Reason = (typeof UNAVAILABLE_REASONS)[number];
 
@@ -245,6 +246,7 @@ export function Technician({ id }: { id: string }): ReactNode {
                 )}
               </Section>
             </div>
+            {member === undefined ? null : <TechnicianNumbers id={id} />}
             <Away id={id} now={now} />
           </>
         );
