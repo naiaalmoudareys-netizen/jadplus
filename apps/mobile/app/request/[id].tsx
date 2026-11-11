@@ -15,8 +15,11 @@ import {
   residentStatusLabel,
 } from '../../src/jobs/format.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
+import { ReportCard } from '../../src/requests/ReportCard.js';
 import { RequestPhotos } from '../../src/requests/RequestPhotos.js';
 import { ResidentJourney } from '../../src/requests/ResidentJourney.js';
+import { consultationOf } from '../../src/api/consultation.js';
+import { ConsultationJourney } from '../../src/requests/ConsultationJourney.js';
 import { useSession, useSessionController } from '../../src/session/SessionProvider.js';
 import { Conversation } from '../../src/ui/Conversation.js';
 import { useLoad } from '../../src/ui/hooks.js';
@@ -34,6 +37,9 @@ export default function RequestPage(): ReactNode {
   const { id } = useLocalSearchParams<{ id: string }>();
   const load = useCallback(() => requestDetail(api, id), [api, id]);
   const detail = useLoad(load, REFRESH_MS);
+  // ADR 0031: a consultation shows its stages instead of the visit journey (null for any other request).
+  const loadConsultation = useCallback(() => consultationOf(api, id), [api, id]);
+  const consultation = useLoad(loadConsultation, REFRESH_MS);
 
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if (detail.loading && detail.data === null) return <Loading />;
@@ -69,11 +75,27 @@ export default function RequestPage(): ReactNode {
         <Body>{request.description}</Body>
       </View>
       <RequestPhotos requestId={request.id} photos={photos} />
-      <ResidentJourney
-        detail={detail.data}
-        owner={session.me.role === 'owner'}
-        onChanged={() => void detail.reload()}
-      />
+      {session.me.role === 'owner' ? (
+        <ReportCard requestId={request.id} onChanged={() => void detail.reload()} />
+      ) : null}
+      {consultation.data === null ? (
+        consultation.loading ? null : (
+          <ResidentJourney
+            detail={detail.data}
+            owner={session.me.role === 'owner'}
+            onChanged={() => void detail.reload()}
+          />
+        )
+      ) : (
+        <ConsultationJourney
+          detail={detail.data}
+          consultation={consultation.data}
+          onChanged={() => {
+            void detail.reload();
+            void consultation.reload();
+          }}
+        />
+      )}
       <Conversation
         api={api}
         requestId={request.id}

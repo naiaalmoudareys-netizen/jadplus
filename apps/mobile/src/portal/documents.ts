@@ -19,7 +19,12 @@ export function clearDocuments(): void {
 }
 
 export async function openDocument(api: ApiClient, fileId: string, title: string): Promise<void> {
-  const { bytes, type } = await api.download(`/api/owner/files/${encodeURIComponent(fileId)}`);
+  await openFile(api, `/api/owner/files/${encodeURIComponent(fileId)}`, title);
+}
+
+/** Any file the API serves to the signed-in owner (e.g. a request's report, ADR 0032), opened the same way. */
+export async function openFile(api: ApiClient, path: string, title: string): Promise<void> {
+  const { bytes, type } = await api.download(path);
   clearDocuments();
   const dir = folder();
   dir.create();

@@ -4,6 +4,7 @@
  * outside partner; JAD+ Admin adds providers and closes old in-house requests nobody could take.
  */
 import {
+  CONSULTATION_CONSENT_VERSION,
   DEFAULT_CALENDAR,
   addWorkingMinutes,
   adminPartnersResponse,
@@ -77,7 +78,7 @@ const jobs = async (w: World, token: string) =>
 describe('in-house services go to a JAD Global team (ADR 0030, P6)', () => {
   it('P6/S3: with a team assigned the service is live; the request goes to the team with its own clock (S4)', async () => {
     const w = await world();
-    const harbor = await team(w, 'harbor-re', ['leasing']);
+    const harbor = await team(w, 'harbor-re', ['leasing', 'handover']);
     const { services } = servicesResponse.parse(
       await (await w.h.request('/api/services', { token: w.ownerToken })).json(),
     );
@@ -87,7 +88,8 @@ describe('in-house services go to a JAD Global team (ADR 0030, P6)', () => {
     });
     expect(services.find((s) => s.code === 'resale')?.routing).toBe('coming_soon');
 
-    const res = await post(w, '/api/requests', w.ownerToken, ask('leasing'));
+    // A consultation (leasing) is sent through its own form with consent (ADR 0031); handover is a visit.
+    const res = await post(w, '/api/requests', w.ownerToken, ask('handover'));
     expect(res.status).toBe(201);
     expect(requestRaisedResponse.parse(await res.json()).sentTo).toBe('harbor-re (demo)');
     expect(rows(w, 'SELECT status, partner_id, next_due_at, next_due_kind FROM requests')).toEqual([
@@ -98,7 +100,7 @@ describe('in-house services go to a JAD Global team (ADR 0030, P6)', () => {
         next_due_kind: 'first_contact',
       },
     ]);
-    expect((await jobs(w, harbor.member)).map((j) => j.serviceName)).toEqual(['Leasing']);
+    expect((await jobs(w, harbor.member)).map((j) => j.serviceName)).toEqual(['Handover Management']);
     // The owner sees the team by name, marked as a JAD Global team.
     const { requests } = myRequestsResponse.parse(
       await (await w.h.request('/api/requests', { token: w.ownerToken })).json(),
@@ -156,16 +158,25 @@ describe('in-house services go to a JAD Global team (ADR 0030, P6)', () => {
 
   it('C-AZ-1/C-AZ-2: a JAD Global team’s office sees only its own jobs, and outside partners not its jobs', async () => {
     const w = await world();
-    const harbor = await team(w, 'harbor-re', ['leasing']);
+    const harbor = await team(w, 'harbor-re', ['handover']);
     const other = await team(w, 'harbor-pm', ['property-management']);
-    await post(w, '/api/requests', w.ownerToken, ask('leasing'));
+    await post(w, '/api/requests', w.ownerToken, ask('handover'));
     await post(w, '/api/requests', w.ownerToken, ask('maintenance'));
-    await post(w, '/api/requests', w.ownerToken, ask('property-management'));
-    expect((await jobs(w, harbor.office)).map((j) => j.serviceName)).toEqual(['Leasing']);
+    await post(w, '/api/consultations', w.ownerToken, {
+      sfUnitId: SF_UNIT,
+      serviceCode: 'property-management',
+      answers: { tenanted: 'no' },
+      bestDate: DAY,
+      bestSlot: 'morning',
+      providerId: 'harbor-pm',
+      consent: true,
+      consentVersion: CONSULTATION_CONSENT_VERSION,
+    });
+    expect((await jobs(w, harbor.office)).map((j) => j.serviceName)).toEqual(['Handover Management']);
     expect((await jobs(w, other.office)).map((j) => j.serviceName)).toEqual(['Property Management']);
     expect((await jobs(w, w.primaryToken)).map((j) => j.serviceName)).toEqual(['Maintenance']);
-    const leasing = rows(w, "SELECT id FROM requests WHERE service_code = 'leasing'") as { id: string }[];
-    const id = leasing[0]?.id ?? '';
+    const handover = rows(w, "SELECT id FROM requests WHERE service_code = 'handover'") as { id: string }[];
+    const id = handover[0]?.id ?? '';
     expect((await w.h.request(`/api/requests/${id}`, { token: other.office })).status).toBe(404);
     expect((await w.h.request(`/api/requests/${id}`, { token: w.primaryToken })).status).toBe(404);
     expect((await w.h.request(`/api/requests/${id}`, { token: harbor.office })).status).toBe(200);

@@ -142,6 +142,8 @@ describe('hash router (ADR 0023, 0025)', () => {
       'Services',
       'Buildings',
       'Offers',
+      'Handovers',
+      'Education',
       'On-call',
       'Reports',
       'Audit log',
@@ -163,6 +165,8 @@ describe('hash router (ADR 0023, 0025)', () => {
       'After-hours',
       'Performance',
       'Invoices',
+      'Handovers',
+      'Education',
     ]);
     for (const role of ['jad_admin', 'jad_viewer', 'partner_admin'] as const) {
       for (const item of navFor(role)) expect(routeAllowed(item.route, role)).toBe(true);

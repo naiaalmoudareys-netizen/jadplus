@@ -2,7 +2,8 @@
  * Demo data for a developer's LOCAL database only (never preview or production): a fictional partner with
  * one technician, two fictional JAD Global teams (ADR 0030) with an office admin and one team member each, every
  * service assigned to a provider so the whole catalogue is live, a fictional owner with two units, fictional building help lines (E12), and one open demo
- * emergency (added only when none is open; older ones and kinds no longer offered are closed, ADR 0017), so the
+ * emergency (added only when none is open; older ones and kinds no longer offered are closed, ADR 0017) and one
+ * leasing consultation in progress (ADR 0031), so the
  * app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
  *
  * People are obviously fictional (CLAUDE.md "People"). Personal fields are encrypted with the local keys from
@@ -11,6 +12,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { blindIndex, encryptField, importKeys, toHex } from '../src/crypto.ts';
+import { handoverEducationSeed } from './seed-handover-education.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, '.wrangler', 'demo-seed.sql');
@@ -28,6 +30,7 @@ const vars = devVars();
 if (vars.ENVIRONMENT !== 'local') throw new Error('Demo data is for ENVIRONMENT=local only.');
 const keys = await importKeys(vars.INDEX_KEY ?? '', vars.DATA_KEY ?? '');
 const now = Date.now();
+const DAY = 86_400_000;
 
 const hex = (bytes: Uint8Array) => `X'${toHex(bytes)}'`;
 const text = (s: string | null) => (s === null ? 'NULL' : `'${s.replace(/'/g, "''")}'`);
@@ -158,6 +161,21 @@ const sql = [
     UNION ALL
     SELECT '${requestId}-e2', ${text(requestId)}, ${now}, NULL, 'system', 'assigned', NULL, 'demo-partner'
     WHERE EXISTS (SELECT 1 FROM requests WHERE id = ${text(requestId)});`,
+  // ADR 0031: one leasing consultation in progress (contact made, listed), once; the owner agreed to share
+  // (consent wording version as CONSULTATION_CONSENT_VERSION in packages/shared/src/consultation.ts).
+  `INSERT OR IGNORE INTO requests (id, ref, service_code, sf_unit_id, owner_user_id, raised_by_user_id, raised_by_role,
+    description, is_emergency, status, partner_id, preferred_date, preferred_slot, created_at, updated_at, status_changed_at)
+    VALUES ('demo-consult-1', 'JAD-DCONS1', 'leasing', '${UNIT_2}', 'demo-owner', 'demo-owner', 'owner',
+      'Looking for a long-term tenant from next month.', 0, 'in_progress', 'demo-harbor-re', NULL, NULL,
+      ${now - 2 * DAY}, ${now - DAY}, ${now - DAY});`,
+  `INSERT OR IGNORE INTO consultations (request_id, service_code, answers, consent_partner_id, consent_version, consented_at)
+    VALUES ('demo-consult-1', 'leasing', '{"furnished":"unfurnished","available_from":"2026-12-15"}', 'demo-harbor-re',
+      'consult-2026-11', ${now - 2 * DAY});`,
+  `INSERT OR IGNORE INTO consultation_steps (id, request_id, step, note, partner_id, actor_user_id, at) VALUES
+    ('demo-consult-1-s1', 'demo-consult-1', 'contact_made', 'Spoke with the owner about the rent.', 'demo-harbor-re', 'demo-harbor-re-office', ${now - 2 * DAY + 3_600_000}),
+    ('demo-consult-1-s2', 'demo-consult-1', 'listed', 'Listed on the main portals.', 'demo-harbor-re', 'demo-harbor-re-office', ${now - DAY});`,
+  // ADR 0033: a handover checklist in progress for the second unit, and two upcoming education sessions.
+  ...(await handoverEducationSeed(keys, now, UNIT_2)),
 ];
 
 mkdirSync(join(ROOT, '.wrangler'), { recursive: true });

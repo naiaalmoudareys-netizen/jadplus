@@ -16,9 +16,12 @@ import {
   firstResponseDue,
   preferredDays,
   providerFits,
+  providerServiceFor,
   raiseRequestBody,
+  reportServiceOf,
   serviceOpenTo,
   serviceRouting,
+  snaggingTypeFor,
   type ProviderKind,
   type ServiceDelivery,
   type ServiceFlow,
@@ -123,15 +126,24 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
     if (actor.role === 'tenant' && !serviceOpenTo('tenant', body.serviceCode)) {
       throw new ApiError(403, 'Only your owner can request this service.');
     }
-    const route = await routeService(db, body.serviceCode);
-    if (route === null) throw new ApiError(404, 'This service is not available.');
-    const { service, routing } = route;
+    const service = (await routeService(db, body.serviceCode))?.service ?? null;
+    if (service === null) throw new ApiError(404, 'This service is not available.');
+    // O3 (ADR 0032): soft snagging is done by the JAD Global handover team, professional by the inspector.
+    const snagging = snaggingTypeFor(service.code, body.snaggingType);
+    const route = await routeService(db, providerServiceFor(service.code, snagging));
+    const routing = route?.routing ?? 'coming_soon';
     if (routing === 'coming_soon') {
       throw new ApiError(422, `${service.name} is coming soon.`, { body: { code: 'coming_soon' } });
     }
+    // ADR 0031: a consultation needs the owner's consent and answers, so it is sent through its own form.
+    if (service.flow === 'consultation') {
+      throw new ApiError(422, 'Use the consultation form for this service.', {
+        body: { code: 'consultation' },
+      });
+    }
     // A1: a tenant's request waits for the owner; the partner is chosen when the owner approves.
     const tenant = actor.role === 'tenant';
-    const partner = tenant ? null : route.partner;
+    const partner = tenant ? null : (route?.partner ?? null);
     const status = tenant ? 'awaiting_owner' : partner === null ? 'submitted' : 'assigned';
     // S4: the service's first deadline (ADR 0030); education has none.
     const due = tenant
@@ -187,9 +199,20 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
         targetId: id,
         ipHash: c.get('ipHash'),
         httpRequestId: c.get('requestId'),
-        detail: { service: service.code, routing, awaitingOwner: tenant },
+        detail: { service: service.code, routing, awaitingOwner: tenant, snagging },
       }),
     ];
+    // Flow B (ADR 0032): the report side of a snagging or valuation request, with the owner's snagging choice.
+    const reportService = reportServiceOf(service.code);
+    if (reportService !== null) {
+      statements.push(
+        db
+          .prepare(
+            'INSERT INTO report_requests (request_id, service, snagging_type, created_at) VALUES (?, ?, ?, ?)',
+          )
+          .bind(id, reportService, snagging, now),
+      );
+    }
     if (tenant) {
       statements.push(
         ...inboxStatements(
@@ -217,7 +240,7 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
       {
         requestId: id,
         ref,
-        sentTo: route.partner?.name ?? 'the JAD+ team',
+        sentTo: route?.partner?.name ?? 'the JAD+ team',
         awaitingOwner: tenant,
       },
       201,

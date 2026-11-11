@@ -24,6 +24,10 @@ import { Requests } from './Requests';
 import { Services } from './Services';
 import { Settings } from './Settings';
 import { Staff } from './Staff';
+import { Education } from '../journey/Education';
+import { EducationSession } from '../journey/EducationSession';
+import { HandoverPage } from '../journey/HandoverPage';
+import { Handovers } from '../journey/Handovers';
 
 /** JAD+ Admin's page for a route; routes of the partner office show nothing (the router never allows them). */
 export default function AdminPage({ route }: { route: Route }): ReactNode {
@@ -69,6 +73,14 @@ export default function AdminPage({ route }: { route: Route }): ReactNode {
       return <Settings />;
     case 'invoices':
       return <AdminInvoices />;
+    case 'handovers':
+      return <Handovers />;
+    case 'handover':
+      return <HandoverPage id={route.id} />;
+    case 'education':
+      return <Education />;
+    case 'education_session':
+      return <EducationSession id={route.id} />;
     default:
       return null;
   }

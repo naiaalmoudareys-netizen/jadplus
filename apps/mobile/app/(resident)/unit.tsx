@@ -14,6 +14,7 @@ import { StyleSheet, View } from 'react-native';
 import { errorText } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
 import { GuideLink } from '../../src/building/BuildingParts.js';
+import { HandoverSection } from '../../src/handover/HandoverSection.js';
 import { BuildingHelpLink } from '../../src/building/HelpLines.js';
 import { ConstructionSection } from '../../src/portal/ConstructionSection.js';
 import { documentRow } from '../../src/portal/deskRows.js';
@@ -28,6 +29,7 @@ import { useOpenDocument } from '../../src/portal/useOpenDocument.js';
 import { Hero } from '../../src/ui/brand.js';
 import { DeskHelpLink } from '../../src/ui/HelpBits.js';
 import { TenantSection } from '../../src/tenancy/TenantSection.js';
+import { UnitReports } from '../../src/requests/UnitReports.js';
 import { useScrollTarget } from '../../src/ui/scrollTarget.js';
 import { Body, Button, Card, Heading, Loading, Notice, Page } from '../../src/ui/kit.js';
 import { space } from '../../src/ui/theme.js';
@@ -122,6 +124,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
             />
           );
         })}
+        <UnitReports unitName={deal.unit?.name ?? null} />
         {data.documents.map((d) => (
           <LineItem
             key={d.fileId}
@@ -200,6 +203,8 @@ export default function MyUnit(): ReactNode {
       <View style={styles.section}>
         <TenantSection key={u?.name ?? deal.id} unitName={u?.name ?? null} />
       </View>
+      {/* O2: the handover checklist, once the handover team has opened it (ADR 0033). */}
+      <HandoverSection unitName={u?.name ?? null} />
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal, t)} />
       <View style={styles.section} onLayout={scroll.onLayout('documents')}>
         <Documents data={data} deal={deal} />

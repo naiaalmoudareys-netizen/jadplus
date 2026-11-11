@@ -66,6 +66,7 @@ function Screens(): ReactNode {
       <Stack.Screen name="desk-request" options={{ title: t('title.desk') }} />
       <Stack.Screen name="guide" options={{ title: t('guide.title') }} />
       <Stack.Screen name="building-help" options={{ title: t('buildingHelp.title') }} />
+      <Stack.Screen name="education" options={{ title: t('education.title') }} />
       <Stack.Screen name="legal/[doc]" options={{ title: '' }} />
     </Stack>
   );

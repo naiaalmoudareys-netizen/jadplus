@@ -17,6 +17,10 @@ import { Quotes } from './Quotes';
 import { RateCard } from './RateCard';
 import { Team } from './Team';
 import { Technician } from './Technician';
+import { Education } from '../journey/Education';
+import { EducationSession } from '../journey/EducationSession';
+import { HandoverPage } from '../journey/HandoverPage';
+import { Handovers } from '../journey/Handovers';
 
 /** The office's page for a route; JAD+ Admin routes show nothing (the router never allows them). */
 export default function OfficePage({ route }: { route: Route }): ReactNode {
@@ -47,6 +51,14 @@ export default function OfficePage({ route }: { route: Route }): ReactNode {
       return <Performance month={route.month} />;
     case 'invoices':
       return <OfficeInvoices />;
+    case 'handovers':
+      return <Handovers />;
+    case 'handover':
+      return <HandoverPage id={route.id} />;
+    case 'education':
+      return <Education />;
+    case 'education_session':
+      return <EducationSession id={route.id} />;
     default:
       return null;
   }

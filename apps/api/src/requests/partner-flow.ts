@@ -28,6 +28,7 @@ import { parseJsonBody, parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
 import { loadForAction } from './flow.js';
 import { inboxStatements } from './inbox.js';
+import { bookedDue, startedDue } from './report-store.js';
 import { eventStatement } from './store.js';
 import { changeStatements, firstResponseStatement } from './transition.js';
 
@@ -54,11 +55,14 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
     }
     const visitId = newId();
     const first = firstResponseStatement(c, row, 'visit');
+    // S4: a valuation keeps its report deadline; the free re-inspection is not a repeat visit (ADR 0032).
+    const nextDue = await bookedDue(db, row, body.windowEnd);
+    const repeat = row.status === 'reopened' && row.flow !== 'report';
     await withConflictCheck(() =>
       db.batch([
         ...changeStatements(c, row, {
           to: 'scheduled',
-          nextDue: { at: body.windowEnd, kind: 'visit' },
+          nextDue,
           audit: 'visit_booked',
         }),
         // One live visit per request: moving the visit cancels the earlier booking.
@@ -70,15 +74,7 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
             `INSERT INTO visits (id, request_id, technician_id, window_start, window_end, status, is_repeat, created_at)
              VALUES (?, ?, ?, ?, ?, 'booked', ?, ?)`,
           )
-          .bind(
-            visitId,
-            id,
-            tech.id,
-            body.windowStart,
-            body.windowEnd,
-            row.status === 'reopened' ? 1 : 0,
-            now,
-          ),
+          .bind(visitId, id, tech.id, body.windowStart, body.windowEnd, repeat ? 1 : 0, now),
         // The window also shows on the request card and on Home ("technician today").
         db
           .prepare(
@@ -158,9 +154,11 @@ export function partnerFlowRoutes(): Hono<AppEnv> {
     const { id } = parseParams(c, requestIdParam);
     const { row } = await loadForAction(c, id, 'start_work');
     const db = c.env.DB;
+    // S4: on a report request the report clock starts with the inspection (ADR 0032).
+    const nextDue = await startedDue(db, row, c.get('now'));
     await withConflictCheck(() =>
       db.batch([
-        ...changeStatements(c, row, { to: 'in_progress', nextDue: null, audit: 'work_started' }),
+        ...changeStatements(c, row, { to: 'in_progress', nextDue, audit: 'work_started' }),
         db
           .prepare(
             "UPDATE visits SET status = 'arrived' WHERE request_id = ? AND status IN ('booked', 'on_the_way')",

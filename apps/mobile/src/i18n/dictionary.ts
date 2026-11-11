@@ -9,6 +9,10 @@ import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
 import { screensBuilding } from './strings/screens-building.js';
 import { screensBuildingHelp } from './strings/screens-building-help.js';
+import { screensConsultation } from './strings/screens-consultation.js';
+import { screensConsultation2 } from './strings/screens-consultation-2.js';
+import { screensEducation } from './strings/screens-education.js';
+import { screensHandover } from './strings/screens-handover.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
@@ -20,6 +24,7 @@ import { screensJourney } from './strings/screens-journey.js';
 import { screensOwner } from './strings/screens-owner.js';
 import { screensOwner2 } from './strings/screens-owner-2.js';
 import { screensPartner } from './strings/screens-partner.js';
+import { screensReports } from './strings/screens-reports.js';
 import { screensRequests } from './strings/screens-requests.js';
 import { screensTenancy } from './strings/screens-tenancy.js';
 import { screensTenancy2 } from './strings/screens-tenancy-2.js';
@@ -48,7 +53,12 @@ export const PARTS = [
   screensJob,
   screensBuilding,
   screensBuildingHelp,
+  screensConsultation,
+  screensConsultation2,
+  screensHandover,
+  screensEducation,
   screensInvoices,
+  screensReports,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

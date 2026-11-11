@@ -14,8 +14,11 @@
  * These are pure rules: the API enforces them, the apps only show the buttons they allow.
  */
 import { z } from 'zod';
+import type { ConsultationOutcome } from './consultation.js';
+import { consultationJobActions } from './consultation-flow.js';
 import { canTransition, type CloseReason, type Role, type Status } from './lifecycle.js';
 import { idSchema } from './schemas.js';
+import type { ServiceFlow } from './services.js';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -64,12 +67,30 @@ export interface JobState {
   readonly makeSafeRecorded: boolean;
   /** The signed-in person raised this request (a tenant may cancel only their own). */
   readonly raisedByMe: boolean;
+  /** How the service runs (ADR 0030); left out = the visit journey. */
+  readonly flow?: ServiceFlow;
+  /** ADR 0031: how the provider ended a consultation, once it has. */
+  readonly consultationOutcome?: ConsultationOutcome | null;
 }
+
+/**
+ * Flow B (ADR 0032): a snagging or valuation request ends with a report (reports.ts), not with "work finished":
+ * no quote, no "work done", no make-safe; and the owner confirms the report or the re-inspection result
+ * ("not done" would reopen a request whose only remedy is the free re-inspection).
+ */
+const NOT_IN_REPORT_FLOW: ReadonlySet<JobAction> = new Set<JobAction>([
+  'send_quote',
+  'work_done',
+  'make_safe',
+  'not_done',
+]);
 
 const RATEABLE: ReadonlySet<CloseReason> = new Set<CloseReason>(['confirmed', 'auto_closed']);
 
 /** The actions a role may take now (the API checks who the person is and that the request is theirs). */
 export function jobActions(role: Role, s: JobState): JobAction[] {
+  // ADR 0031: a consultation has no visit, quote or "not done"; its provider steps are consultationActions().
+  if (s.flow === 'consultation') return consultationJobActions(role, s);
   const actions: JobAction[] = [];
   const ready = !s.isEmergency || s.acknowledged;
   if (role === 'partner' || role === 'partner_admin') {
@@ -114,7 +135,7 @@ export function jobActions(role: Role, s: JobState): JobAction[] {
   // E19: the owner used their own contractor; the request closes as "owner arranged".
   if (role === 'owner' && (s.status === 'assigned' || s.status === 'scheduled'))
     actions.push('arranged_myself');
-  return actions;
+  return s.flow === 'report' ? actions.filter((a) => !NOT_IN_REPORT_FLOW.has(a)) : actions;
 }
 
 export interface Outcome {

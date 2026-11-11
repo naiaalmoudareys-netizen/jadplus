@@ -65,6 +65,7 @@ const TRANSITIONS: Readonly<Partial<Record<Role, TransitionTable>>> = {
     submitted: ['cancelled'],
     assigned: ['cancelled', 'closed'], // cancel / owner arranged (E19)
     scheduled: ['cancelled', 'closed'],
+    in_progress: ['reopened'], // asks for the free re-inspection after the snags are fixed (O3, ADR 0032)
   },
   tenant: {
     completed: ['closed', 'reopened'],
@@ -72,8 +73,9 @@ const TRANSITIONS: Readonly<Partial<Record<Role, TransitionTable>>> = {
     submitted: ['cancelled'],
   },
   partner: {
-    assigned: ['scheduled', 'quote_sent', 'in_progress', 'on_hold'],
-    scheduled: ['in_progress', 'on_hold', 'quote_sent'],
+    // completed from assigned / scheduled: a valuation report delivered without a visit (ADR 0032).
+    assigned: ['scheduled', 'quote_sent', 'in_progress', 'on_hold', 'completed'],
+    scheduled: ['in_progress', 'on_hold', 'quote_sent', 'completed'],
     in_progress: ['completed', 'on_hold', 'quote_sent'],
     on_hold: ['scheduled', 'in_progress'],
     reopened: ['scheduled', 'in_progress'],

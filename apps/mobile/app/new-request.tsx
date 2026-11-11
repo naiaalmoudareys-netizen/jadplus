@@ -6,9 +6,16 @@
  * company or the JAD+ team. Photos are re-saved on the phone without location data before they are sent.
  * A tenant raises one for their home; it first waits for the owner's approval (A1, ADR 0021), and the answer
  * says so. A line at the top sends problems outside the home (lobby, lift, corridor, parking, noise) to Building
- * help, the building's own numbers, instead of a partner request (E12, ADR 0029).
+ * help, the building's own numbers, instead of a partner request (E12, ADR 0029). A consultation service (leasing,
+ * resale, mortgage, ...) opens its own pop-up with questions and the consent to share contact details (ADR 0031).
  */
-import { SERVICE_GROUPS, type MyPlace, type RequestRaised, type ServiceView } from '@jadplus/shared';
+import {
+  SERVICE_GROUPS,
+  type ConsultationRaised,
+  type MyPlace,
+  type RequestRaised,
+  type ServiceView,
+} from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
 import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -20,6 +27,8 @@ import { useT } from '../src/i18n/I18nProvider.js';
 import { serviceBlurb, serviceName } from '../src/i18n/sharedLabels.js';
 import { preparePhoto } from '../src/requests/photoPicker.js';
 import { OTHER_PROJECT, groupByProject, placeDetail, placeKey } from '../src/requests/places.js';
+import { ConsultationSent } from '../src/requests/ConsultationSent.js';
+import { ConsultationSheet } from '../src/requests/ConsultationSheet.js';
 import { RequestSheet, type RequestDetails } from '../src/requests/RequestSheet.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { Choice } from '../src/ui/Choice.js';
@@ -54,6 +63,8 @@ export default function NewRequest(): ReactNode {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<{ raised: RequestRaised; photoProblem: boolean } | null>(null);
+  // ADR 0031: a consultation is sent from its own pop-up (questions, best time to call, consent).
+  const [consultSent, setConsultSent] = useState<ConsultationRaised | null>(null);
 
   if (session.status !== 'signed_in') return <Redirect href="/" />;
   if ((catalogue.loading && catalogue.data === null) || (places.loading && places.data === null)) {
@@ -74,6 +85,7 @@ export default function NewRequest(): ReactNode {
         description: details.description,
         preferredDate: details.preferredDate,
         preferredSlot: details.preferredSlot,
+        ...(details.snaggingType === undefined ? {} : { snaggingType: details.snaggingType }),
       });
       // The request is saved first; a photo that fails does not lose the request.
       let photoProblem = false;
@@ -91,6 +103,18 @@ export default function NewRequest(): ReactNode {
       setBusy(false);
     }
   };
+
+  if (consultSent !== null && service !== null) {
+    return (
+      <ConsultationSent
+        service={service}
+        raised={consultSent}
+        onFollow={() => {
+          router.replace({ pathname: '/request/[id]', params: { id: consultSent.requestId } });
+        }}
+      />
+    );
+  }
 
   if (sent !== null) {
     return (
@@ -198,6 +222,11 @@ export default function NewRequest(): ReactNode {
                   selected={false}
                   disabled={s.routing === 'coming_soon' || place === null}
                   onPress={() => {
+                    // Investor education is a seat on a session, not a visit (flow 'booking', ADR 0033).
+                    if (s.flow === 'booking') {
+                      router.push('/education');
+                      return;
+                    }
                     setError(null);
                     setService(s);
                   }}
@@ -207,7 +236,19 @@ export default function NewRequest(): ReactNode {
         )}
       </Section>
 
-      {service === null || place === null ? null : (
+      {service !== null && place !== null && service.flow === 'consultation' ? (
+        <ConsultationSheet
+          key={`${service.code}:${placeKey(place)}`}
+          service={service}
+          place={place}
+          placeLabel={placeLabel(place.location, t)}
+          onClose={() => {
+            setService(null);
+          }}
+          onSent={setConsultSent}
+        />
+      ) : null}
+      {service === null || place === null || service.flow === 'consultation' ? null : (
         <RequestSheet
           key={`${service.code}:${placeKey(place)}`}
           service={service}

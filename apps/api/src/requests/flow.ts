@@ -12,12 +12,14 @@ import {
   type JobAction,
   type JobState,
   type RequestDetail,
+  type ServiceFlow,
   type Status,
 } from '@jadplus/shared';
 import type { Context } from 'hono';
 import { decryptField, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { consultationOutcome } from '../consultations/store.js';
 import { requestFacts } from './store.js';
 
 type Ctx = Context<AppEnv>;
@@ -35,6 +37,8 @@ export interface FlowRow {
   next_due_at: number | null;
   next_due_kind: string | null;
   version: number;
+  /** How the request's service runs (ADR 0030); the report flow has its own steps (ADR 0032). */
+  flow?: ServiceFlow | null;
 }
 
 export interface Flow {
@@ -42,11 +46,12 @@ export interface Flow {
   readonly state: JobState;
 }
 
-function readFlowRow(db: D1Database, id: string): Promise<FlowRow | null> {
+export function readFlowRow(db: D1Database, id: string): Promise<FlowRow | null> {
   return db
     .prepare(
       `SELECT id, status, is_emergency, acknowledged_at, partner_id, owner_user_id, tenancy_id, raised_by_user_id,
-              close_reason, next_due_at, next_due_kind, version
+              close_reason, next_due_at, next_due_kind, version,
+              (SELECT s.flow FROM services s WHERE s.code = requests.service_code) AS flow
        FROM requests WHERE id = ?`,
     )
     .bind(id)
@@ -54,7 +59,7 @@ function readFlowRow(db: D1Database, id: string): Promise<FlowRow | null> {
 }
 
 /** The request's journey state as the rules see it. */
-async function stateOf(db: D1Database, row: FlowRow, viewer: string): Promise<JobState> {
+export async function stateOf(db: D1Database, row: FlowRow, viewer: string): Promise<JobState> {
   const counts = await db
     .prepare(
       `SELECT
@@ -73,6 +78,8 @@ async function stateOf(db: D1Database, row: FlowRow, viewer: string): Promise<Jo
       make_safe: number;
       visit: 'booked' | 'on_the_way' | 'arrived' | null;
     }>();
+  // ADR 0031: how a consultation ended, for the owner's close and rating steps.
+  const outcome = row.flow === 'consultation' ? await consultationOutcome(db, row.id) : null;
   return {
     status: row.status,
     isEmergency: row.is_emergency === 1,
@@ -85,6 +92,8 @@ async function stateOf(db: D1Database, row: FlowRow, viewer: string): Promise<Jo
     visit: counts?.visit ?? 'none',
     makeSafeRecorded: (counts?.make_safe ?? 0) > 0,
     raisedByMe: row.raised_by_user_id === viewer,
+    ...(row.flow === undefined || row.flow === null ? {} : { flow: row.flow }),
+    ...(row.flow === 'consultation' ? { consultationOutcome: outcome } : {}),
   };
 }
 

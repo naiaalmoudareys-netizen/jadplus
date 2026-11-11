@@ -6,8 +6,11 @@
 import type { UserRole } from '@jadplus/shared';
 import { ADMIN_OPS_ACTIONS } from './audit-actions/admin-ops.js';
 import { ADMIN_PLATFORM_ACTIONS } from './audit-actions/admin-platform.js';
+import { CONSULTATION_ACTIONS_AUDIT } from './audit-actions/consultations.js';
+import { HANDOVER_EDUCATION_ACTIONS } from './audit-actions/handover-education.js';
 import { INVOICE_ACTIONS } from './audit-actions/invoices.js';
 import { PARTNER_OFFICE_ACTIONS } from './audit-actions/partner-office.js';
+import { REPORT_AUDIT_ACTIONS } from './audit-actions/reports.js';
 
 export type AuditActorRole = UserRole | 'system' | 'anonymous';
 
@@ -70,6 +73,9 @@ export const AUDIT_ACTIONS = [
   ...ADMIN_PLATFORM_ACTIONS,
   ...PARTNER_OFFICE_ACTIONS,
   ...INVOICE_ACTIONS,
+  ...CONSULTATION_ACTIONS_AUDIT,
+  ...HANDOVER_EDUCATION_ACTIONS,
+  ...REPORT_AUDIT_ACTIONS,
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

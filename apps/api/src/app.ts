@@ -3,7 +3,7 @@
  * request id → security headers → body size limit → request context → authentication (deny by default).
  * Routes then declare their roles with requireRole() and check object ownership (C-AZ-1, C-AZ-2).
  */
-import { PARTNER_DOCUMENT_MAX_BYTES, PHOTO_MAX_BYTES } from '@jadplus/shared';
+import { PARTNER_DOCUMENT_MAX_BYTES, PHOTO_MAX_BYTES, REPORT_MAX_BYTES } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { except } from 'hono/combine';
 import { bodyLimit } from 'hono/body-limit';
@@ -21,6 +21,9 @@ import { deskRoutes } from './portal/desk.js';
 import { portalRoutes } from './portal/routes.js';
 import { residentRoutes } from './requests/resident.js';
 import { PHOTO_UPLOAD_PATH, photoRoutes } from './requests/photos.js';
+import { REPORT_UPLOAD_PATH, reportRoutes } from './requests/reports.js';
+import { SNAG_PHOTO_UPLOAD_PATH, snagRoutes } from './requests/snags.js';
+import { snagViewRoutes } from './requests/snag-views.js';
 import { preferenceRoutes } from './me/preferences.js';
 import { inboxRoutes } from './me/inbox.js';
 import { calendarRoutes } from './me/calendar.js';
@@ -41,6 +44,13 @@ import { residentFlowRoutes } from './requests/resident-flow.js';
 import { routineRoutes } from './requests/routine.js';
 import { requestRoutes } from './requests/routes.js';
 import { securityHeaders } from './security.js';
+import { consultationRaiseRoutes } from './consultations/raise.js';
+import { consultationViewRoutes } from './consultations/routes.js';
+import { consultationStepRoutes } from './consultations/steps.js';
+import { ownerHandoverRoutes } from './handover/owner.js';
+import { handoverStaffRoutes } from './handover/staff.js';
+import { ownerEducationRoutes } from './education/owner.js';
+import { educationStaffRoutes } from './education/staff.js';
 
 /** Largest JSON body accepted (photo/PDF uploads use their own endpoint and limit). */
 const MAX_JSON_BYTES = 64 * 1024;
@@ -57,7 +67,10 @@ export function createApp(deps: Deps): Hono<AppEnv> {
     except(
       (c) =>
         c.req.method === 'POST' &&
-        (PHOTO_UPLOAD_PATH.test(c.req.path) || PARTNER_DOCUMENT_UPLOAD_PATH.test(c.req.path)),
+        (PHOTO_UPLOAD_PATH.test(c.req.path) ||
+          PARTNER_DOCUMENT_UPLOAD_PATH.test(c.req.path) ||
+          REPORT_UPLOAD_PATH.test(c.req.path) ||
+          SNAG_PHOTO_UPLOAD_PATH.test(c.req.path)),
       bodyLimit({ maxSize: MAX_JSON_BYTES, onError: (c) => c.json({ error: 'Request too large.' }, 413) }),
     ),
   );
@@ -75,6 +88,21 @@ export function createApp(deps: Deps): Hono<AppEnv> {
       onError: (c) => c.json({ error: 'Documents can be up to 15 MB.' }, 413),
     }),
   );
+  // Flow B (ADR 0032): the report PDF (20 MB) and the snag photos (10 MB, like request photos).
+  app.post(
+    '/api/requests/:id/report',
+    bodyLimit({
+      maxSize: REPORT_MAX_BYTES,
+      onError: (c) => c.json({ error: 'Reports can be up to 20 MB.' }, 413),
+    }),
+  );
+  app.post(
+    '/api/requests/:id/snags/:snagId/:upload{photo|fix}',
+    bodyLimit({
+      maxSize: PHOTO_MAX_BYTES,
+      onError: (c) => c.json({ error: 'Photos can be up to 10 MB.' }, 413),
+    }),
+  );
   app.use('/api/*', requestContext(deps));
   app.use('/api/*', authenticate());
 
@@ -84,6 +112,9 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api', residentRoutes());
   app.route('/api', routineRoutes(deps));
   app.route('/api', photoRoutes());
+  app.route('/api', reportRoutes());
+  app.route('/api', snagRoutes());
+  app.route('/api', snagViewRoutes());
   app.route('/api', preferenceRoutes());
   app.route('/api', calendarRoutes());
   app.route('/api/owner', portalRoutes(deps));
@@ -100,11 +131,21 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api', tenancyRoutes(deps));
   app.route('/api', residentFlowRoutes());
   app.route('/api', invoiceRoutes());
+  app.route('/api', consultationRaiseRoutes(deps));
+  app.route('/api', consultationViewRoutes());
+  app.route('/api', consultationStepRoutes());
   app.route('/api/admin', adminRoutes());
   app.route('/api/admin', adminConsoleRoutes());
   app.route('/api/admin', adminOpsRoutes());
   app.route('/api/admin', adminPlatformRoutes());
   app.route('/api/admin', adminPartnerExtrasRoutes());
+  // Handover checklist and investor education (O2, O5; ADR 0033): owners, the JAD Global team's office, JAD+ Admin.
+  app.route('/api', ownerHandoverRoutes());
+  app.route('/api', ownerEducationRoutes());
+  app.route('/api/partner', handoverStaffRoutes('office'));
+  app.route('/api/partner', educationStaffRoutes('office'));
+  app.route('/api/admin', handoverStaffRoutes('admin'));
+  app.route('/api/admin', educationStaffRoutes('admin'));
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
 

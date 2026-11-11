@@ -6,6 +6,7 @@
  * one. Without an active provider it shows "coming soon" and cannot be requested (S2, P6: no promise).
  */
 import { z } from 'zod';
+import { snaggingTypeSchema } from './reports.js';
 import { VISIT_SLOT_KEYS } from './visits.js';
 
 export const SERVICE_GROUPS = ['Property care', 'Investment services', 'Lifestyle'] as const;
@@ -196,9 +197,14 @@ export const raiseRequestBody = z
     /** A working day from preferredDays() (checked by the API) and a time window (ADR 0013). */
     preferredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     preferredSlot: z.enum(VISIT_SLOT_KEYS),
+    /** O3 (ADR 0032): soft or professional snagging; snagging requests only (professional when left out). */
+    snaggingType: snaggingTypeSchema.optional(),
   })
   .refine((b) => (b.tenancyId === undefined) !== (b.sfUnitId === undefined), {
     message: 'Give either the tenancy or the unit.',
+  })
+  .refine((b) => b.snaggingType === undefined || b.serviceCode === 'snagging', {
+    message: 'The snagging choice is for snagging requests only.',
   });
 export type RaiseRequestBody = z.infer<typeof raiseRequestBody>;
 

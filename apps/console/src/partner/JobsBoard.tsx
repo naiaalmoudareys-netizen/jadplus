@@ -17,6 +17,7 @@ import { groupJobs, jobClock, jobWhat, placeText } from '../lib/jobs';
 import { technicianAssignedResponse } from '../lib/schemas';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Link, Loaded, Notice, PageHeader, StatusTag, Tag } from '../ui/parts';
+import { SnagsToFix } from './SnagsToFix';
 
 type Technician = PartnerTeam['technicians'][number];
 
@@ -173,6 +174,7 @@ export function JobsBoard(): ReactNode {
           Refresh
         </button>
       </PageHeader>
+      <SnagsToFix />
       <Loaded state={state} reload={reload}>
         {([{ jobs }, team]) => (
           <>

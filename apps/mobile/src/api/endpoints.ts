@@ -169,7 +169,10 @@ export const services = async (api: ApiClient): Promise<ServiceView[]> =>
 export const raiseRequest = (
   api: ApiClient,
   place: MyPlace,
-  details: Pick<RaiseRequestBody, 'serviceCode' | 'description' | 'preferredDate' | 'preferredSlot'>,
+  details: Pick<
+    RaiseRequestBody,
+    'serviceCode' | 'description' | 'preferredDate' | 'preferredSlot' | 'snaggingType'
+  >,
 ): Promise<RequestRaised> =>
   api.post(
     '/api/requests',

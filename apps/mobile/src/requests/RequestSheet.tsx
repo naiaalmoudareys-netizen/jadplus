@@ -11,6 +11,7 @@ import {
   dubaiDate,
   preferredDays,
   type ServiceView,
+  type SnaggingType,
   type VisitSlot,
 } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
@@ -34,12 +35,15 @@ import { colors, fonts, radius, space } from '../ui/theme.js';
 import { useWorkingCalendar } from '../ui/calendar.js';
 import { PhotoAdder } from './PhotoAdder.js';
 import { pickPhoto, type PickedPhoto } from './photoPicker.js';
+import { SnaggingChoice } from './SnaggingChoice.js';
 
 export interface RequestDetails {
   readonly preferredDate: string;
   readonly preferredSlot: VisitSlot;
   readonly description: string;
   readonly photos: readonly PickedPhoto[];
+  /** O3 (ADR 0032): soft or professional, for snagging only. */
+  readonly snaggingType?: SnaggingType;
 }
 
 function Section({ title, children }: { title: string; children: ReactNode }): ReactNode {
@@ -65,9 +69,11 @@ export function RequestSheet(props: {
   const [slot, setSlot] = useState<VisitSlot | null>(null);
   const [description, setDescription] = useState('');
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const snagging = props.service.code === 'snagging';
+  const [snaggingType, setSnaggingType] = useState<SnaggingType | null>(null);
   const days = preferredDays(dubaiDate(Date.now()), useWorkingCalendar());
   const text = description.trim();
-  const ready = day !== null && slot !== null && text !== '';
+  const ready = day !== null && slot !== null && text !== '' && (!snagging || snaggingType !== null);
 
   const addPhoto = async (source: 'camera' | 'library') => {
     const picked = await pickPhoto(source);
@@ -99,6 +105,7 @@ export function RequestSheet(props: {
               </Pressable>
             </View>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+              {snagging ? <SnaggingChoice value={snaggingType} onChange={setSnaggingType} /> : null}
               <Section title={t('req.sheet.day')}>
                 <ScrollView
                   horizontal
@@ -161,7 +168,13 @@ export function RequestSheet(props: {
                 disabled={!ready}
                 onPress={() => {
                   if (day !== null && slot !== null && text !== '') {
-                    props.onSend({ preferredDate: day, preferredSlot: slot, description: text, photos });
+                    props.onSend({
+                      preferredDate: day,
+                      preferredSlot: slot,
+                      description: text,
+                      photos,
+                      ...(snaggingType === null ? {} : { snaggingType }),
+                    });
                   }
                 }}
               />

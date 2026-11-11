@@ -28,6 +28,11 @@ export type Route =
   | { readonly name: 'settings' }
   // Both consoles: each role gets its own invoices page (ADR 0026, being built).
   | { readonly name: 'invoices' }
+  // Both consoles: handover checklists and investor education (ADR 0033).
+  | { readonly name: 'handovers' }
+  | { readonly name: 'handover'; readonly id: string }
+  | { readonly name: 'education' }
+  | { readonly name: 'education_session'; readonly id: string }
   // Partner office
   | { readonly name: 'office' }
   | { readonly name: 'dispatch'; readonly date: string | null }
@@ -69,6 +74,8 @@ const SIMPLE: Readonly<Record<string, SimpleName>> = {
   staff: 'staff',
   settings: 'settings',
   invoices: 'invoices',
+  handovers: 'handovers',
+  education: 'education',
   office: 'office',
   jobs: 'jobs',
   messages: 'messages',
@@ -83,12 +90,19 @@ const PATH_OF: Readonly<Partial<Record<RouteName, string>>> = Object.fromEntries
 );
 
 /** Pages for one item: "#/people/abc". */
-const ITEM: Readonly<Record<string, 'request' | 'person' | 'desk_item' | 'partner' | 'technician'>> = {
+const ITEM: Readonly<
+  Record<
+    string,
+    'request' | 'person' | 'desk_item' | 'partner' | 'technician' | 'handover' | 'education_session'
+  >
+> = {
   requests: 'request',
   people: 'person',
   desk: 'desk_item',
   partners: 'partner',
   team: 'technician',
+  handovers: 'handover',
+  education: 'education_session',
 };
 
 const isStatus = (s: string | null): s is Status => s !== null && (STATUSES as readonly string[]).includes(s);
@@ -169,6 +183,10 @@ export function formatRoute(route: Route): string {
       return `#/partners/${route.id}`;
     case 'technician':
       return `#/team/${route.id}`;
+    case 'handover':
+      return `#/handovers/${route.id}`;
+    case 'education_session':
+      return `#/education/${route.id}`;
     case 'building':
       return withQuery('building', { project: route.project, building: route.building });
     case 'reports':
@@ -204,6 +222,10 @@ const ADMIN_PAGES: ReadonlySet<RouteName> = new Set<RouteName>([
   'reports',
   'settings',
   'invoices',
+  'handovers',
+  'handover',
+  'education',
+  'education_session',
 ]);
 /** Staff accounts and the audit log are for JAD+ Admin only (the API refuses viewers too). */
 const ADMIN_ONLY_PAGES: ReadonlySet<RouteName> = new Set<RouteName>(['audit', 'staff']);
@@ -221,6 +243,10 @@ const OFFICE_PAGES: ReadonlySet<RouteName> = new Set<RouteName>([
   'after_hours',
   'performance',
   'invoices',
+  'handovers',
+  'handover',
+  'education',
+  'education_session',
 ]);
 
 /** Pages each console role may open. Phone-app roles have none. */
@@ -251,6 +277,8 @@ const ADMIN_NAV: readonly NavItem[] = [
   { label: 'Services', route: { name: 'services' } },
   { label: 'Buildings', route: { name: 'buildings' } },
   { label: 'Offers', route: { name: 'offers' } },
+  { label: 'Handovers', route: { name: 'handovers' } },
+  { label: 'Education', route: { name: 'education' } },
   { label: 'On-call', route: { name: 'on_call' } },
   { label: 'Reports', route: { name: 'reports', month: null } },
   { label: 'Audit log', route: { name: 'audit' } },
@@ -271,6 +299,8 @@ const OFFICE_NAV: readonly NavItem[] = [
   { label: 'After-hours', route: { name: 'after_hours' } },
   { label: 'Performance', route: { name: 'performance', month: null } },
   { label: 'Invoices', route: { name: 'invoices' } },
+  { label: 'Handovers', route: { name: 'handovers' } },
+  { label: 'Education', route: { name: 'education' } },
 ];
 
 /** The left navigation for each role: only pages the role may open. */
@@ -289,6 +319,8 @@ const PARENT: Readonly<Partial<Record<RouteName, readonly RouteName[]>>> = {
   partner: ['partners'],
   building: ['buildings'],
   technician: ['team'],
+  handover: ['handovers'],
+  education_session: ['education'],
 };
 
 /** Whether a navigation item is the current page (an item page belongs to its list). */

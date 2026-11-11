@@ -102,6 +102,13 @@ const DUE_KIND_LABELS: Readonly<Record<string, string>> = {
   eligibility_answer: 'Answer on eligibility',
   service_quote: 'Send the quote',
   design_proposal: 'Send the design proposal',
+  // S4: the report flow's later deadlines (ADR 0032, packages/shared reports.ts).
+  snagging_report: 'Send the snagging report',
+  reinspection_booking: 'Book the re-inspection',
+  reinspection_report: 'Send the re-inspection report',
+  // S4: the consultation flow's later deliverables (ADR 0031, packages/shared consultation-flow.ts).
+  listing: 'List the unit',
+  valuation_plan: 'Send the valuation and sales plan',
 };
 
 export function dueKindText(kind: string): string {
