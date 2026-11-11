@@ -22,6 +22,7 @@ import { CompletionPhotos } from './job/CompletionPhotos';
 import { ConsultationSteps } from './job/ConsultationSteps';
 import { MakeSafe, NoAccess } from './job/DoorForms';
 import { Progress } from './job/Progress';
+import { ProjectSection } from '../request/ProjectSection';
 import { ReportSection } from './job/ReportSection';
 import type { StepProps } from './job/shared';
 import { Acknowledge, BookVisit, SendQuote, StartWork, WorkDone } from './job/StepForms';
@@ -131,6 +132,7 @@ export function JobPage({ id }: { id: string }): ReactNode {
           <Progress status={d.request.status} />
           <Steps d={d} team={team.technicians} now={now} onChanged={reload} />
           <ConsultationSteps id={id} onChanged={reload} />
+          <ProjectSection id={id} onChanged={reload} />
           <Summary d={d} now={now} />
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />
           <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />

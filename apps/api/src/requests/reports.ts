@@ -35,6 +35,8 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseParams } from '../validate.js';
 import { withConflictCheck } from './concurrency.js';
+import { partnerInboxStatement } from './inbox.js';
+import { handoverTeamInboxStatement, requestOwnerInboxStatement } from './inbox-flows.js';
 import { loadReport, loadReportForAction, reportFacts, type ReportRow } from './report-store.js';
 import { visibleRequest } from './resident.js';
 import { changeStatements } from './transition.js';
@@ -133,6 +135,19 @@ export function reportRoutes(): Hono<AppEnv> {
               ),
           ]
         : [];
+    // ADR 0035: the owner is told the report is ready; with open snags, the handover team that may fix them too.
+    const openSnags = state.snags.filter((s) => s === 'open').length;
+    const told = [
+      requestOwnerInboxStatement(db, {
+        requestId: id,
+        kind: 'report_ready',
+        at: now,
+        data: { reportKind: outcome.kind },
+      }),
+      ...(outcome.kind === 'snagging' && openSnags > 0
+        ? [handoverTeamInboxStatement(db, { requestId: id, at: now, data: { count: openSnags } })]
+        : []),
+    ];
     await withConflictCheck(async () =>
       db.batch([
         ...changeStatements(c, row, {
@@ -174,6 +189,7 @@ export function reportRoutes(): Hono<AppEnv> {
             ]
           : []),
         ...milestone,
+        ...told,
       ]),
     );
     return c.json({ id: reportId, kind: outcome.kind, status: outcome.to }, 201);
@@ -237,6 +253,17 @@ export function reportRoutes(): Hono<AppEnv> {
                reinspection_requested_by = excluded.reinspection_requested_by`,
           )
           .bind(id, now, actor.userId, now),
+        // ADR 0035: the provider is told to book it (the request is theirs, loadReportForAction checked it).
+        ...(row.partner_id === null
+          ? []
+          : [
+              partnerInboxStatement(
+                db,
+                { requestId: id, partnerId: row.partner_id },
+                'reinspection_requested',
+                now,
+              ),
+            ]),
       ]),
     );
     return c.json({ id, status: 'reopened' });

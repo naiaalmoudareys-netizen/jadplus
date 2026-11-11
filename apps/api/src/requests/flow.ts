@@ -20,6 +20,7 @@ import { decryptField, toBytes } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { consultationOutcome } from '../consultations/store.js';
+import { managedNow } from '../managed/store.js';
 import { requestFacts } from './store.js';
 
 type Ctx = Context<AppEnv>;
@@ -33,6 +34,8 @@ export interface FlowRow {
   owner_user_id: string;
   tenancy_id: string | null;
   raised_by_user_id: string;
+  /** The unit, for the managed-unit rules (ADR 0034). */
+  sf_unit_id: string;
   close_reason: CloseReason | null;
   next_due_at: number | null;
   next_due_kind: string | null;
@@ -50,7 +53,7 @@ export function readFlowRow(db: D1Database, id: string): Promise<FlowRow | null>
   return db
     .prepare(
       `SELECT id, status, is_emergency, acknowledged_at, partner_id, owner_user_id, tenancy_id, raised_by_user_id,
-              close_reason, next_due_at, next_due_kind, version,
+              sf_unit_id, close_reason, next_due_at, next_due_kind, version,
               (SELECT s.flow FROM services s WHERE s.code = requests.service_code) AS flow
        FROM requests WHERE id = ?`,
     )
@@ -113,6 +116,18 @@ export async function loadForAction(c: Ctx, id: string, action: JobAction): Prom
     throw new ApiError(409, 'This step is not possible for this request now. Refresh and try again.');
   }
   return { row, state };
+}
+
+/**
+ * The signed-in person's steps on the request page. ADR 0034: on a managed unit the managing team decides a
+ * tenant's request (A1), so the owner is not offered approve / decline.
+ */
+async function viewerActions(c: Ctx, row: FlowRow): Promise<JobAction[]> {
+  const { role, userId } = c.get('auth');
+  const actions = jobActions(role, await stateOf(c.env.DB, row, userId));
+  if (role !== 'owner' || row.status !== 'awaiting_owner') return actions;
+  if ((await managedNow(c.env.DB, row.sf_unit_id, c.get('now'))) === null) return actions;
+  return actions.filter((a) => a !== 'approve_request' && a !== 'decline_request');
 }
 
 interface ExtrasRow {
@@ -211,7 +226,7 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
           },
     completionPhotos: photos.results,
     rating,
-    actions: canAct ? jobActions(c.get('auth').role, await stateOf(db, row, c.get('auth').userId)) : [],
+    actions: canAct ? await viewerActions(c, row) : [],
     clock: CLOCK_ROLES.has(c.get('auth').role)
       ? requestClock(
           {

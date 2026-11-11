@@ -4,12 +4,23 @@
  *
  * - A8: the visit, 24 hours before (only if it was booked more than 2 hours ahead) and 1 hour before
  * - A2: a quote still waiting on day 10 (it expires on day 14)
- * - A4: work marked done and not confirmed, at 24 h and 48 h (it closes by itself at 72 h)
+ * - A4: work marked done and not confirmed, at 24 h and 48 h (it closes by itself at 72 h); the item carries the
+ *   service's flow so a consultation reads "please close this request" (ADR 0035)
+ * - O5 (ADR 0035): an education session, from 24 hours before, to each owner holding a seat (not to one who took
+ *   the seat less than 2 hours before the start). The dedupe key names the start time, so a session moved to
+ *   another day reminds again.
  *
  * When message providers are connected (phase E) the same items are also sent by SMS / WhatsApp / push.
  */
-import { CONFIRM_REMINDER_HOURS, QUOTE_REMINDER_AFTER, VISIT_REMINDERS } from '@jadplus/shared';
+import {
+  CONFIRM_REMINDER_HOURS,
+  QUOTE_REMINDER_AFTER,
+  SESSION_REMINDER_BEFORE,
+  VISIT_REMINDERS,
+  type ServiceFlow,
+} from '@jadplus/shared';
 import { inboxStatements, type InboxTarget } from '../requests/inbox.js';
+import { sessionInboxStatement } from '../requests/inbox-flows.js';
 
 const HOUR = 3_600_000;
 
@@ -28,12 +39,14 @@ interface QuoteDue extends InboxTarget {
 
 interface ConfirmDue extends InboxTarget {
   done_at: number;
+  flow: ServiceFlow | null;
 }
 
 export interface ReminderResult {
   readonly visits: number;
   readonly quotes: number;
   readonly confirmations: number;
+  readonly sessions: number;
 }
 
 const TARGET = 'r.id, r.owner_user_id, r.raised_by_user_id';
@@ -111,8 +124,9 @@ async function quoteReminders(db: D1Database, now: number): Promise<number> {
 async function confirmReminders(db: D1Database, now: number): Promise<number> {
   const { results } = await db
     .prepare(
-      `SELECT ${TARGET}, r.status_changed_at AS done_at FROM requests r
-       WHERE r.status = 'completed' AND r.status_changed_at <= ?`,
+      `SELECT ${TARGET}, r.status_changed_at AS done_at,
+              (SELECT s.flow FROM services s WHERE s.code = r.service_code) AS flow
+       FROM requests r WHERE r.status = 'completed' AND r.status_changed_at <= ?`,
     )
     .bind(now - CONFIRM_REMINDER_HOURS[0] * HOUR)
     .all<ConfirmDue>();
@@ -121,12 +135,40 @@ async function confirmReminders(db: D1Database, now: number): Promise<number> {
     // The latest reminder due now; the dedupe key makes each one happen once.
     const hours = [...CONFIRM_REMINDER_HOURS].reverse().find((h) => r.done_at + h * HOUR <= now);
     if (hours === undefined) continue;
-    await db.batch(
-      inboxStatements(db, r, 'confirm_reminder', now, { hours }, `confirm:${String(hours)}:${r.id}`),
-    );
+    // A visit needs no flow (the wording's default); a consultation or a report reads differently.
+    const data = r.flow === null || r.flow === 'visit' ? { hours } : { hours, flow: r.flow };
+    await db.batch(inboxStatements(db, r, 'confirm_reminder', now, data, `confirm:${String(hours)}:${r.id}`));
     sent += 1;
   }
   return sent;
+}
+
+/** O5: sessions starting within a day that still have a seat holder without a reminder for this start time. */
+async function sessionReminders(db: D1Database, now: number): Promise<number> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.id, s.starts_at FROM education_sessions s
+       WHERE s.cancelled_at IS NULL AND s.starts_at > ?1 AND s.starts_at - ?2 <= ?1
+         AND EXISTS (SELECT 1 FROM education_bookings b
+           WHERE b.session_id = s.id AND b.cancelled_at IS NULL AND b.booked_at < s.starts_at - ?3
+             AND NOT EXISTS (SELECT 1 FROM inbox i
+               WHERE i.dedupe_key = 'session_reminder:' || s.id || ':' || s.starts_at || ':' || b.user_id))`,
+    )
+    .bind(now, SESSION_REMINDER_BEFORE, 2 * HOUR)
+    .all<{ id: string; starts_at: number }>();
+  for (const s of results) {
+    await db.batch([
+      sessionInboxStatement(db, {
+        sessionId: s.id,
+        kind: 'session_reminder',
+        at: now,
+        data: { startsAt: s.starts_at },
+        dedupeKey: `session_reminder:${s.id}:${String(s.starts_at)}`,
+        bookedBefore: s.starts_at - 2 * HOUR,
+      }),
+    ]);
+  }
+  return results.length;
 }
 
 export async function runReminders(db: D1Database, now: number): Promise<ReminderResult> {
@@ -134,5 +176,6 @@ export async function runReminders(db: D1Database, now: number): Promise<Reminde
     visits: await visitReminders(db, now),
     quotes: await quoteReminders(db, now),
     confirmations: await confirmReminders(db, now),
+    sessions: await sessionReminders(db, now),
   };
 }

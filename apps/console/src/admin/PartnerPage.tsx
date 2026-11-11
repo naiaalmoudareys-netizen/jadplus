@@ -11,6 +11,7 @@ import { canChange } from '../lib/session';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Fact, Loaded, Notice, PageHeader, Tag } from '../ui/parts';
 import { PartnerDocuments } from './partner/Documents';
+import { ManagedUnits } from './partner/ManagedUnits';
 import { RateChanges } from './partner/RateChanges';
 import { PartnerScorecard } from './partner/Scorecard';
 import { StandingChange, STANDING } from './Partners';
@@ -70,6 +71,7 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
             <PartnerDocuments partnerId={id} editable={editable} />
             <RateChanges partnerId={id} editable={editable} />
             <PartnerScorecard partnerId={id} />
+            {partner.kind === 'jad_group' ? <ManagedUnits providerId={id} editable={editable} /> : null}
           </>
         );
       }}

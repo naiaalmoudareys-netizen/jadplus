@@ -17,6 +17,8 @@ import { groupJobs, jobClock, jobWhat, placeText } from '../lib/jobs';
 import { technicianAssignedResponse } from '../lib/schemas';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Link, Loaded, Notice, PageHeader, StatusTag, Tag } from '../ui/parts';
+import { showsSnagsToFix } from '../lib/capabilities';
+import { useCapabilities } from '../ui/capabilities';
 import { SnagsToFix } from './SnagsToFix';
 
 type Technician = PartnerTeam['technicians'][number];
@@ -158,6 +160,7 @@ function JobRow({
 
 export function JobsBoard(): ReactNode {
   const { api } = useConsole();
+  const caps = useCapabilities();
   const now = useNow();
   const { state, reload } = useLoad(
     () =>
@@ -174,7 +177,7 @@ export function JobsBoard(): ReactNode {
           Refresh
         </button>
       </PageHeader>
-      <SnagsToFix />
+      {showsSnagsToFix(caps) ? <SnagsToFix /> : null}
       <Loaded state={state} reload={reload}>
         {([{ jobs }, team]) => (
           <>

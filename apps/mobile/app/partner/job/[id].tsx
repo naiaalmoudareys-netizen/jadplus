@@ -10,7 +10,9 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { partnerJobs, requestDetail } from '../../../src/api/endpoints.js';
+import { DeliverySection } from '../../../src/jobs/DeliverySection.js';
 import { JobBar } from '../../../src/jobs/JobBar.js';
+import { hasProjectSide } from '../../../src/managed/logic.js';
 import { JobForms } from '../../../src/jobs/JobForms.js';
 import { JobHeader } from '../../../src/jobs/JobHeader.js';
 import { JobSections } from '../../../src/jobs/JobSections.js';
@@ -79,6 +81,8 @@ export default function Job(): ReactNode {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <JobHeader job={j} progress={jobProgress(j, d)} now={now} />
         <JobVisit job={j} visit={d?.visit ?? null} now={now} />
+        {/* ADR 0034: the furnishing delivery date, once the owner approved the quote. */}
+        {hasProjectSide(j.serviceName) ? <DeliverySection jobId={j.id} /> : null}
         <JobSections
           job={j}
           detail={d}

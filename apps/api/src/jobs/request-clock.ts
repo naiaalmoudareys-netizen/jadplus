@@ -9,7 +9,7 @@
  * visits, quote day 10, confirmation 24 h / 48 h). Each change is one batch guarded by the request version, so
  * a decision made at the same moment wins and the sweep skips that request.
  */
-import { AUTO_CLOSE_HOURS, type CloseReason } from '@jadplus/shared';
+import { AUTO_CLOSE_HOURS, type CloseReason, type ServiceFlow } from '@jadplus/shared';
 import { auditStatement, type AuditAction } from '../audit.js';
 import type { Logger } from '../logger.js';
 import { isVersionConflict, versionGuard } from '../requests/concurrency.js';
@@ -24,6 +24,8 @@ interface Due extends InboxTarget {
   status: 'quote_sent' | 'completed';
   version: number;
   quote_id: string | null;
+  /** The service's flow, so the auto-close item reads right for a consultation (ADR 0035). */
+  flow: ServiceFlow | null;
 }
 
 export interface ClockResult {
@@ -73,11 +75,12 @@ function closeStatements(
 export async function runRequestClock(db: D1Database, now: number, log: Logger): Promise<ClockResult> {
   const { results } = await db
     .prepare(
-      `SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, q.id AS quote_id
+      `SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, q.id AS quote_id, NULL AS flow
        FROM requests r JOIN quotes q ON q.request_id = r.id AND q.status = 'pending'
        WHERE r.status = 'quote_sent' AND q.expires_at <= ?1
        UNION ALL
-       SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, NULL AS quote_id
+       SELECT r.id, r.owner_user_id, r.raised_by_user_id, r.status, r.version, NULL AS quote_id,
+              (SELECT s.flow FROM services s WHERE s.code = r.service_code) AS flow
        FROM requests r WHERE r.status = 'completed' AND r.status_changed_at <= ?2`,
     )
     .bind(now, now - AUTO_CLOSE_HOURS * HOUR)
@@ -91,7 +94,13 @@ export async function runRequestClock(db: D1Database, now: number, log: Logger):
       r.quote_id === null
         ? [
             ...closeStatements(db, r, now, 'auto_closed', 'request_auto_closed'),
-            ...inboxStatements(db, r, 'auto_closed', now),
+            ...inboxStatements(
+              db,
+              r,
+              'auto_closed',
+              now,
+              r.flow === null || r.flow === 'visit' ? {} : { flow: r.flow },
+            ),
           ]
         : [
             ...closeStatements(db, r, now, 'quote_expired', 'quote_expired'),

@@ -3,7 +3,7 @@
  * one technician, two fictional JAD Global teams (ADR 0030) with an office admin and one team member each, every
  * service assigned to a provider so the whole catalogue is live, a fictional owner with two units, fictional building help lines (E12), and one open demo
  * emergency (added only when none is open; older ones and kinds no longer offered are closed, ADR 0017) and one
- * leasing consultation in progress (ADR 0031), so the
+ * leasing consultation in progress (ADR 0031), a managed unit with one statement (ADR 0034), so the
  * app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
  *
  * People are obviously fictional (CLAUDE.md "People"). Personal fields are encrypted with the local keys from
@@ -13,9 +13,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { blindIndex, encryptField, importKeys, toHex } from '../src/crypto.ts';
 import { handoverEducationSeed } from './seed-handover-education.ts';
+import { managedSeed } from './seed-managed.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, '.wrangler', 'demo-seed.sql');
+const STATEMENT_PDF = join(ROOT, '.wrangler', 'demo-statement.pdf');
 
 function devVars(): Record<string, string> {
   const vars: Record<string, string> = {};
@@ -106,6 +108,7 @@ const UNIT_2 = 'a0XDEMO0000000002A';
 const OPEN = "status NOT IN ('closed', 'cancelled')";
 const run = now.toString(36).toUpperCase().slice(-6);
 const requestId = `demo-req-${run}`;
+const managed = managedSeed(now, UNIT_2);
 const sql = [
   await user('demo-tech', 'demo@jadplus.ae', 'Sami Demo'),
   await user('demo-owner', 'layla.haddad@example.com', 'Layla Haddad'),
@@ -176,7 +179,10 @@ const sql = [
     ('demo-consult-1-s2', 'demo-consult-1', 'listed', 'Listed on the main portals.', 'demo-harbor-re', 'demo-harbor-re-office', ${now - DAY});`,
   // ADR 0033: a handover checklist in progress for the second unit, and two upcoming education sessions.
   ...(await handoverEducationSeed(keys, now, UNIT_2)),
+  // ADR 0034: the second unit is managed by the fictional Harbor Property Management, with one statement.
+  ...managed.sql,
 ];
 
 mkdirSync(join(ROOT, '.wrangler'), { recursive: true });
 writeFileSync(OUT, `${sql.join('\n')}\n`);
+writeFileSync(STATEMENT_PDF, managed.pdf);

@@ -36,6 +36,7 @@ import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { loadCalendar } from '../calendar.js';
 import { parseJsonBody } from '../validate.js';
+import { managedNow } from '../managed/store.js';
 import { place } from './emergency.js';
 import { inboxStatements, partnerInboxStatement } from './inbox.js';
 import { eventStatement, newRef, servicePartners, type ServicePartner } from './store.js';
@@ -213,7 +214,10 @@ export function routineRoutes(deps: Deps): Hono<AppEnv> {
           .bind(id, reportService, snagging, now),
       );
     }
-    if (tenant) {
+    // ADR 0034: on a managed unit the managing team decides (A1); it sees the request on its Managed units page.
+    // Hook point (notifications): tell the managing team's office here once an inbox kind exists for it.
+    const managed = tenant ? await managedNow(db, where.sfUnitId, now) : null;
+    if (tenant && managed === null) {
       statements.push(
         ...inboxStatements(
           db,

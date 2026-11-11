@@ -2,7 +2,8 @@
  * Notifications (ADR 0019): what happened on the person's requests and what is coming up, newest first under
  * Today, Yesterday and Earlier (Dubai dates), written by the app in the person's language. Tapping one marks it
  * read and opens its request (a tenancy item: My unit for owners, Home for tenants; for a technician or the
- * partner office, the job page, except an emergency moved to the backup partner, which only reads as read);
+ * partner office, the job page, except an emergency moved to the backup partner, which only reads as read; a
+ * handover item opens My unit at the handover card, an education item Investor Education, ADR 0035);
  * "Mark all as read" clears the dots; pull down to refresh. Reached from the bell on Home and on Today.
  */
 import type { Inbox, InboxItem } from '@jadplus/shared';
@@ -16,6 +17,7 @@ import { InboxEmpty, InboxRow } from '../src/inbox/InboxParts.js';
 import { inboxGroups, inboxTarget } from '../src/inbox/wording.js';
 import { useSession, useSessionController } from '../src/session/SessionProvider.js';
 import { useLoad, useNow } from '../src/ui/hooks.js';
+import { scrollParams } from '../src/ui/scrollTarget.js';
 import { Loading, Notice } from '../src/ui/kit.js';
 import { colors, fonts, space } from '../src/ui/theme.js';
 
@@ -66,6 +68,12 @@ export default function Notifications(): ReactNode {
     if ('jobId' in target) router.push({ pathname: '/partner/job/[id]', params: { id: target.jobId } });
     else if ('requestId' in target)
       router.push({ pathname: '/request/[id]', params: { id: target.requestId } });
+    else if ('screen' in target) router.push('/education');
+    else if (target.section !== undefined)
+      router.push({
+        pathname: target.tab === 'unit' ? '/unit' : '/home',
+        params: scrollParams(target.section, Date.now()),
+      });
     else router.push(target.tab === 'unit' ? '/unit' : '/home');
   };
   const markAll = () => {

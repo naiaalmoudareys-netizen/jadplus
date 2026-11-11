@@ -30,6 +30,7 @@ import {
   stripPhotoMetadata,
   type PhotoType,
   type SnagEventKind,
+  type SnagStatus,
 } from '@jadplus/shared';
 import type { Context } from 'hono';
 import { Hono } from 'hono';
@@ -39,6 +40,8 @@ import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { parseJsonBody, parseParams } from '../validate.js';
+import { partnerInboxStatement } from './inbox.js';
+import { handoverTeamInboxStatement, requestOwnerInboxStatement } from './inbox-flows.js';
 import { stillOpen } from './report-store.js';
 import {
   EXTENSION,
@@ -129,6 +132,35 @@ function evidence(
       detail: { request: e.requestId },
     }),
   ];
+}
+
+/**
+ * ADR 0035: who is told about the owner's decision. Reopened: the provider, and the handover team that may fix
+ * it. Confirmed and no other snag left to confirm (`before` holds the statuses as read, this snag included):
+ * the provider. Two confirmations of different snags at the very same moment could each see the other one
+ * unconfirmed and send nothing; the snag list itself still shows every snag confirmed.
+ */
+function decisionInbox(
+  c: Ctx,
+  partnerId: string | null,
+  requestId: string,
+  confirm: boolean,
+  before: readonly SnagStatus[],
+): D1PreparedStatement[] {
+  const db = c.env.DB;
+  const now = c.get('now');
+  if (!confirm) {
+    return [
+      ...(partnerId === null
+        ? []
+        : [partnerInboxStatement(db, { requestId, partnerId }, 'snag_reopened', now)]),
+      handoverTeamInboxStatement(db, { requestId, at: now, data: { count: 1, reopened: true } }),
+    ];
+  }
+  const lastOne = before.filter((s) => s !== 'confirmed').length === 1;
+  return partnerId !== null && lastOne
+    ? [partnerInboxStatement(db, { requestId, partnerId }, 'snags_all_confirmed', now)]
+    : [];
 }
 
 export function snagRoutes(): Hono<AppEnv> {
@@ -252,6 +284,8 @@ export function snagRoutes(): Hono<AppEnv> {
              fixed_by_partner_id = ?, updated_at = ? WHERE id = ?`,
         ).bind(snag.status, to, key, photo.type, now, c.get('auth').partnerId, now, snagId),
         ...evidence(c, { snagId, requestId: id, kind: 'fixed', audit: 'snag_fixed', photoKey: key }),
+        // ADR 0035: the owner is asked to check the fix.
+        requestOwnerInboxStatement(c.env.DB, { requestId: id, kind: 'snag_fixed', at: now }),
       ]),
     );
     return c.json({ id: snagId, status: to });
@@ -287,6 +321,7 @@ export function snagRoutes(): Hono<AppEnv> {
           kind: confirm ? 'confirmed' : 'reopened',
           audit: confirm ? 'snag_confirmed' : 'snag_reopened',
         }),
+        ...decisionInbox(c, f.row.partner_id, id, confirm, f.state.snags),
       ]),
     );
     return c.json({ id: snagId, status: to });

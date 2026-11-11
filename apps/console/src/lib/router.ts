@@ -3,7 +3,15 @@
  * library: every page a person may open is decided here, by role (deny by default, C-AZ-1). The API checks
  * every call again; this only keeps people on their own pages.
  */
-import { DESK_STATUSES, STATUSES, type DeskStatus, type Status, type UserRole } from '@jadplus/shared';
+import {
+  DESK_STATUSES,
+  STATUSES,
+  type DeskStatus,
+  type PartnerCapabilities,
+  type Status,
+  type UserRole,
+} from '@jadplus/shared';
+import { isGatedOfficePage, officeShows } from './capabilities';
 
 export type Route =
   // JAD+ Admin
@@ -45,6 +53,9 @@ export type Route =
   | { readonly name: 'rate_card' }
   | { readonly name: 'after_hours' }
   | { readonly name: 'performance'; readonly month: string | null }
+  // Partner office of a property management team (ADR 0034)
+  | { readonly name: 'managed_units' }
+  | { readonly name: 'managed_unit'; readonly id: string }
   | { readonly name: 'not_found' };
 
 export type RouteName = Route['name'];
@@ -84,6 +95,7 @@ const SIMPLE: Readonly<Record<string, SimpleName>> = {
   documents: 'documents',
   'rate-card': 'rate_card',
   'after-hours': 'after_hours',
+  'managed-units': 'managed_units',
 };
 const PATH_OF: Readonly<Partial<Record<RouteName, string>>> = Object.fromEntries(
   Object.entries(SIMPLE).map(([path, name]) => [name, path]),
@@ -93,7 +105,14 @@ const PATH_OF: Readonly<Partial<Record<RouteName, string>>> = Object.fromEntries
 const ITEM: Readonly<
   Record<
     string,
-    'request' | 'person' | 'desk_item' | 'partner' | 'technician' | 'handover' | 'education_session'
+    | 'request'
+    | 'person'
+    | 'desk_item'
+    | 'partner'
+    | 'technician'
+    | 'handover'
+    | 'education_session'
+    | 'managed_unit'
   >
 > = {
   requests: 'request',
@@ -103,6 +122,7 @@ const ITEM: Readonly<
   team: 'technician',
   handovers: 'handover',
   education: 'education_session',
+  'managed-units': 'managed_unit',
 };
 
 const isStatus = (s: string | null): s is Status => s !== null && (STATUSES as readonly string[]).includes(s);
@@ -187,6 +207,8 @@ export function formatRoute(route: Route): string {
       return `#/handovers/${route.id}`;
     case 'education_session':
       return `#/education/${route.id}`;
+    case 'managed_unit':
+      return `#/managed-units/${route.id}`;
     case 'building':
       return withQuery('building', { project: route.project, building: route.building });
     case 'reports':
@@ -247,6 +269,8 @@ const OFFICE_PAGES: ReadonlySet<RouteName> = new Set<RouteName>([
   'handover',
   'education',
   'education_session',
+  'managed_units',
+  'managed_unit',
 ]);
 
 /** Pages each console role may open. Phone-app roles have none. */
@@ -301,14 +325,19 @@ const OFFICE_NAV: readonly NavItem[] = [
   { label: 'Invoices', route: { name: 'invoices' } },
   { label: 'Handovers', route: { name: 'handovers' } },
   { label: 'Education', route: { name: 'education' } },
+  { label: 'Managed units', route: { name: 'managed_units' } },
 ];
 
-/** The left navigation for each role: only pages the role may open. */
-export function navFor(role: UserRole): readonly NavItem[] {
+/**
+ * The left navigation for each role: only pages the role may open. A partner office sees Handovers, Education
+ * and Managed units only when its company holds the service (`caps`, ADR 0034; hidden while unknown).
+ */
+export function navFor(role: UserRole, caps: PartnerCapabilities | null = null): readonly NavItem[] {
   if (role === 'jad_admin' || role === 'jad_viewer') {
     return ADMIN_NAV.filter((n) => routeAllowed(n.route, role));
   }
-  return role === 'partner_admin' ? OFFICE_NAV : [];
+  if (role !== 'partner_admin') return [];
+  return OFFICE_NAV.filter((n) => !isGatedOfficePage(n.route.name) || officeShows(caps, n.route.name));
 }
 
 /** The list page an item page belongs to, for the navigation highlight. */
@@ -321,6 +350,7 @@ const PARENT: Readonly<Partial<Record<RouteName, readonly RouteName[]>>> = {
   technician: ['team'],
   handover: ['handovers'],
   education_session: ['education'],
+  managed_unit: ['managed_units'],
 };
 
 /** Whether a navigation item is the current page (an item page belongs to its list). */

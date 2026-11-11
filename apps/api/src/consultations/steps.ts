@@ -23,6 +23,8 @@ import {
   contactMeetsDeadline,
   dubaiDate,
   dueAfterContact,
+  MANAGEMENT_ACTIVE_STAGE,
+  MANAGEMENT_SERVICE_CODE,
   maskContactDetails,
   nextStages,
   requestIdParam,
@@ -38,8 +40,10 @@ import { loadCalendar } from '../calendar.js';
 import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { managedAudit, startArrangementStatements } from '../managed/store.js';
 import { withConflictCheck } from '../requests/concurrency.js';
 import { readFlowRow, type FlowRow } from '../requests/flow.js';
+import { requestOwnerInboxStatement, stageReachedStatement } from '../requests/inbox-flows.js';
 import { requestFacts } from '../requests/store.js';
 import { changeStatements } from '../requests/transition.js';
 import { parseJsonBody, parseParams } from '../validate.js';
@@ -107,6 +111,28 @@ function step(c: Ctx, l: Loaded, id: string, note: string | null): D1PreparedSta
   });
 }
 
+/** O4 (ADR 0034): the statements that start managing the owner's unit when its property management is Active. */
+function managementStarts(c: Ctx, l: Loaded, serviceCode: string, stage: string): D1PreparedStatement[] {
+  if (serviceCode !== MANAGEMENT_SERVICE_CODE || stage !== MANAGEMENT_ACTIVE_STAGE) return [];
+  const id = newId();
+  return [
+    ...startArrangementStatements(c, {
+      id,
+      sfUnitId: l.row.sf_unit_id,
+      ownerUserId: l.row.owner_user_id,
+      providerId: l.partnerId,
+      source: 'consultation',
+      requestId: l.row.id,
+      since: dubaiDate(c.get('now')),
+      until: null,
+    }),
+    managedAudit(c, 'managed_unit_set', 'managed_unit', id, {
+      source: 'consultation',
+      provider: l.partnerId,
+    }),
+  ];
+}
+
 function present<T>(x: T | null): x is T {
   return x !== null;
 }
@@ -132,6 +158,13 @@ export function consultationStepRoutes(): Hono<AppEnv> {
             detail: { service: cons.service_code },
           }),
           step(c, l, 'contact_made', masked(body.note)),
+          // ADR 0035: the owner is told the provider has been in touch.
+          requestOwnerInboxStatement(c.env.DB, {
+            requestId: id,
+            kind: 'consultation_contact_made',
+            at: c.get('now'),
+            data: { service: cons.service_code, hasNote: body.note !== undefined },
+          }),
           sla,
         ].filter(present),
       ),
@@ -158,7 +191,16 @@ export function consultationStepRoutes(): Hono<AppEnv> {
             detail: { service: cons.service_code, stage: body.stage },
           }),
           step(c, l, body.stage, masked(body.note)),
+          stageReachedStatement(c.env.DB, {
+            requestId: id,
+            service: cons.service_code,
+            stage: body.stage,
+            hasNote: body.note !== undefined,
+            at: c.get('now'),
+          }),
           delivered && due !== null ? milestoneStatement(c, l, due) : null,
+          // ADR 0034: property management reaching "Active" makes the unit managed by this team.
+          ...managementStarts(c, l, cons.service_code, body.stage),
         ].filter(present),
       ),
     );
@@ -180,6 +222,13 @@ export function consultationStepRoutes(): Hono<AppEnv> {
             detail: { service: cons.service_code, outcome: body.outcome },
           }),
           step(c, l, body.outcome, masked(body.note)),
+          // P5: done (the owner closes it) or did not go ahead (the reason is on the request).
+          requestOwnerInboxStatement(c.env.DB, {
+            requestId: id,
+            kind: 'consultation_closed',
+            at: c.get('now'),
+            data: { service: cons.service_code, outcome: body.outcome, hasNote: body.note !== undefined },
+          }),
           // Ending it answers whatever deliverable was still due (an eligibility "no" is an answer too).
           due === null ? null : milestoneStatement(c, l, due),
         ].filter(present),

@@ -153,7 +153,12 @@ describe('hash router (ADR 0023, 0025)', () => {
     ]);
     expect(navFor('jad_viewer').map((n) => n.label)).not.toContain('Audit log');
     expect(navFor('jad_viewer').map((n) => n.label)).not.toContain('Staff');
-    expect(navFor('partner_admin').map((n) => n.label)).toEqual([
+    const everything = {
+      kind: 'jad_group' as const,
+      services: ['handover', 'education', 'property-management'],
+      managesUnits: true,
+    };
+    expect(navFor('partner_admin', everything).map((n) => n.label)).toEqual([
       'Overview',
       'Dispatch',
       'Jobs',
@@ -167,9 +172,10 @@ describe('hash router (ADR 0023, 0025)', () => {
       'Invoices',
       'Handovers',
       'Education',
+      'Managed units',
     ]);
     for (const role of ['jad_admin', 'jad_viewer', 'partner_admin'] as const) {
-      for (const item of navFor(role)) expect(routeAllowed(item.route, role)).toBe(true);
+      for (const item of navFor(role, everything)) expect(routeAllowed(item.route, role)).toBe(true);
     }
   });
 

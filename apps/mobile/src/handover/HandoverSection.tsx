@@ -7,7 +7,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useCallback, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { useLang } from '../i18n/I18nProvider.js';
 import { useSessionController } from '../session/SessionProvider.js';
 import { useLoad } from '../ui/hooks.js';
@@ -41,7 +41,14 @@ function Step({ line, extra }: { line: StepLine; extra: ReactNode }): ReactNode 
   );
 }
 
-export function HandoverSection({ unitName }: { unitName: string | null }): ReactNode {
+export function HandoverSection({
+  unitName,
+  onLayout,
+}: {
+  unitName: string | null;
+  /** Where My unit lands when a handover notification is tapped (scrollTarget.ts, ADR 0035). */
+  onLayout?: (e: LayoutChangeEvent) => void;
+}): ReactNode {
   const { api } = useSessionController();
   const lang = useLang();
   const { t } = lang;
@@ -83,7 +90,7 @@ export function HandoverSection({ unitName }: { unitName: string | null }): Reac
     );
   };
   return (
-    <View style={styles.section}>
+    <View style={styles.section} onLayout={onLayout}>
       <Heading>{t('handover.title')}</Heading>
       <Card>
         <Eyebrow>{progressLine(h, lang)}</Eyebrow>

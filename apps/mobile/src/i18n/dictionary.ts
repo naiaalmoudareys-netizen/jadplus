@@ -16,11 +16,13 @@ import { screensHandover } from './strings/screens-handover.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
+import { screensInboxFlows } from './strings/screens-inbox-flows.js';
 import { screensInboxJad } from './strings/screens-inbox-jad.js';
 import { screensInboxPartner } from './strings/screens-inbox-partner.js';
 import { screensInvoices } from './strings/screens-invoices.js';
 import { screensJob } from './strings/screens-job.js';
 import { screensJourney } from './strings/screens-journey.js';
+import { screensManaged } from './strings/screens-managed.js';
 import { screensOwner } from './strings/screens-owner.js';
 import { screensOwner2 } from './strings/screens-owner-2.js';
 import { screensPartner } from './strings/screens-partner.js';
@@ -46,6 +48,7 @@ export const PARTS = [
   screensInbox,
   screensInboxPartner,
   screensInboxJad,
+  screensInboxFlows,
   screensExtras,
   screensTenancy,
   screensTenancy2,
@@ -59,6 +62,7 @@ export const PARTS = [
   screensEducation,
   screensInvoices,
   screensReports,
+  screensManaged,
 ] as const;
 
 export type MessageKey = KeysOf<(typeof PARTS)[number]>;

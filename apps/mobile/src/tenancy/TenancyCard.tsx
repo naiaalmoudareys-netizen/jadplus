@@ -24,6 +24,8 @@ export function TenancyCard(props: {
   tenancy: OwnerTenancy;
   today: string;
   onChanged: (note: string | null) => void;
+  /** ADR 0034: on a managed unit the managing team changes the tenancy; the owner only reads. */
+  readOnly?: boolean;
 }): ReactNode {
   const { api } = useSessionController();
   const lang = useLang();
@@ -62,60 +64,62 @@ export function TenancyCard(props: {
         <Text style={[styles.status, warn && styles.warn]}>{daysLeftText(x.daysLeft, t)}</Text>
       ) : null}
 
-      <View style={styles.box}>
-        {step === 'extend' ? (
-          <ExtendTenancy
-            tenancy={x}
-            today={props.today}
-            onExtended={(endsOn) => {
-              setStep('idle');
-              props.onChanged(t('tenancy.extended', { date: longDate(endsOn, locale) }));
-            }}
-            onClose={() => {
-              setStep('idle');
-            }}
-          />
-        ) : null}
-        {step === 'end' ? (
-          <View style={styles.box} accessibilityLiveRegion="polite">
-            <Body>
-              {t(invited ? 'tenancy.cancelInviteConfirm' : 'tenancy.endConfirm', { name: x.tenantName })}
-            </Body>
-            <Button
-              title={t(invited ? 'tenancy.yesCancel' : 'tenancy.yesEnd')}
-              kind="danger"
-              busy={action.busy}
-              onPress={end}
-            />
-            <Button
-              title={t('tenancy.keep')}
-              kind="secondary"
-              disabled={action.busy}
-              onPress={() => {
+      {props.readOnly === true ? null : (
+        <View style={styles.box}>
+          {step === 'extend' ? (
+            <ExtendTenancy
+              tenancy={x}
+              today={props.today}
+              onExtended={(endsOn) => {
+                setStep('idle');
+                props.onChanged(t('tenancy.extended', { date: longDate(endsOn, locale) }));
+              }}
+              onClose={() => {
                 setStep('idle');
               }}
             />
-          </View>
-        ) : null}
-        {step === 'idle' && !invited ? (
-          <Button
-            title={t('tenancy.extend')}
-            onPress={() => {
-              setStep('extend');
-            }}
-          />
-        ) : null}
-        {step === 'idle' && !ended ? (
-          <Button
-            title={t(invited ? 'tenancy.cancelInvite' : 'tenancy.end')}
-            kind="secondary"
-            onPress={() => {
-              setStep('end');
-            }}
-          />
-        ) : null}
-        {action.error === null ? null : <Notice tone="error">{action.error}</Notice>}
-      </View>
+          ) : null}
+          {step === 'end' ? (
+            <View style={styles.box} accessibilityLiveRegion="polite">
+              <Body>
+                {t(invited ? 'tenancy.cancelInviteConfirm' : 'tenancy.endConfirm', { name: x.tenantName })}
+              </Body>
+              <Button
+                title={t(invited ? 'tenancy.yesCancel' : 'tenancy.yesEnd')}
+                kind="danger"
+                busy={action.busy}
+                onPress={end}
+              />
+              <Button
+                title={t('tenancy.keep')}
+                kind="secondary"
+                disabled={action.busy}
+                onPress={() => {
+                  setStep('idle');
+                }}
+              />
+            </View>
+          ) : null}
+          {step === 'idle' && !invited ? (
+            <Button
+              title={t('tenancy.extend')}
+              onPress={() => {
+                setStep('extend');
+              }}
+            />
+          ) : null}
+          {step === 'idle' && !ended ? (
+            <Button
+              title={t(invited ? 'tenancy.cancelInvite' : 'tenancy.end')}
+              kind="secondary"
+              onPress={() => {
+                setStep('end');
+              }}
+            />
+          ) : null}
+          {action.error === null ? null : <Notice tone="error">{action.error}</Notice>}
+        </View>
+      )}
     </Card>
   );
 }

@@ -81,6 +81,10 @@ const TRANSITIONS: Readonly<Partial<Record<Role, TransitionTable>>> = {
     reopened: ['scheduled', 'in_progress'],
     quote_sent: [], // waits for the owner
   },
+  partner_admin: {
+    // The managing team's office decides a tenant's request on a managed unit (A1, ADR 0034).
+    awaiting_owner: ['submitted', 'closed'],
+  },
   jad_admin: {
     awaiting_owner: ['submitted', 'cancelled'], // after calling the owner (A1, 48 h)
     submitted: ['assigned', 'cancelled', 'completed'], // completed: "handled by JAD+" (ADR 0030)

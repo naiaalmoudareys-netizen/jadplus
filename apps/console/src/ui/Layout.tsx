@@ -3,6 +3,7 @@ import type { RoleContextView } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { formatRoute, isCurrent, navFor, type Route } from '../lib/router';
 import { contextKey, viewName, type Session } from '../lib/session';
+import { useCapabilities } from './capabilities';
 
 export function Layout({
   session,
@@ -21,6 +22,8 @@ export function Layout({
 }): ReactNode {
   const current: RoleContextView = { role: session.role, partnerId: session.partnerId };
   const others = session.contexts.length > 1;
+  // ADR 0034: a partner office sees the pages of the services its company holds.
+  const caps = useCapabilities();
   return (
     <div className="shell">
       <aside className="nav">
@@ -29,7 +32,7 @@ export function Layout({
         </p>
         <nav aria-label="Pages">
           <ul>
-            {navFor(session.role).map((item) => (
+            {navFor(session.role, caps).map((item) => (
               <li key={item.label}>
                 <a
                   href={formatRoute(item.route)}

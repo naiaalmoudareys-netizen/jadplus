@@ -7,12 +7,16 @@ import {
   latestDeskRequest,
   type DeskRequestType,
   type OwnerDeal,
+  type OwnerManagedUnit,
   type OwnerPortalAnswer,
 } from '@jadplus/shared';
-import { useState, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { errorText } from '../../src/api/client.js';
 import { deskRequest } from '../../src/api/endpoints.js';
+import { ownerManagedUnits } from '../../src/api/managed.js';
+import { ManagedStatements } from '../../src/managed/ManagedParts.js';
+import { useLoad } from '../../src/ui/hooks.js';
 import { GuideLink } from '../../src/building/BuildingParts.js';
 import { HandoverSection } from '../../src/handover/HandoverSection.js';
 import { BuildingHelpLink } from '../../src/building/HelpLines.js';
@@ -67,7 +71,15 @@ function FloorPlan({ fileId, unit }: { fileId: string | null; unit: string }): R
  * Documents: the residence's papers (SPA, Reservation Form, statement, NOC, title deed) with "Request" until
  * the JAD+ desk attaches them (ADR 0011), then the owner's own identity documents (Naya, 10-Nov-2026).
  */
-function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal }): ReactNode {
+function Documents({
+  data,
+  deal,
+  managed,
+}: {
+  data: OwnerPortalAnswer;
+  deal: OwnerDeal;
+  managed: readonly OwnerManagedUnit[];
+}): ReactNode {
   const doc = useOpenDocument();
   const { t, locale } = useLang();
   const { reload } = usePortal();
@@ -125,6 +137,7 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
           );
         })}
         <UnitReports unitName={deal.unit?.name ?? null} />
+        <ManagedStatements units={managed} unitName={deal.unit?.name ?? null} />
         {data.documents.map((d) => (
           <LineItem
             key={d.fileId}
@@ -148,6 +161,10 @@ function Documents({ data, deal }: { data: OwnerPortalAnswer; deal: OwnerDeal })
 export default function MyUnit(): ReactNode {
   const { data, error, loading, dealIndex } = usePortal();
   const scroll = useScrollTarget();
+  const { api } = useSessionController();
+  // ADR 0034: managed units ("Managed by …", read-only tenant, monthly statements).
+  const loadManaged = useCallback(() => ownerManagedUnits(api), [api]);
+  const managed = useLoad(loadManaged);
   const lang = useLang();
   const { t, locale } = lang;
   if (loading && data === null) return <Loading />;
@@ -201,13 +218,13 @@ export default function MyUnit(): ReactNode {
         <Fact label={t('owner.fact.role')} value={deal.role} />
       </Card>
       <View style={styles.section}>
-        <TenantSection key={u?.name ?? deal.id} unitName={u?.name ?? null} />
+        <TenantSection key={u?.name ?? deal.id} unitName={u?.name ?? null} managed={managed.data ?? []} />
       </View>
       {/* O2: the handover checklist, once the handover team has opened it (ADR 0033). */}
-      <HandoverSection unitName={u?.name ?? null} />
+      <HandoverSection unitName={u?.name ?? null} onLayout={scroll.onLayout('handover')} />
       <FloorPlan fileId={u?.planFileId ?? null} unit={unitTitle(deal, t)} />
       <View style={styles.section} onLayout={scroll.onLayout('documents')}>
-        <Documents data={data} deal={deal} />
+        <Documents data={data} deal={deal} managed={managed.data ?? []} />
       </View>
       <View style={styles.section} onLayout={scroll.onLayout('construction')}>
         <ConstructionSection project={u?.project ?? null} />

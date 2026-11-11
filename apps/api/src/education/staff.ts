@@ -28,6 +28,7 @@ import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { audit } from '../partner/company/common.js';
+import { sessionInboxStatement, userInboxStatement } from '../requests/inbox-flows.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import {
   SESSION_COLUMNS,
@@ -151,6 +152,19 @@ export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
       throw new ApiError(422, `${String(s.taken)} seats are already booked; keep at least that many.`);
     }
     const db = c.env.DB;
+    const moved = body.startsAt !== s.starts_at || body.endsAt !== s.ends_at;
+    // ADR 0035: seat holders are told when the time, the way it runs or the place changes (not for a new title).
+    const told =
+      moved || body.mode !== s.mode || body.place !== s.place
+        ? [
+            sessionInboxStatement(db, {
+              sessionId: id,
+              kind: 'session_changed',
+              at: now,
+              data: { startsAt: body.startsAt, moved },
+            }),
+          ]
+        : [];
     await db.batch([
       db
         .prepare(
@@ -175,6 +189,7 @@ export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
         seats: body.seats,
         moved: body.startsAt !== s.starts_at,
       }),
+      ...told,
     ]);
     return c.json({ id });
   });
@@ -192,6 +207,12 @@ export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
         )
         .bind(now, now, id),
       audit(c, 'education_session_cancelled', 'education_session', id, { seatsHeld: s.taken }),
+      sessionInboxStatement(db, {
+        sessionId: id,
+        kind: 'session_cancelled',
+        at: now,
+        data: { startsAt: s.starts_at },
+      }),
     ]);
     return c.json({ id });
   });
@@ -291,9 +312,9 @@ export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
     const db = c.env.DB;
     const now = c.get('now');
     const row = await db
-      .prepare('SELECT status FROM education_book_requests WHERE id = ?')
+      .prepare('SELECT status, user_id FROM education_book_requests WHERE id = ?')
       .bind(id)
-      .first<{ status: string }>();
+      .first<{ status: string; user_id: string }>();
     if (row === null) throw new ApiError(404, 'Not found.');
     if (row.status === 'sent') throw new ApiError(409, 'Already marked sent.');
     await db.batch([
@@ -303,6 +324,8 @@ export function educationStaffRoutes(scope: StaffScope): Hono<AppEnv> {
         )
         .bind(now, c.get('auth').userId, id),
       audit(c, 'education_book_sent', 'education_book_request', id),
+      // Once per book request (the route refuses a second "sent" anyway).
+      userInboxStatement(db, { userId: row.user_id, kind: 'book_sent', at: now, dedupeKey: `book:${id}` }),
     ]);
     return c.json({ id });
   });

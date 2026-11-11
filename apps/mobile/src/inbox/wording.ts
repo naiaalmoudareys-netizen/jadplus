@@ -19,6 +19,15 @@ import type { MessageKey } from '../i18n/dictionary.js';
 import type { Lang } from '../i18n/lang.js';
 import { dayLabel } from '../jobs/format.js';
 import { aed, longDate } from '../portal/format.js';
+import type { ScrollSection } from '../ui/scrollParams.js';
+import {
+  EDUCATION_KINDS,
+  FLOW_LOOK,
+  HANDOVER_KINDS,
+  flowDetailKey,
+  flowTitleKey,
+  flowValues,
+} from './flowWording.js';
 
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
@@ -52,7 +61,14 @@ export type InboxIcon =
   | 'star-outline'
   | 'receipt-outline'
   | 'cash-outline'
-  | 'megaphone-outline';
+  | 'megaphone-outline'
+  | 'call-outline'
+  | 'flag-outline'
+  | 'hammer-outline'
+  | 'home-outline'
+  | 'school-outline'
+  | 'book-outline'
+  | 'cube-outline';
 
 export interface InboxText {
   readonly title: string;
@@ -115,6 +131,8 @@ const LOOK: Readonly<Record<InboxKind, KindLook>> = {
   request_moved_by_jad: { icon: 'swap-horizontal-outline', needsYou: false },
   request_reclassified: { icon: 'refresh-outline', needsYou: false },
   building_notice: { icon: 'megaphone-outline', needsYou: false },
+  // The service flows (ADR 0035): flowWording.ts.
+  ...FLOW_LOOK,
 };
 
 const key = (kind: InboxKind, part: 'title' | 'detail'): MessageKey => `inbox.${kind}.${part}`;
@@ -145,6 +163,8 @@ function values(item: InboxItem, lang: Lang): Record<string, string | number> {
     dueOn: longDate(item.data.dueOn ?? null, lang.locale),
     // V1 (ADR 0027): what the building notice is about.
     topic: lang.t(`building.kind.${item.data.noticeKind ?? 'other'}`),
+    // The service flows (ADR 0035): service, stage, handover step, month, and their own `when`.
+    ...flowValues(item, lang),
   };
 }
 
@@ -174,12 +194,19 @@ const DETAIL_WITHOUT_DATE: Partial<Record<InboxKind, MessageKey>> = {
 function titleKey(item: InboxItem, v: Record<string, string | number>, urgent: boolean): MessageKey {
   if (item.kind === 'job_new' && urgent) return 'inbox.job_new.titleUrgent';
   if (item.kind === 'job_rated' && v.stars === '') return 'inbox.job_rated.titlePlain';
+  const flow = flowTitleKey(item);
+  if (flow !== null) return flow;
   return (v.amount === '' ? TITLE_WITHOUT_AMOUNT[item.kind] : undefined) ?? key(item.kind, 'title');
 }
 
-/** The detail key: tenancy lines without a date use their plain wording; a new emergency job asks to act now. */
-function detailKey(item: InboxItem, v: Record<string, string | number>, urgent: boolean): MessageKey {
+/**
+ * The detail key ('' for no sentence): tenancy lines without a date use their plain wording; a new emergency job
+ * asks to act now; the service flows pick their own variant (flowWording.ts).
+ */
+function detailKey(item: InboxItem, v: Record<string, string | number>, urgent: boolean): MessageKey | '' {
   if (item.kind === 'job_new' && urgent) return 'inbox.job_new.detailUrgent';
+  const flow = flowDetailKey(item, v);
+  if (flow !== null) return flow;
   return (v.date === '' ? DETAIL_WITHOUT_DATE[item.kind] : undefined) ?? key(item.kind, 'detail');
 }
 
@@ -189,7 +216,8 @@ export function inboxText(item: InboxItem, lang: Lang): InboxText {
   const look = LOOK[item.kind];
   const urgent = isUrgent(item);
   const noWindow = WINDOW_KINDS.has(item.kind) && v.when === '';
-  const sentence = noWindow ? '' : lang.t(detailKey(item, v, urgent), v);
+  const detail = noWindow ? '' : detailKey(item, v, urgent);
+  const sentence = detail === '' ? '' : lang.t(detail, v);
   return {
     title: lang.t(titleKey(item, v, urgent), v),
     detail: [sentence, item.ref ?? ''].filter((x) => x !== '').join(' · '),
@@ -201,18 +229,29 @@ export function inboxText(item: InboxItem, lang: Lang): InboxText {
 
 /**
  * Where tapping a notification goes. Residents: its request, a building notice to Home (where notices are
- * shown, ADR 0027), or (a tenancy item) My unit for owners and Home for tenants. Partners: the job page; an emergency moved to the backup partner is no longer theirs (E6), so it opens
- * nothing (null) and stays in the list to read.
+ * shown, ADR 0027), or (a tenancy item) My unit for owners and Home for tenants. Owners (ADR 0035): a handover
+ * item to My unit at the handover card, an education item to Investor Education, a statement without a request
+ * to My unit's documents. Partners: the job page; an emergency moved to the backup partner is no longer theirs
+ * (E6), and the handover team's "snags to fix" are on a job that is not theirs (fixed from the console), so
+ * those open nothing (null) and stay in the list to read.
  */
 export type InboxTarget =
-  { readonly requestId: string } | { readonly jobId: string } | { readonly tab: 'unit' | 'home' } | null;
+  | { readonly requestId: string }
+  | { readonly jobId: string }
+  | { readonly tab: 'unit' | 'home'; readonly section?: ScrollSection }
+  | { readonly screen: 'education' }
+  | null;
 
 export function inboxTarget(item: InboxItem, role: Role): InboxTarget {
   if (role === 'partner' || role === 'partner_admin') {
-    if (item.kind === 'job_moved_away' || item.requestId === null) return null;
+    if (item.kind === 'job_moved_away' || item.kind === 'snags_to_fix' || item.requestId === null)
+      return null;
     return { jobId: item.requestId };
   }
+  if (HANDOVER_KINDS.has(item.kind)) return { tab: 'unit', section: 'handover' };
+  if (EDUCATION_KINDS.has(item.kind)) return { screen: 'education' };
   if (item.requestId !== null) return { requestId: item.requestId };
+  if (item.kind === 'statement_ready') return { tab: 'unit', section: 'documents' };
   if (item.kind === 'building_notice') return { tab: 'home' };
   return { tab: role === 'owner' ? 'unit' : 'home' };
 }

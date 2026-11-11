@@ -34,6 +34,7 @@ import { newId } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
 import { audit } from '../partner/company/common.js';
+import { handoverStepStatement, requestOwnerInboxStatement } from '../requests/inbox-flows.js';
 import { parseJsonBody, parseParams } from '../validate.js';
 import {
   encryptNote,
@@ -193,6 +194,17 @@ export function handoverStaffRoutes(scope: StaffScope): Hono<AppEnv> {
         done: body.done,
         note: body.note !== null,
       }),
+      // ADR 0035: the owner is told when a step is done (putting one back says nothing).
+      ...(body.done
+        ? [
+            handoverStepStatement(db, {
+              requestId: list.requestId,
+              step: body.step,
+              hasNote: body.note !== null,
+              at: now,
+            }),
+          ]
+        : []),
     ]);
     return c.json({ id, completedAt });
   });
@@ -222,6 +234,12 @@ export function handoverStaffRoutes(scope: StaffScope): Hono<AppEnv> {
         date: body.date,
         slot: body.slot,
         moved: list.appointment !== null,
+      }),
+      requestOwnerInboxStatement(db, {
+        requestId: list.requestId,
+        kind: 'key_collection_booked',
+        at: now,
+        data: { date: body.date, slot: body.slot, moved: list.appointment !== null },
       }),
     ]);
     return c.json({ id, completedAt: null });

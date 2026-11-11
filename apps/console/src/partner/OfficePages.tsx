@@ -10,6 +10,8 @@ import { Documents } from './Documents';
 import { OfficeInvoices } from './Invoices';
 import { JobPage } from './JobPage';
 import { JobsBoard } from './JobsBoard';
+import { ManagedUnit } from './ManagedUnit';
+import { ManagedUnits } from './ManagedUnits';
 import { OfficeMessages } from './Messages';
 import { OfficeOverview } from './Overview';
 import { Performance } from './Performance';
@@ -59,6 +61,10 @@ export default function OfficePage({ route }: { route: Route }): ReactNode {
       return <Education />;
     case 'education_session':
       return <EducationSession id={route.id} />;
+    case 'managed_units':
+      return <ManagedUnits />;
+    case 'managed_unit':
+      return <ManagedUnit id={route.id} />;
     default:
       return null;
   }

@@ -55,7 +55,9 @@ describe('handover pages (O2)', () => {
       expect(routeAllowed(route, 'partner_admin')).toBe(true);
       expect(routeAllowed(route, 'owner')).toBe(false);
     }
-    expect(navFor('partner_admin').some((n) => n.route.name === 'handovers')).toBe(true);
+    // ADR 0034: the office menu shows Handovers to the handover team.
+    const team = { kind: 'jad_group' as const, services: ['handover'], managesUnits: false };
+    expect(navFor('partner_admin', team).some((n) => n.route.name === 'handovers')).toBe(true);
     expect(isCurrent({ name: 'handovers' }, { name: 'handover', id: 'h-1' })).toBe(true);
     expect(parseHash('#/handovers/../x').name).toBe('not_found');
   });

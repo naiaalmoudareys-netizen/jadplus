@@ -60,6 +60,8 @@ export interface ApiClientOptions {
 export interface ApiClient {
   get<S extends z.ZodType>(path: string, schema: S): Promise<z.output<S>>;
   post<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
+  /** Replaces something the person sets (e.g. a furnishing delivery date, ADR 0034). */
+  put<S extends z.ZodType>(path: string, body: unknown, schema: S): Promise<z.output<S>>;
   /** For calls answered with "204 No Content". */
   postNoContent(path: string, body?: unknown): Promise<void>;
   /** Sends a file (e.g. a photo) as the raw request body with its type. */
@@ -77,7 +79,7 @@ export interface ApiClient {
 
 export function createApiClient(o: ApiClientOptions): ApiClient {
   async function send(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PUT',
     path: string,
     body: unknown,
     raw?: { bytes: Uint8Array<ArrayBuffer>; type: string },
@@ -118,6 +120,7 @@ export function createApiClient(o: ApiClientOptions): ApiClient {
   return {
     get: async (path, schema) => read(await send('GET', path, undefined), schema),
     post: async (path, body, schema) => read(await send('POST', path, body), schema),
+    put: async (path, body, schema) => read(await send('PUT', path, body), schema),
     postNoContent: async (path, body) => {
       await send('POST', path, body);
     },

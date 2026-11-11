@@ -30,6 +30,8 @@ import { BuildingNotices } from '../../src/building/BuildingParts.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
 import { InboxBell } from '../../src/inbox/InboxParts.js';
 import { aedFromFils, dueText } from '../../src/invoices/logic.js';
+import { ownerManagedUnits } from '../../src/api/managed.js';
+import { managedUnitNames } from '../../src/managed/logic.js';
 import { useUnread } from '../../src/inbox/useUnread.js';
 import { arrivalLabel, jobTitle } from '../../src/jobs/format.js';
 import { aed, longDate, unitTitle } from '../../src/portal/format.js';
@@ -74,6 +76,9 @@ export default function Home(): ReactNode {
   );
   const invoices = useLoad(loadInvoices);
   const reloadInvoices = invoices.reload;
+  // ADR 0034: tenant requests on a managed unit are decided by the managing team, not the owner.
+  const loadManaged = useCallback(() => (owner ? ownerManagedUnits(api) : Promise.resolve([])), [api, owner]);
+  const managed = useLoad(loadManaged);
   useFocusEffect(
     useCallback(() => {
       void reload();
@@ -106,6 +111,7 @@ export default function Home(): ReactNode {
     arrival: (r) => arrivalLabel(r, t),
     invoices: invoices.data ?? [],
     invoiceDetail: (i) => `${aedFromFils(i.totalFils, locale)} · ${dueText(i, dubaiDate(now), lang)}`,
+    managedUnits: managedUnitNames(managed.data ?? []),
   });
   // Tabs remember where they were scrolled; links from Home say where to land (scrollTarget.ts).
   const openPayments = () => {

@@ -9,7 +9,9 @@ import { apiPath } from '../lib/api';
 import { jobWhat } from '../lib/jobs';
 import { canChange } from '../lib/session';
 import { Photos, Summary } from '../request/Detail';
+import { ConsultationView } from '../request/ConsultationView';
 import { Messages } from '../request/Messages';
+import { ProjectSection } from '../request/ProjectSection';
 import { ReportView } from '../request/ReportView';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Loaded, PageHeader, Tag } from '../ui/parts';
@@ -40,6 +42,8 @@ export function RequestPage({ id }: { id: string }): ReactNode {
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />
           <Photos requestId={id} title="Photos when the work was finished" photos={d.completionPhotos} />
           <ReportView requestId={id} refText={d.request.ref} />
+          <ConsultationView requestId={id} />
+          <ProjectSection id={id} onChanged={reload} />
           <div className="columns">
             <Messages d={d} editable={editable} onSent={changed} />
             <Notes id={id} round={round} editable={editable} />

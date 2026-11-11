@@ -3,7 +3,12 @@
  * request id → security headers → body size limit → request context → authentication (deny by default).
  * Routes then declare their roles with requireRole() and check object ownership (C-AZ-1, C-AZ-2).
  */
-import { PARTNER_DOCUMENT_MAX_BYTES, PHOTO_MAX_BYTES, REPORT_MAX_BYTES } from '@jadplus/shared';
+import {
+  PARTNER_DOCUMENT_MAX_BYTES,
+  PHOTO_MAX_BYTES,
+  REPORT_MAX_BYTES,
+  STATEMENT_MAX_BYTES,
+} from '@jadplus/shared';
 import { Hono } from 'hono';
 import { except } from 'hono/combine';
 import { bodyLimit } from 'hono/body-limit';
@@ -51,6 +56,10 @@ import { ownerHandoverRoutes } from './handover/owner.js';
 import { handoverStaffRoutes } from './handover/staff.js';
 import { ownerEducationRoutes } from './education/owner.js';
 import { educationStaffRoutes } from './education/staff.js';
+import { managedAdminRoutes } from './managed/admin.js';
+import { managedOfficeRoutes } from './managed/office.js';
+import { STATEMENT_UPLOAD_PATH, managedStatementRoutes } from './managed/statements.js';
+import { projectRoutes } from './requests/project.js';
 
 /** Largest JSON body accepted (photo/PDF uploads use their own endpoint and limit). */
 const MAX_JSON_BYTES = 64 * 1024;
@@ -70,6 +79,7 @@ export function createApp(deps: Deps): Hono<AppEnv> {
         (PHOTO_UPLOAD_PATH.test(c.req.path) ||
           PARTNER_DOCUMENT_UPLOAD_PATH.test(c.req.path) ||
           REPORT_UPLOAD_PATH.test(c.req.path) ||
+          STATEMENT_UPLOAD_PATH.test(c.req.path) ||
           SNAG_PHOTO_UPLOAD_PATH.test(c.req.path)),
       bodyLimit({ maxSize: MAX_JSON_BYTES, onError: (c) => c.json({ error: 'Request too large.' }, 413) }),
     ),
@@ -101,6 +111,14 @@ export function createApp(deps: Deps): Hono<AppEnv> {
     bodyLimit({
       maxSize: PHOTO_MAX_BYTES,
       onError: (c) => c.json({ error: 'Photos can be up to 10 MB.' }, 413),
+    }),
+  );
+  // ADR 0034: a managed unit's monthly statement PDF (20 MB, like reports).
+  app.post(
+    '/api/partner/managed-units/:id/statements',
+    bodyLimit({
+      maxSize: STATEMENT_MAX_BYTES,
+      onError: (c) => c.json({ error: 'Statements can be up to 20 MB.' }, 413),
     }),
   );
   app.use('/api/*', requestContext(deps));
@@ -146,6 +164,11 @@ export function createApp(deps: Deps): Hono<AppEnv> {
   app.route('/api/partner', educationStaffRoutes('office'));
   app.route('/api/admin', handoverStaffRoutes('admin'));
   app.route('/api/admin', educationStaffRoutes('admin'));
+  // Managed units, furnishing delivery dates and interior design stages (O4, O5, A1, S4; ADR 0034).
+  app.route('/api/partner', managedOfficeRoutes());
+  app.route('/api/admin', managedAdminRoutes());
+  app.route('/api', managedStatementRoutes());
+  app.route('/api', projectRoutes());
 
   app.notFound((c) => c.json({ error: 'Not found.' }, 404));
 

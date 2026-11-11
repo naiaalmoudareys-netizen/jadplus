@@ -16,6 +16,7 @@ import {
   dubaiDate,
 } from '@jadplus/shared';
 import { auditStatement } from '../audit.js';
+import { managedNowSql } from '../managed/store.js';
 import { inboxStatements, tenancyInboxStatement, type InboxTarget } from '../requests/inbox.js';
 
 const HOUR = 3_600_000;
@@ -97,15 +98,18 @@ async function markEnded(db: D1Database, now: number, today: string): Promise<nu
   return results.length;
 }
 
-async function approvalReminders(db: D1Database, now: number): Promise<number> {
+async function approvalReminders(db: D1Database, now: number, today: string): Promise<number> {
+  // ADR 0034: on a managed unit the managing team decides, so the owner is not reminded.
   const { results } = await db
     .prepare(
       `SELECT id, owner_user_id, raised_by_user_id FROM requests
-       WHERE status = 'awaiting_owner' AND created_at + ? <= ?
+       WHERE status = 'awaiting_owner' AND created_at + ?1 <= ?2
          AND NOT EXISTS (SELECT 1 FROM inbox
-           WHERE dedupe_key = 'approval_reminder:' || requests.id || ':' || owner_user_id)`,
+           WHERE dedupe_key = 'approval_reminder:' || requests.id || ':' || owner_user_id)
+         AND NOT EXISTS (SELECT 1 FROM managed_units m
+           WHERE m.sf_unit_id = requests.sf_unit_id AND ${managedNowSql('m', '?3')})`,
     )
-    .bind(APPROVAL_REMINDER_HOURS * HOUR, now)
+    .bind(APPROVAL_REMINDER_HOURS * HOUR, now, today)
     .all<InboxTarget>();
   for (const r of results) {
     await db.batch(inboxStatements(db, r, 'approval_reminder', now, {}, `approval_reminder:${r.id}`));
@@ -118,6 +122,6 @@ export async function runTenancyClock(db: D1Database, now: number): Promise<Tena
   return {
     warned: await warnEnding(db, now, today),
     ended: await markEnded(db, now, today),
-    approvalReminders: await approvalReminders(db, now),
+    approvalReminders: await approvalReminders(db, now, today),
   };
 }

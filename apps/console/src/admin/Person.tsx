@@ -13,6 +13,7 @@ import { canChange } from '../lib/session';
 import { useConsole, useLoad } from '../ui/hooks';
 import { Empty, Fact, Link, Loaded, Notice, PageHeader, Section, StatusTag, Tag } from '../ui/parts';
 import { AccountActions } from './person/Account';
+import { ManagedUnitsOfOwner } from './person/Managed';
 import { RaiseForOwner } from './person/Raise';
 import { Tenancies } from './person/Tenancies';
 
@@ -97,6 +98,14 @@ export function Person({ id }: { id: string }): ReactNode {
             </div>
             {editable && isOwner && p.status === 'active' && p.ownerUnits.length > 0 ? (
               <RaiseForOwner ownerUserId={p.id} units={p.ownerUnits} />
+            ) : null}
+            {p.ownerUnits.length > 0 ? (
+              <ManagedUnitsOfOwner
+                ownerUserId={p.id}
+                units={p.ownerUnits}
+                editable={editable}
+                onChanged={changed}
+              />
             ) : null}
             <Tenancies tenancies={p.tenancies} editable={editable} onChanged={changed} />
             <div className="columns">

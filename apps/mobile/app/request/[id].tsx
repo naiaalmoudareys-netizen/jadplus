@@ -16,6 +16,8 @@ import {
 } from '../../src/jobs/format.js';
 import { useLang } from '../../src/i18n/I18nProvider.js';
 import { ReportCard } from '../../src/requests/ReportCard.js';
+import { ProjectCard } from '../../src/requests/ProjectCard.js';
+import { hasProjectSide } from '../../src/managed/logic.js';
 import { RequestPhotos } from '../../src/requests/RequestPhotos.js';
 import { ResidentJourney } from '../../src/requests/ResidentJourney.js';
 import { consultationOf } from '../../src/api/consultation.js';
@@ -75,6 +77,10 @@ export default function RequestPage(): ReactNode {
         <Body>{request.description}</Body>
       </View>
       <RequestPhotos requestId={request.id} photos={photos} />
+      {/* ADR 0034: furnishing delivery date and interior design stages (owners only). */}
+      {session.me.role === 'owner' && hasProjectSide(request.serviceName) ? (
+        <ProjectCard requestId={request.id} />
+      ) : null}
       {session.me.role === 'owner' ? (
         <ReportCard requestId={request.id} onChanged={() => void detail.reload()} />
       ) : null}

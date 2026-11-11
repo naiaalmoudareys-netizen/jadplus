@@ -199,6 +199,16 @@ pnpm --filter @jadplus/mobile start   # Expo
   request ("problem outside your home") and on a Building help page (noise complaints → security). 836 tests.
   Open: whole-building AC failure and common-area reports routed to building management (E12, asked Naya),
   linking requests to one building incident (V1).
+- 11-Nov-2026 (cont.): Service coverage map for Naya (Desktop "JAD+ Service Coverage Map.docx/.pdf", from her
+  services sheet; contacts left out). Built to cover it, in three waves: service flows + per-service first
+  deadlines + JAD Global teams as providers (ADR 0030, mig 0027); consultation flow with consent and stages
+  (ADR 0031, mig 0028); PDF reports, snag lists, re-inspection (ADR 0032, mig 0029); handover checklist and
+  education bookings (ADR 0033, mig 0030); notifications for all of them (ADR 0035, mig 0031); managed units
+  with Harbor PM, monthly statements, furnishing delivery dates, interior design stages, capability-based
+  office menu (ADR 0034, mig 0032). 1,075 tests. Open: office notification for managed-unit approvals,
+  48-hour "call the owner" for managed units, report upload from the technician app, Hospital check-ups
+  as a News & offers post (no build), native-speaker review of new texts, Naya's confirmations listed in
+  ADRs 0030-0035.
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

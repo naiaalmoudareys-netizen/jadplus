@@ -1,5 +1,5 @@
 /** Where a link opens a tab (scrollTarget.ts). Plain logic, tested without a phone. */
-export const SCROLL_SECTIONS = ['top', 'documents', 'construction'] as const;
+export const SCROLL_SECTIONS = ['top', 'documents', 'construction', 'handover'] as const;
 export type ScrollSection = (typeof SCROLL_SECTIONS)[number];
 
 /** Route params for a link that lands on `section` (a fresh `at` makes a repeated tap scroll again). */

@@ -3,18 +3,27 @@
  * in the owner's units (/api/me/places, by its Salesforce unit name) to get the unit id the tenancy is tied
  * to; then the section shows "Invite a tenant", or the tenant's card (TenancyCard).
  */
-import { dubaiDate } from '@jadplus/shared';
+import { dubaiDate, type OwnerManagedUnit } from '@jadplus/shared';
 import { useCallback, useState, type ReactNode } from 'react';
 import { myPlaces, ownerTenancies } from '../api/endpoints.js';
 import { useT } from '../i18n/I18nProvider.js';
 import { useSessionController } from '../session/SessionProvider.js';
 import { useLoad } from '../ui/hooks.js';
 import { Body, Button, Card, Eyebrow, Heading, Notice } from '../ui/kit.js';
+import { currentArrangement } from '../managed/logic.js';
+import { ManagedCard } from '../managed/ManagedParts.js';
 import { InviteTenant } from './InviteTenant.js';
 import { invitationSentText, placeForUnit, unitTenancy } from './logic.js';
 import { TenancyCard } from './TenancyCard.js';
 
-export function TenantSection({ unitName }: { unitName: string | null }): ReactNode {
+export function TenantSection({
+  unitName,
+  managed,
+}: {
+  unitName: string | null;
+  /** The owner's managed units (ADR 0034). */
+  managed: readonly OwnerManagedUnit[];
+}): ReactNode {
   const { api } = useSessionController();
   const t = useT();
   const loadPlaces = useCallback(() => myPlaces(api), [api]);
@@ -39,6 +48,22 @@ export function TenantSection({ unitName }: { unitName: string | null }): ReactN
   const place = placeForUnit(places.data, unitName);
   const sfUnitId = place?.sfUnitId ?? null;
   const tenancy = sfUnitId === null ? null : unitTenancy(tenancies.data, sfUnitId);
+  // ADR 0034: a managed unit's tenant is looked after by the managing team; the owner reads.
+  const arrangement = currentArrangement(managed, { sfUnitId, unitName });
+  if (arrangement !== null) {
+    return (
+      <>
+        <ManagedCard arrangement={arrangement} />
+        <Heading>{t('tenancy.title')}</Heading>
+        {tenancy === null ? (
+          <Body muted>{t('managed.noTenant')}</Body>
+        ) : (
+          <TenancyCard tenancy={tenancy} today={today} onChanged={() => undefined} readOnly />
+        )}
+        <Body muted>{t('managed.tenantNote', { provider: arrangement.providerName })}</Body>
+      </>
+    );
+  }
 
   return (
     <>

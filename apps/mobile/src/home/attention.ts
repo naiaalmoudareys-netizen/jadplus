@@ -55,6 +55,8 @@ export function attentionItems(input: {
   readonly invoices: readonly OwnerInvoice[];
   /** "AED 1,050 · Due tomorrow" for an invoice. */
   readonly invoiceDetail: (i: OwnerInvoice) => string;
+  /** Names of the owner's units managed now (ADR 0034): their tenant requests are not the owner's to approve. */
+  readonly managedUnits?: ReadonlySet<string>;
 }): AttentionItem[] {
   const { t } = input;
   const items: AttentionItem[] = [];
@@ -71,7 +73,12 @@ export function attentionItems(input: {
             : t('attention.withPartner', { partner: r.partnerName })),
         target: { requestId: r.id },
       });
-    } else if (input.owner && r.status === 'awaiting_owner') {
+    } else if (
+      input.owner &&
+      r.status === 'awaiting_owner' &&
+      // A1 (ADR 0034): on a managed unit the managing team decides, not the owner.
+      !(r.location !== null && (input.managedUnits?.has(r.location.unitName) ?? false))
+    ) {
       items.push({
         kind: 'approval',
         title: t('tenancy.attention.approval'),

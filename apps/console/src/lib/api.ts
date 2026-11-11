@@ -19,6 +19,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The answer's JSON, for screens that show more than the message (e.g. per-row problems); never shown raw. */
+    readonly body: unknown = null,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -151,10 +153,12 @@ export class Api {
       throw new SignedOutError();
     }
     if (!res.ok) {
-      const error = errorResponse.safeParse(await readJson(res));
+      const raw = await readJson(res);
+      const error = errorResponse.safeParse(raw);
       throw new ApiError(
         error.success ? error.data.error : `Something went wrong (${res.status}). Please try again.`,
         res.status,
+        raw,
       );
     }
     return res;
