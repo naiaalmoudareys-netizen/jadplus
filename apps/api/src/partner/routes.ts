@@ -223,9 +223,11 @@ export function partnerRoutes(): Hono<AppEnv> {
             job.version,
             id,
           ),
+        // OR IGNORE: when the sweep already took the job on to on-call it recorded this partner's miss (E7); that
+        // miss stands and a late acknowledgement adds nothing (one outcome per partner and metric).
         db
           .prepare(
-            `INSERT INTO sla_outcomes (id, request_id, partner_id, metric, due_at, met_at, outcome, recorded_at)
+            `INSERT OR IGNORE INTO sla_outcomes (id, request_id, partner_id, metric, due_at, met_at, outcome, recorded_at)
              VALUES (?, ?, ?, 'emergency_ack', ?, ?, ?, ?)`,
           )
           .bind(newId(), id, actor.partnerId, ackDue, met ? now : null, met ? 'met' : 'missed', now),

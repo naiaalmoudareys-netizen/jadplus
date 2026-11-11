@@ -13,7 +13,9 @@
     "test": "pnpm -r --if-present test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "db:demo:company": "pnpm --filter @jadplus/api db:demo:company",
+    "db:migrate:local": "pnpm --filter @jadplus/api db:migrate:local"
   },
   "devDependencies": {
     "@eslint/js": "9",

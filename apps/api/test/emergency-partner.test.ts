@@ -172,6 +172,21 @@ describe('escalation sweep (E5-E7)', () => {
     expect((await sweepAt(w, 120, raisedAt)).checked).toBe(0);
   });
 
+  it('E7: the backup can still acknowledge after on-call took over; its recorded miss stands', async () => {
+    const w = await world();
+    const raisedAt = w.h.clock;
+    const id = await raised(w);
+    await sweepAt(w, 30, raisedAt);
+    await sweepAt(w, 45, raisedAt);
+    w.h.clock = raisedAt + 50 * MIN;
+    const res = await ack(w, id, w.backupToken, { technicianId: 't-backup' });
+    expect(res.status).toBe(200);
+    expect(rows(w, 'SELECT partner_id, outcome FROM sla_outcomes ORDER BY partner_id')).toEqual([
+      { partner_id: 'p-backup', outcome: 'missed' },
+      { partner_id: 'p-primary', outcome: 'missed' },
+    ]);
+  });
+
   it('E4: an acknowledged emergency never escalates', async () => {
     const w = await world();
     const raisedAt = w.h.clock;
