@@ -166,9 +166,11 @@ export function HandoverPage({ id }: { id: string }): ReactNode {
         const locked = h.completedAt !== null;
         return (
           <>
-            <PageHeader eyebrow="Handover" title={unitText(h)}>
-              <Tag tone={locked ? 'good' : 'warn'}>{handoverProgressText(h)}</Tag>
-            </PageHeader>
+            <PageHeader
+              eyebrow="Handover"
+              title={unitText(h)}
+              tags={<Tag tone={locked ? 'good' : 'warn'}>{handoverProgressText(h)}</Tag>}
+            />
             <section className="card">
               <dl className="facts">
                 <Fact label="Request">

@@ -194,7 +194,8 @@ describe('overview per workspace (ADR 0036)', () => {
     });
     expect(pm.managed).toMatchObject({ units: 0, approvalsWaiting: 0, statementsDue: [] });
     expect(pm.consultations).not.toBeNull();
-    expect(pm.reports).not.toBeNull();
+    // No report service: its soft snagging is on the handovers section, never counted twice.
+    expect(pm.reports).toBeNull();
     const re = await overview(o, o.re);
     expect([re.visits, re.handover, re.managed]).toEqual([null, null, null]);
     expect(re.education).toEqual({ nextSession: null, booksToSend: 0 });

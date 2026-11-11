@@ -3,7 +3,9 @@
  * They mirror apps/api/src/admin/routes.ts and apps/api/src/partner/office.ts. Objects are not strict, as in
  * shared/responses.ts: the API may add a field without breaking the console.
  */
+import { partnerDocumentLabel } from '@jadplus/shared';
 import { z } from 'zod';
+import { dayText } from './format';
 
 /** GET /api/admin/partner-review (S6, S7, P3). */
 export const partnerReviewResponse = z.object({
@@ -65,7 +67,7 @@ const reviewDetail = z.object({
   missed: z.number().optional(),
 });
 
-/** "Average 3.4 from 5 ratings", "insurance expires 2026-12-01"; null when there is nothing to add. */
+/** "Average 3.4 from 5 ratings", "Insurance expires 1 Dec 2026"; null when there is nothing to add. */
 export function reviewDetailText(detail: unknown): string | null {
   const parsed = reviewDetail.safeParse(detail);
   if (!parsed.success) return null;
@@ -75,7 +77,9 @@ export function reviewDetailText(detail: unknown): string | null {
     d.average === undefined ? undefined : `average ${d.average} from ${d.ratings ?? 0} ratings`,
     d.missed === undefined ? undefined : `${d.missed} missed`,
     d.jobs === undefined ? undefined : `${d.jobs} open jobs`,
-    d.document === undefined ? undefined : `${d.document} expires ${d.expiresOn ?? 'soon'}`,
+    d.document === undefined
+      ? undefined
+      : `${partnerDocumentLabel(d.document)} expires ${d.expiresOn === undefined ? 'soon' : dayText(d.expiresOn)}`,
   ].filter((p): p is string => p !== undefined && p !== '');
   return parts.length === 0 ? null : parts.join('; ');
 }

@@ -8,7 +8,15 @@ import { partnerFeedbackResponse, partnerScorecardResponse, type PartnerScorecar
 import type { ReactNode } from 'react';
 import { withQuery } from '../lib/api';
 import { today } from '../lib/dates';
-import { dayText, humanize, minutesText, monthText, percentText, shiftMonth, starsText } from '../lib/format';
+import {
+  dayText,
+  humanize,
+  minutesText,
+  monthText,
+  percentText,
+  ratingText,
+  shiftMonth,
+} from '../lib/format';
 import { SLA_METRIC_LABELS } from '../lib/labels';
 import { FileButton } from '../ui/actions';
 import { navigate, useConsole, useLoad, useNow } from '../ui/hooks';
@@ -60,8 +68,8 @@ function Scorecard({ s }: { s: PartnerScorecard }): ReactNode {
               </td>
             </tr>
             <tr>
-              <td>Average rating ({s.rating.count})</td>
-              <td className="num">{starsText(s.rating.average)}</td>
+              <td>Average rating</td>
+              <td className="num">{ratingText(s.rating.average, s.rating.count)}</td>
               <td className="muted">{t.averageRating.toFixed(1)} or more</td>
               <td>
                 <Meets value={s.meets.rating} />

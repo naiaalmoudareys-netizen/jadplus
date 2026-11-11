@@ -56,6 +56,21 @@ export function sessionWhenText(s: Pick<StaffSession, 'startsAt' | 'endsAt'>): s
   return `${dayText(dubaiDate(s.startsAt))}, ${dubaiClock(s.startsAt)}-${dubaiClock(s.endsAt)}`;
 }
 
+/**
+ * Sessions in date order: the coming ones first, soonest first; then cancelled and past ones, most recent first,
+ * so the next session is always at the top.
+ */
+export function sessionsInOrder<T extends Pick<StaffSession, 'startsAt' | 'cancelledAt'>>(
+  sessions: readonly T[],
+  now: number,
+): T[] {
+  const coming = (s: T): boolean => s.cancelledAt === null && s.startsAt >= now;
+  return [...sessions].sort((a, b) => {
+    if (coming(a) !== coming(b)) return coming(a) ? -1 : 1;
+    return coming(a) ? a.startsAt - b.startsAt : b.startsAt - a.startsAt;
+  });
+}
+
 export function seatsText(s: Pick<StaffSession, 'seats' | 'booked'>): string {
   return s.booked >= s.seats
     ? `Full (${String(s.seats)} seats)`

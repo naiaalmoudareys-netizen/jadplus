@@ -77,9 +77,25 @@ from the menu, but most API endpoints still answered any office.
 - The jobs list (`GET /api/partner/jobs`) now also carries the service code, so the console can keep
   consultations off the jobs board. The phone app ignores the extra field.
 
+## Review of 11-Nov-2026 (screenshots of the four demo workspaces)
+
+- **Document kinds have one source.** `packages/shared/src/partner-documents.ts` holds the kinds, the two every
+  partner must hold (trade licence, insurance) and their names. The console had checked a code that does not exist
+  ("licence"), so every partner showed "Trade licence: not on file"; the daily check (S7, P3) was already right
+  and now uses the same list.
+- **Overview sections only for work the company holds.** "Reports" shows only for a company holding a report
+  service (snagging, valuation). A handover team's soft snagging stays on its Handovers section, so the same
+  figure never shows twice. Wording follows the report kind: a valuation team reads "Reports due" and
+  "Delivered", never snags.
+- **Names.** The menu says "Reports" (was "Inspections & reports"), "Jobs" and "Education", and each page title
+  matches its menu label; Education sits under Work. A partner office reads statuses from its own side ("New",
+  "Waiting for you" instead of "With the partner"). An emergency is named by its type everywhere (Dispatch too).
+- **Tests.** The D1 stand-in used by the API tests now refuses a query whose bound values do not match its
+  placeholders, as real D1 does (a query like this had passed the tests and failed on real D1 with a 500).
+
 ## Open points for Naya
 
-- The handover team also gets "Inspections & reports", because soft snagging is its work (ADR 0032). If you would
+- The handover team also gets "Reports" (was "Inspections & reports"), because soft snagging is its work (ADR 0032). If you would
   rather show soft snagging only on the jobs board, it is one line in `officePages`.
 - Performance is shown for home-visit work only (as asked). Consultation and report deadlines are measured too
   (S4); a later step could show them to advisory teams.

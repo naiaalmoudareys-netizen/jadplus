@@ -141,21 +141,37 @@ describe('partner documents (S7, P3)', () => {
       tone: 'bad',
       text: 'expired 3 Nov 2026',
     });
-    expect(documentLine({ kind: 'licence', expiresOn: '2026-12-01' }, NOW)).toMatchObject({
+    expect(documentLine({ kind: 'trade_licence', expiresOn: '2026-12-01' }, NOW)).toMatchObject({
       label: 'Trade licence',
       tone: 'warn',
       text: 'expires 1 Dec 2026',
     });
-    expect(documentLine({ kind: 'licence', expiresOn: '2027-06-01' }, NOW).tone).toBe('good');
+    expect(documentLine({ kind: 'trade_licence', expiresOn: '2027-06-01' }, NOW).tone).toBe('good');
     // The expiry day itself is still valid; it lapses the day after.
-    expect(documentLine({ kind: 'licence', expiresOn: '2026-11-10' }, NOW).standing).toBe('expiring_soon');
+    expect(documentLine({ kind: 'trade_licence', expiresOn: '2026-11-10' }, NOW).standing).toBe(
+      'expiring_soon',
+    );
   });
 
   it('always lists the trade licence and insurance, "not on file" when missing', () => {
-    const lines = documentLines([{ kind: 'licence', expiresOn: '2027-06-01' }], NOW);
+    const lines = documentLines([{ kind: 'trade_licence', expiresOn: '2027-06-01' }], NOW);
     expect(lines.map((l) => [l.label, l.text, l.tone])).toEqual([
       ['Trade licence', 'expires 1 Jun 2027', 'good'],
       ['Insurance', 'not on file', 'bad'],
     ]);
+  });
+
+  it('S7: a partner with a valid trade licence and insurance shows both on file, once, by name', () => {
+    const lines = documentLines(
+      [
+        { kind: 'trade_licence', expiresOn: '2027-12-31' },
+        { kind: 'insurance', expiresOn: '2027-12-31' },
+        { kind: 'signed_sop_sla_kpi', expiresOn: null },
+      ],
+      NOW,
+    );
+    expect(lines.map((l) => l.label)).toEqual(['Trade licence', 'Insurance', 'Signed SOP, SLA and KPIs']);
+    expect(lines.slice(0, 2).every((l) => l.tone === 'good')).toBe(true);
+    expect(lines.some((l) => l.label.includes('_'))).toBe(false);
   });
 });

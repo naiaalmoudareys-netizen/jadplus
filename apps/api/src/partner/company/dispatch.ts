@@ -92,7 +92,7 @@ async function dayPlan(c: Ctx, partnerId: string, date: string): Promise<Dispatc
     .all<{ technician_id: string; reason: Reason }>();
   const { results: visitRows } = await db
     .prepare(
-      `SELECT v.technician_id, r.id, r.ref, ou.building, v.window_start, v.window_end, v.status,
+      `SELECT v.technician_id, r.id, r.ref, r.emergency_type, ou.building, v.window_start, v.window_end, v.status,
          (SELECT name FROM services WHERE code = r.service_code) AS service
        FROM visits v JOIN requests r ON r.id = v.request_id ${LOCATION_JOIN}
        WHERE r.partner_id = ? AND v.technician_id IS NOT NULL AND v.status <> 'cancelled'
@@ -103,6 +103,7 @@ async function dayPlan(c: Ctx, partnerId: string, date: string): Promise<Dispatc
       technician_id: string;
       id: string;
       ref: string;
+      emergency_type: EmergencyType | null;
       building: string | null;
       window_start: number;
       window_end: number;
@@ -142,6 +143,7 @@ async function dayPlan(c: Ctx, partnerId: string, date: string): Promise<Dispatc
         requestId: v.id,
         ref: v.ref,
         service: v.service,
+        emergencyType: v.emergency_type,
         building: v.building,
         windowStart: v.window_start,
         windowEnd: v.window_end,
@@ -158,6 +160,7 @@ async function dayPlan(c: Ctx, partnerId: string, date: string): Promise<Dispatc
         id: j.id,
         ref: j.ref,
         emergency: j.is_emergency === 1,
+        emergencyType: j.emergency_type,
         service: j.service,
         building: j.building,
         nextDueAt: j.next_due_at,

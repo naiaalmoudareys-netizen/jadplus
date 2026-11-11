@@ -1,16 +1,18 @@
 /**
- * "Inspections & reports" (ADR 0032, 0036; O3, S4, L2): the office's own snagging inspections and valuations,
- * grouped by what they wait for: the report (with its deadline), the owner's snags still open after the report,
+ * "Reports" (ADR 0032, 0036; O3, S4, L2): the office's own snagging inspections and valuations, grouped by what
+ * they wait for: the report (with its deadline), the owner's snags still open after the report,
  * or nothing (reported or finished, kept here for 30 days). Each opens the request, where the visit is booked,
- * snags are listed and the report PDF is uploaded.
+ * snags are listed and the report PDF is uploaded. A valuation-only office reads valuation words throughout
+ * (reports due, delivered); snags and their column appear only for an office that does snagging inspections.
  */
 import { partnerInspectionsResponse, type InspectionGroup, type PartnerInspection } from '@jadplus/shared';
 import type { ReactNode } from 'react';
-import { inspectionSections, unitLine } from '../lib/boards';
-import { dateTime, deadlineText, STATUS_LABELS } from '../lib/format';
+import { inspectionSections, reportWork, unitLine, type ReportWork } from '../lib/boards';
+import { dateTime, deadlineText, OFFICE_STATUS_LABELS } from '../lib/format';
 import { REPORT_KIND_LABELS } from '../lib/reports';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, PageHeader, Section, Tag } from '../ui/parts';
+import { useWorkspace } from '../ui/workspace';
 
 const SERVICE_NAMES: Readonly<Record<PartnerInspection['service'], string>> = {
   snagging: 'Snagging',
@@ -23,12 +25,12 @@ const SNAGGING_KINDS: Readonly<Record<NonNullable<PartnerInspection['snaggingTyp
 };
 
 const EMPTY: Readonly<Record<InspectionGroup, string>> = {
-  report_due: 'Inspections waiting for their report appear here, with the report deadline.',
+  report_due: 'Requests waiting for their report appear here, with the report deadline.',
   snags_open: 'Reported inspections with snags the owner still waits on appear here.',
   done: 'Reports delivered in the last 30 days appear here.',
 };
 
-function Row({ item, now }: { item: PartnerInspection; now: number }): ReactNode {
+function Row({ item, now, work }: { item: PartnerInspection; now: number; work: ReportWork }): ReactNode {
   const due = deadlineText(item.nextDueAt, now);
   const kind =
     item.snaggingType === null
@@ -43,14 +45,14 @@ function Row({ item, now }: { item: PartnerInspection; now: number }): ReactNode
       </td>
       <td>{kind}</td>
       <td>{unitLine(item)}</td>
-      <td>{STATUS_LABELS[item.status]}</td>
+      <td>{OFFICE_STATUS_LABELS[item.status]}</td>
       <td>
         {item.reports.length === 0
           ? 'None yet'
           : item.reports.map((r) => `${REPORT_KIND_LABELS[r.kind]} ${dateTime(r.uploadedAt)}`).join('; ')}
         {item.reinspectionRequested ? <span className="block hint">Re-inspection asked for</span> : null}
       </td>
-      <td className="num">{item.snagsOpen}</td>
+      {work.snagging ? <td className="num">{item.snagsOpen}</td> : null}
       <td>{due === null ? '—' : <Tag tone={due.startsWith('Overdue') ? 'bad' : 'calm'}>{due}</Tag>}</td>
     </tr>
   );
@@ -59,20 +61,23 @@ function Row({ item, now }: { item: PartnerInspection; now: number }): ReactNode
 export function Inspections(): ReactNode {
   const { api } = useConsole();
   const now = useNow();
+  const ws = useWorkspace();
+  const held = ws === null ? [] : ws.workspace.services.map((s) => s.code);
   const { state, reload } = useLoad(
     () => api.get('/api/partner/inspections', partnerInspectionsResponse),
     'inspections',
   );
   return (
     <>
-      <PageHeader title="Inspections & reports">
+      <PageHeader title="Reports">
         <button type="button" className="btn btn-outline" onClick={reload}>
           Refresh
         </button>
       </PageHeader>
       <Loaded state={state} reload={reload}>
-        {({ inspections }) =>
-          inspectionSections(inspections).map((s) => (
+        {({ inspections }) => {
+          const work = reportWork(held, inspections);
+          return inspectionSections(inspections, work).map((s) => (
             <Section key={s.group} title={s.label} count={s.items.length}>
               {s.items.length === 0 ? (
                 <Empty explain={EMPTY[s.group]}>Nothing here.</Empty>
@@ -82,27 +87,29 @@ export function Inspections(): ReactNode {
                     <thead>
                       <tr>
                         <th scope="col">Request</th>
-                        <th scope="col">Inspection</th>
+                        <th scope="col">{work.snagging ? 'Inspection' : 'Report'}</th>
                         <th scope="col">Unit</th>
                         <th scope="col">Status</th>
                         <th scope="col">Reports</th>
-                        <th scope="col" className="num">
-                          Open snags
-                        </th>
+                        {work.snagging ? (
+                          <th scope="col" className="num">
+                            Open snags
+                          </th>
+                        ) : null}
                         <th scope="col">Deadline</th>
                       </tr>
                     </thead>
                     <tbody>
                       {s.items.map((i) => (
-                        <Row key={i.id} item={i} now={now} />
+                        <Row key={i.id} item={i} now={now} work={work} />
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
             </Section>
-          ))
-        }
+          ));
+        }}
       </Loaded>
     </>
   );

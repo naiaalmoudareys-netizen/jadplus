@@ -75,6 +75,22 @@ export const STATUS_LABELS: Readonly<Record<Status, string>> = {
   cancelled: 'Cancelled',
 };
 
+/**
+ * The same statuses as a partner office reads them: from its own point of view, so a job JAD+ has given it is
+ * "Waiting for you", never "With the partner".
+ */
+export const OFFICE_STATUS_LABELS: Readonly<Record<Status, string>> = {
+  ...STATUS_LABELS,
+  submitted: 'New',
+  assigned: 'Waiting for you',
+  completed: 'Done, owner to confirm',
+};
+
+/** A status in the reader's words: `office` true in a partner office console. */
+export function statusLabel(status: Status, office: boolean): string {
+  return (office ? OFFICE_STATUS_LABELS : STATUS_LABELS)[status];
+}
+
 /** Colour families from docs/DESIGN.md. */
 export type Tone = 'good' | 'warn' | 'bad' | 'calm';
 
@@ -119,6 +135,17 @@ export function percentText(value: number | null): string {
 /** "4.6 / 5", or "—" with no ratings. */
 export function starsText(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(1)} / 5`;
+}
+
+/** "4.6 / 5 (12 ratings)", or "No ratings yet" when nobody has rated (S5: real data only). */
+export function ratingText(average: number | null, ratings: number): string {
+  if (average === null || ratings === 0) return 'No ratings yet';
+  return `${starsText(average)} (${String(ratings)} ${ratings === 1 ? 'rating' : 'ratings'})`;
+}
+
+/** "Week of 9 Nov 2026" for the Monday a week starts on (YYYY-MM-DD). */
+export function weekText(monday: string): string {
+  return `Week of ${dayText(monday)}`;
 }
 
 const MONTH_NAMES = [

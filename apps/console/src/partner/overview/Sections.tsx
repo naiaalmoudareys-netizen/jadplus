@@ -3,10 +3,10 @@
  * managed units, consultations, inspections and reports, investor education. Each shows only this company's
  * work and links to the page where it is done.
  */
-import type { PartnerOverview } from '@jadplus/shared';
+import { dubaiClock, dubaiDate, type PartnerOverview } from '@jadplus/shared';
 import type { ReactNode } from 'react';
 import { unitLine } from '../../lib/boards';
-import { dateTime, monthText, preferredText } from '../../lib/format';
+import { dayText, monthText, preferredText } from '../../lib/format';
 import type { Route } from '../../lib/router';
 import { Empty, Figure, Link, Section } from '../../ui/parts';
 
@@ -63,14 +63,14 @@ export function ManagedSection({ s }: { s: Of<'managed'> }): ReactNode {
           note="Your decision (A1)"
         />
         <Figure
-          label="Statements due"
+          label={`${monthText(s.statementMonth)} statements to upload`}
           value={String(s.statementsDue.length)}
-          note={`For ${monthText(s.statementMonth)}`}
+          note="Last month's statement, one per unit"
         />
       </div>
       {s.statementsDue.length === 0 ? null : (
         <>
-          <h3 className="label subhead">Statement for {monthText(s.statementMonth)} still to upload</h3>
+          <h3 className="label subhead">{monthText(s.statementMonth)} statements to upload</h3>
           <ul className="plain">
             {s.statementsDue.map((u) => (
               <li key={u.id}>
@@ -124,32 +124,61 @@ export function ConsultationsSection({ s }: { s: Of<'consultations'> }): ReactNo
   );
 }
 
-export function ReportsSection({ s }: { s: Of<'reports'> }): ReactNode {
+/**
+ * Reports, worded by the kind of report the company writes: snagging inspections (with the snags they found) or
+ * valuations (reports due and delivered). A company doing both sees both sets of words.
+ */
+export function ReportsSection({
+  s,
+  services,
+}: {
+  s: Of<'reports'>;
+  services: readonly string[];
+}): ReactNode {
+  const snagging = services.includes('snagging');
+  const valuation = services.includes('valuation');
+  const title =
+    snagging && !valuation
+      ? 'Inspections & snagging reports'
+      : valuation && !snagging
+        ? 'Valuation reports'
+        : 'Reports';
   return (
-    <Section
-      title="Inspections & reports"
-      actions={<Open to={{ name: 'inspections' }}>Open inspections</Open>}
-    >
+    <Section title={title} actions={<Open to={{ name: 'inspections' }}>Open reports</Open>}>
       <div className="figures">
         <Figure label="Reports due" value={String(s.due)} />
         <Figure label="Overdue" value={String(s.overdue)} note="Past the report deadline" />
-        <Figure label="Uploaded this month" value={String(s.uploadedThisMonth)} />
-        <Figure label="Snags open" value={String(s.snagsOpen)} note="On your inspections" />
+        <Figure
+          label={valuation && !snagging ? 'Delivered this month' : 'Uploaded this month'}
+          value={String(s.uploadedThisMonth)}
+        />
+        {snagging ? (
+          <Figure label="Snags open" value={String(s.snagsOpen)} note="Found on your inspections" />
+        ) : null}
       </div>
     </Section>
+  );
+}
+
+/** The next session as a date tile: the day, the time, and the seats left, at a readable size. */
+function NextSession({ next }: { next: Of<'education'>['nextSession'] }): ReactNode {
+  if (next === null) return <Figure label="Next session" value="—" note="None scheduled" />;
+  return (
+    <div className="card figure">
+      <p className="label">Next session</p>
+      <p className="figure-date">{dayText(dubaiDate(next.startsAt))}</p>
+      <p className="figure-time">{dubaiClock(next.startsAt)} (Dubai time)</p>
+      <p className="hint">{next.title}</p>
+    </div>
   );
 }
 
 export function EducationSection({ s }: { s: Of<'education'> }): ReactNode {
   const next = s.nextSession;
   return (
-    <Section title="Investor education" actions={<Open to={{ name: 'education' }}>Open education</Open>}>
+    <Section title="Education" actions={<Open to={{ name: 'education' }}>Open education</Open>}>
       <div className="figures">
-        <Figure
-          label="Next session"
-          value={next === null ? '—' : dateTime(next.startsAt)}
-          note={next === null ? 'None scheduled' : next.title}
-        />
+        <NextSession next={next} />
         <Figure
           label="Seats taken"
           value={next === null ? '—' : `${String(next.booked)} / ${String(next.seats)}`}

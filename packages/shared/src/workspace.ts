@@ -221,13 +221,17 @@ const SECTION_PAGE: Readonly<Record<Exclude<OverviewSection, 'visits'>, OfficePa
 
 /**
  * The overview sections of a workspace, stacked in a sensible order: the main kind of work first, then the
- * others. "Today's visits" belongs to home services only (a handover team's visits are on its handovers).
+ * others. "Today's visits" belongs to home services only (a handover team's visits are on its handovers), and
+ * "Reports" only to a company that holds a report service (snagging, valuation): a handover team's soft snagging
+ * is already counted on its handovers section, so the overview never shows the same figure twice.
  */
-export function overviewSections(ws: Pick<Workspace, 'areas' | 'pages'>): OverviewSection[] {
+export function overviewSections(ws: Pick<Workspace, 'areas' | 'pages' | 'services'>): OverviewSection[] {
   const out: OverviewSection[] = [];
+  const reports = ws.services.some((s) => FLOW_OF.get(s.code) === 'report');
   for (const area of ws.areas) {
     for (const s of AREA_SECTIONS[area]) {
-      const shown = s === 'visits' ? area === 'home' : ws.pages.includes(SECTION_PAGE[s]);
+      const shown =
+        s === 'visits' ? area === 'home' : ws.pages.includes(SECTION_PAGE[s]) && (s !== 'reports' || reports);
       if (shown && !out.includes(s)) out.push(s);
     }
   }

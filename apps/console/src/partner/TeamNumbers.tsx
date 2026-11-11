@@ -49,10 +49,16 @@ function Table({ lines }: { lines: readonly Line[] }): ReactNode {
               </span>
             </td>
             <td>
-              <Value text={starsText(t.rating.average)} meets={t.meets.rating} />
-              <span className="block hint">
-                {t.rating.count === 1 ? '1 rating' : `${String(t.rating.count)} ratings`}
-              </span>
+              {t.rating.count === 0 ? (
+                <span className="muted">No ratings yet</span>
+              ) : (
+                <>
+                  <Value text={starsText(t.rating.average)} meets={t.meets.rating} />
+                  <span className="block hint">
+                    {t.rating.count === 1 ? '1 rating' : `${String(t.rating.count)} ratings`}
+                  </span>
+                </>
+              )}
             </td>
             <td>
               <Value text={String(t.repeatVisits)} meets={t.meets.repeatVisits} />
@@ -147,7 +153,13 @@ export function TechnicianNumbers({ id }: { id: string }): ReactNode {
               <Figure
                 label="Rating"
                 value={starsText(t.rating.average)}
-                note={t.rating.count === 1 ? 'From 1 rating' : `From ${String(t.rating.count)} ratings`}
+                note={
+                  t.rating.count === 0
+                    ? 'No ratings yet'
+                    : t.rating.count === 1
+                      ? 'From 1 rating'
+                      : `From ${String(t.rating.count)} ratings`
+                }
               />
               <Figure
                 label="Repeat visits"

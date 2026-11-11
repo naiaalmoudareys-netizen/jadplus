@@ -34,9 +34,11 @@ export function RequestPage({ id }: { id: string }): ReactNode {
     <Loaded state={state} reload={reload}>
       {(d) => (
         <>
-          <PageHeader eyebrow={`Request ${d.request.ref}`} title={jobWhat(d.request)}>
-            {d.request.emergency ? <Tag tone="bad">Emergency</Tag> : null}
-          </PageHeader>
+          <PageHeader
+            eyebrow={`Request ${d.request.ref}`}
+            title={jobWhat(d.request)}
+            tags={d.request.emergency ? <Tag tone="bad">Emergency</Tag> : null}
+          />
           <Summary d={d} now={now} />
           {editable ? <RequestActions d={d} onChanged={changed} /> : null}
           <Photos requestId={id} title="Photos from the resident" photos={d.photos} />

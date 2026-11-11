@@ -3,6 +3,11 @@
  * Scorecards use real data only (S5). A flag puts the partner on JAD+ Admin's review list; ending the
  * contract is a human decision (S6 "admin may end contract").
  */
+import {
+  PARTNER_DOCUMENT_LABELS,
+  REQUIRED_PARTNER_DOCUMENTS,
+  type RequiredPartnerDocument,
+} from './partner-documents.js';
 
 export const LOW_RATING_AVERAGE = 4.0;
 export const RATING_WINDOW_DAYS = 30;
@@ -64,16 +69,16 @@ export function documentStanding(expiresOn: string | null, today: string): Docum
 export interface Compliance {
   /** ok: may take jobs; warn: flag to admin; suspend: no new jobs, open jobs to the backup (S7). */
   readonly action: 'ok' | 'warn' | 'suspend';
-  readonly licence: DocumentStanding;
+  readonly trade_licence: DocumentStanding;
   readonly insurance: DocumentStanding;
 }
 
 /** Latest expiry date on file for the trade licence and the insurance (null when none is on file). */
 export function partnerCompliance(
-  latest: { readonly licence: string | null; readonly insurance: string | null },
+  latest: Readonly<Record<RequiredPartnerDocument, string | null>>,
   today: string,
 ): Compliance {
-  const licence = documentStanding(latest.licence, today);
+  const licence = documentStanding(latest.trade_licence, today);
   const insurance = documentStanding(latest.insurance, today);
   const both = [licence, insurance];
   const action = both.some((s) => s === 'lapsed' || s === 'missing')
@@ -81,7 +86,7 @@ export function partnerCompliance(
     : both.includes('expiring_soon')
       ? 'warn'
       : 'ok';
-  return { action, licence, insurance };
+  return { action, trade_licence: licence, insurance };
 }
 
 /** Why a partner is suspended: lapsed documents (lifted automatically when renewed) or an admin decision. */
@@ -104,15 +109,13 @@ export function complianceChange(p: PartnerStanding, c: Compliance): 'suspend' |
   return null;
 }
 
-const DOCUMENT_LABEL = { licence: 'Trade licence', insurance: 'Insurance' } as const;
-
 /** Plain reason shown to JAD+ Admin and the partner office, e.g. "Insurance lapsed". */
 export function suspensionReason(c: Compliance): string {
   const parts: string[] = [];
-  for (const doc of ['licence', 'insurance'] as const) {
+  for (const doc of REQUIRED_PARTNER_DOCUMENTS) {
     const standing = c[doc];
-    if (standing === 'lapsed') parts.push(`${DOCUMENT_LABEL[doc]} lapsed`);
-    if (standing === 'missing') parts.push(`${DOCUMENT_LABEL[doc]} not on file`);
+    if (standing === 'lapsed') parts.push(`${PARTNER_DOCUMENT_LABELS[doc]} lapsed`);
+    if (standing === 'missing') parts.push(`${PARTNER_DOCUMENT_LABELS[doc]} not on file`);
   }
   return parts.join('; ');
 }

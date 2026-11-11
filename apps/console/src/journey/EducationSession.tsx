@@ -157,9 +157,11 @@ export function EducationSession({ id }: { id: string }): ReactNode {
         const changeable = canManage && !started && s.cancelledAt === null;
         return (
           <>
-            <PageHeader eyebrow="Investor education" title={s.title}>
-              {s.cancelledAt === null ? null : <Tag tone="bad">Cancelled {dateTime(s.cancelledAt)}</Tag>}
-            </PageHeader>
+            <PageHeader
+              eyebrow="Investor education"
+              title={s.title}
+              tags={s.cancelledAt === null ? null : <Tag tone="bad">Cancelled {dateTime(s.cancelledAt)}</Tag>}
+            />
             <section className="card">
               {editing ? (
                 <SessionFormView

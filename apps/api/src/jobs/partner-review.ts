@@ -17,9 +17,11 @@ import {
   complianceChange,
   dubaiDate,
   partnerCompliance,
+  REQUIRED_PARTNER_DOCUMENTS,
   reviewFlags,
   reviewKey,
   suspensionReason,
+  type RequiredPartnerDocument,
   type Compliance,
   type SuspendedBy,
 } from '@jadplus/shared';
@@ -107,9 +109,9 @@ async function latestDocuments(db: D1Database, partnerId: string) {
        WHERE partner_id = ? AND kind IN ('trade_licence', 'insurance') GROUP BY kind`,
     )
     .bind(partnerId)
-    .all<{ kind: 'trade_licence' | 'insurance'; expires_on: string }>();
-  const of = (kind: string) => results.find((r) => r.kind === kind)?.expires_on ?? null;
-  return { licence: of('trade_licence'), insurance: of('insurance') };
+    .all<{ kind: RequiredPartnerDocument; expires_on: string }>();
+  const of = (kind: RequiredPartnerDocument) => results.find((r) => r.kind === kind)?.expires_on ?? null;
+  return { trade_licence: of('trade_licence'), insurance: of('insurance') };
 }
 
 interface WaitingJob {
@@ -218,7 +220,7 @@ async function setStanding(
           )
           .bind(now, partnerId),
     audit(db, now, change === 'suspend' ? 'partner_suspended' : 'partner_reinstated', 'partner', partnerId, {
-      licence: c.licence,
+      trade_licence: c.trade_licence,
       insurance: c.insurance,
     }),
   ]);
@@ -289,7 +291,7 @@ export async function runPartnerReview(
         .first<{ n: number }>();
       if (left !== null && left.n > 0) await item(p.id, 'open_jobs', 'open_jobs', { jobs: left.n });
     }
-    for (const doc of ['licence', 'insurance'] as const) {
+    for (const doc of REQUIRED_PARTNER_DOCUMENTS) {
       const expiresOn = docs[doc];
       if (c[doc] === 'expiring_soon' && expiresOn !== null) {
         await item(p.id, 'document_expiring', `document_expiring:${doc}:${expiresOn}`, {

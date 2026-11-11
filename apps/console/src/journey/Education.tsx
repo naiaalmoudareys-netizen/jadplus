@@ -13,9 +13,16 @@ import {
 import { useState, type ReactNode } from 'react';
 import { apiPath } from '../lib/api';
 import { dateTime } from '../lib/format';
-import { EMPTY_SESSION_FORM, MODE_LABELS, seatsText, sessionWhenText, staffBase } from '../lib/owner-journey';
+import {
+  EMPTY_SESSION_FORM,
+  MODE_LABELS,
+  seatsText,
+  sessionsInOrder,
+  sessionWhenText,
+  staffBase,
+} from '../lib/owner-journey';
 import { useAction } from '../ui/actions';
-import { navigate, useConsole, useLoad } from '../ui/hooks';
+import { navigate, useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, Notice, PageHeader, Section, Tag } from '../ui/parts';
 import { SessionFormView } from './SessionForm';
 
@@ -120,6 +127,7 @@ function Books({ canManage }: { canManage: boolean }): ReactNode {
 
 export function Education(): ReactNode {
   const { api, session } = useConsole();
+  const now = useNow();
   const [adding, setAdding] = useState(false);
   const base = staffBase(session.role);
   const { state, reload } = useLoad(
@@ -128,7 +136,11 @@ export function Education(): ReactNode {
   );
   return (
     <>
-      <PageHeader title="Investor education" />
+      <PageHeader title="Education">
+        <button type="button" className="btn btn-outline" onClick={reload}>
+          Refresh
+        </button>
+      </PageHeader>
       <Loaded state={state} reload={reload}>
         {({ canManage, sessions }) =>
           session.role === 'partner_admin' && !canManage ? (
@@ -152,7 +164,7 @@ export function Education(): ReactNode {
                   ) : null
                 }
               >
-                <p className="hint">
+                <p className="hint section-intro">
                   Owners always see the next date (or &quot;Next date to be announced&quot;) and reserve one
                   seat each.
                 </p>
@@ -187,7 +199,7 @@ export function Education(): ReactNode {
                       </tr>
                     </thead>
                     <tbody>
-                      {sessions.map((s) => (
+                      {sessionsInOrder(sessions, now).map((s) => (
                         <tr key={s.id}>
                           <td>
                             <Link to={{ name: 'education_session', id: s.id }}>{s.title}</Link>

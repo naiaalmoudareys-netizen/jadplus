@@ -10,6 +10,7 @@ import { firstCallText, pipelines, unitLine, type Pipeline } from '../lib/boards
 import { ago } from '../lib/format';
 import { useConsole, useLoad, useNow } from '../ui/hooks';
 import { Empty, Link, Loaded, PageHeader, Tag } from '../ui/parts';
+import { useWorkspace } from '../ui/workspace';
 
 function Card({ item, now }: { item: PartnerConsultation; now: number }): ReactNode {
   const call = firstCallText(item, now);
@@ -56,6 +57,8 @@ function Board({ pipeline, now }: { pipeline: Pipeline; now: number }): ReactNod
 export function Consultations(): ReactNode {
   const { api } = useConsole();
   const now = useNow();
+  const ws = useWorkspace();
+  const held = ws === null ? [] : ws.workspace.services.map((s) => s.code);
   const { state, reload } = useLoad(
     () => api.get('/api/partner/consultations', partnerConsultationsResponse),
     'consultations',
@@ -69,14 +72,14 @@ export function Consultations(): ReactNode {
       </PageHeader>
       <Loaded state={state} reload={reload}>
         {({ consultations }) =>
-          consultations.length === 0 ? (
+          pipelines(consultations, held).length === 0 ? (
             <section className="card">
               <Empty explain="When an owner asks for one of your consultation services, it appears here as New, with the deadline for your first call.">
                 No consultations yet.
               </Empty>
             </section>
           ) : (
-            pipelines(consultations).map((p) => <Board key={p.serviceCode} pipeline={p} now={now} />)
+            pipelines(consultations, held).map((p) => <Board key={p.serviceCode} pipeline={p} now={now} />)
           )
         }
       </Loaded>

@@ -13,7 +13,7 @@ import {
   type VisitsOverview,
 } from '@jadplus/shared';
 import type { ReactNode } from 'react';
-import { dayText, percentText, starsText } from '../lib/format';
+import { dayText, monthText, percentText, ratingText } from '../lib/format';
 import { UNAVAILABLE_LABELS } from '../lib/labels';
 import { useConsole, useLoad } from '../ui/hooks';
 import { Empty, Figure, Link, Loaded, Notice, PageHeader, Section, Tag } from '../ui/parts';
@@ -38,22 +38,22 @@ function MonthTable({ o }: { o: VisitsOverview }): ReactNode {
     ['On time', (m) => percentText(m.onTimePercent), `${String(o.targets.onTimePercent)} % or more`],
     [
       'Average rating',
-      (m) => `${starsText(m.averageRating)} (${String(m.ratings)})`,
+      (m) => ratingText(m.averageRating, m.ratings),
       `${o.targets.averageRating.toFixed(1)} or more`,
     ],
     ['Repeat visits', (m) => String(m.repeatVisits), `${String(o.targets.repeatVisitPercent)} % or less`],
   ];
   return (
-    <Section title="This month">
+    <Section title="This month and last month">
       <table className="table">
         <thead>
           <tr>
             <th scope="col">Measure</th>
             <th scope="col" className="num">
-              {o.thisMonth.month}
+              {monthText(o.thisMonth.month)}
             </th>
             <th scope="col" className="num">
-              {o.lastMonth.month}
+              {monthText(o.lastMonth.month)}
             </th>
             <th scope="col">JAD+ target</th>
           </tr>
@@ -123,7 +123,15 @@ function VisitsSection({ o }: { o: VisitsOverview }): ReactNode {
 }
 
 /** One section of the overview, when the API sent it. */
-function SectionOf({ name, o }: { name: OverviewSection; o: PartnerOverview }): ReactNode {
+function SectionOf({
+  name,
+  o,
+  services,
+}: {
+  name: OverviewSection;
+  o: PartnerOverview;
+  services: readonly string[];
+}): ReactNode {
   switch (name) {
     case 'visits':
       return o.visits === null ? null : <VisitsSection o={o.visits} />;
@@ -134,7 +142,7 @@ function SectionOf({ name, o }: { name: OverviewSection; o: PartnerOverview }): 
     case 'consultations':
       return o.consultations === null ? null : <ConsultationsSection s={o.consultations} />;
     case 'reports':
-      return o.reports === null ? null : <ReportsSection s={o.reports} />;
+      return o.reports === null ? null : <ReportsSection s={o.reports} services={services} />;
     case 'education':
       return o.education === null ? null : <EducationSection s={o.education} />;
   }
@@ -148,6 +156,7 @@ export function OfficeOverview(): ReactNode {
     'office',
   );
   const sections = ws === null ? [] : overviewSections(ws.workspace);
+  const services = ws === null ? [] : ws.workspace.services.map((s) => s.code);
   return (
     <>
       <PageHeader title="Overview">
@@ -171,7 +180,7 @@ export function OfficeOverview(): ReactNode {
                 </Empty>
               </section>
             ) : (
-              sections.map((name) => <SectionOf key={name} name={name} o={o} />)
+              sections.map((name) => <SectionOf key={name} name={name} o={o} services={services} />)
             )}
           </>
         )}

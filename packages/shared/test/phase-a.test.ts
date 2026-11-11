@@ -170,16 +170,16 @@ describe('scorecard thresholds (S6) and compliance (S7, P3)', () => {
   });
 
   it('S7/P3: a lapsed or missing licence or insurance suspends the partner; expiring soon warns', () => {
-    expect(partnerCompliance({ licence: '2027-06-30', insurance: '2027-06-30' }, '2026-11-09').action).toBe(
-      'ok',
-    );
-    expect(partnerCompliance({ licence: '2027-06-30', insurance: '2026-11-20' }, '2026-11-09').action).toBe(
-      'warn',
-    );
-    expect(partnerCompliance({ licence: '2026-11-01', insurance: '2027-06-30' }, '2026-11-09').action).toBe(
-      'suspend',
-    );
-    expect(partnerCompliance({ licence: '2027-06-30', insurance: null }, '2026-11-09').action).toBe(
+    expect(
+      partnerCompliance({ trade_licence: '2027-06-30', insurance: '2027-06-30' }, '2026-11-09').action,
+    ).toBe('ok');
+    expect(
+      partnerCompliance({ trade_licence: '2027-06-30', insurance: '2026-11-20' }, '2026-11-09').action,
+    ).toBe('warn');
+    expect(
+      partnerCompliance({ trade_licence: '2026-11-01', insurance: '2027-06-30' }, '2026-11-09').action,
+    ).toBe('suspend');
+    expect(partnerCompliance({ trade_licence: '2027-06-30', insurance: null }, '2026-11-09').action).toBe(
       'suspend',
     );
   });

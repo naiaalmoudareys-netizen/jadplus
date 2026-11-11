@@ -29,9 +29,14 @@ export interface Pipeline {
   readonly columns: readonly PipelineColumn[];
 }
 
-/** One pipeline per service the office has consultations for, in catalogue order. */
-export function pipelines(items: readonly PartnerConsultation[]): Pipeline[] {
-  return SERVICES.filter((s) => items.some((i) => i.serviceCode === s.code)).map((s) => {
+/**
+ * One pipeline per consultation service the office holds (`held`, its workspace services) or still has
+ * consultations for, in catalogue order. A service with no consultations yet still shows its empty columns.
+ */
+export function pipelines(items: readonly PartnerConsultation[], held: readonly string[] = []): Pipeline[] {
+  const shown = (code: string, flow: string): boolean =>
+    items.some((i) => i.serviceCode === code) || (flow === 'consultation' && held.includes(code));
+  return SERVICES.filter((s) => shown(s.code, s.flow)).map((s) => {
     const mine = items.filter((i) => i.serviceCode === s.code);
     return {
       serviceCode: s.code,
@@ -71,11 +76,40 @@ export interface InspectionSection {
   readonly items: readonly PartnerInspection[];
 }
 
-/** Inspections grouped: report due, reported with snags open, reported or finished. */
-export function inspectionSections(items: readonly PartnerInspection[]): InspectionSection[] {
-  return INSPECTION_GROUPS.map((group) => ({
+/** The kinds of report an office writes: snagging inspections (snagging, or a handover team's soft snagging). */
+export interface ReportWork {
+  readonly snagging: boolean;
+  readonly valuation: boolean;
+}
+
+/** What the office writes, from the services it holds and the reports it still has in hand. */
+export function reportWork(held: readonly string[], items: readonly PartnerInspection[] = []): ReportWork {
+  return {
+    snagging:
+      held.includes('snagging') || held.includes('handover') || items.some((i) => i.service === 'snagging'),
+    valuation: held.includes('valuation') || items.some((i) => i.service === 'valuation'),
+  };
+}
+
+/** A valuation office reads "Reports due" and "Delivered"; it never sees snagging words. */
+const VALUATION_GROUP_LABELS: Readonly<Record<InspectionGroup, string>> = {
+  report_due: 'Reports due',
+  snags_open: 'Reported, snags open',
+  done: 'Delivered',
+};
+
+/**
+ * Inspections grouped: report due, reported with snags open, reported or finished. The snags group shows only
+ * for an office that does snagging inspections; a valuation-only office gets valuation words.
+ */
+export function inspectionSections(
+  items: readonly PartnerInspection[],
+  work: ReportWork = { snagging: true, valuation: true },
+): InspectionSection[] {
+  const labels = work.snagging ? INSPECTION_GROUP_LABELS : VALUATION_GROUP_LABELS;
+  return INSPECTION_GROUPS.filter((g) => work.snagging || g !== 'snags_open').map((group) => ({
     group,
-    label: INSPECTION_GROUP_LABELS[group],
+    label: labels[group],
     items: items.filter((i) => inspectionGroup(i) === group),
   }));
 }

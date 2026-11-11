@@ -8,11 +8,10 @@ import type {
   DeskStatus,
   GuideSection,
   NoticeKind,
-  PartnerDocumentKind,
   SlaMetric,
   Skill,
 } from '@jadplus/shared';
-import { SERVICES } from '@jadplus/shared';
+import { PARTNER_DOCUMENT_LABELS, SERVICES } from '@jadplus/shared';
 import { humanize, type Tone } from './format';
 
 export const SKILL_LABELS: Readonly<Record<Skill, string>> = {
@@ -32,12 +31,8 @@ export const UNAVAILABLE_LABELS: Readonly<Record<'leave' | 'sick' | 'training' |
   other: 'Away',
 };
 
-export const DOCUMENT_KIND_LABELS: Readonly<Record<PartnerDocumentKind, string>> = {
-  trade_licence: 'Trade licence',
-  insurance: 'Insurance',
-  signed_sop_sla_kpi: 'Signed SOP, SLA and KPIs',
-  rate_card: 'Signed rate card',
-};
+/** Partner document names: the shared list, so every screen says the same (S10). */
+export const DOCUMENT_KIND_LABELS = PARTNER_DOCUMENT_LABELS;
 
 export const RATE_UNIT_LABELS: Readonly<Record<string, string>> = {
   per_job: 'per job',

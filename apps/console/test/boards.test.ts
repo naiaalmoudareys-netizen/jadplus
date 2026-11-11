@@ -1,7 +1,7 @@
 /** The work boards of a provider workspace (ADR 0036; O3, O5, P5, S4): layout and wording. */
 import type { PartnerConsultation, PartnerInspection } from '@jadplus/shared';
 import { describe, expect, it } from 'vitest';
-import { firstCallText, inspectionSections, pipelines, unitLine } from '../src/lib/boards';
+import { firstCallText, inspectionSections, pipelines, reportWork, unitLine } from '../src/lib/boards';
 import { onJobsBoard } from '../src/lib/jobs';
 
 const NOW = Date.UTC(2026, 10, 11, 8);
@@ -59,6 +59,12 @@ describe('consultations pipeline (O5, P5)', () => {
     expect(resale?.columns.find((c) => c.id === 'done')?.items).toHaveLength(1);
   });
 
+  it('O5: every consultation service the office holds has a board, empty or not', () => {
+    const boards = pipelines([consultation({ id: 'a' })], ['leasing', 'resale', 'valuation', 'education']);
+    expect(boards.map((b) => b.serviceCode)).toEqual(['leasing', 'resale']);
+    expect(boards[1]?.columns.every((c) => c.items.length === 0)).toBe(true);
+  });
+
   it('S4: the first-call deadline reads plainly, red once it is late, and disappears after contact', () => {
     expect(firstCallText(consultation({}), NOW)).toEqual({ text: 'First call due in 3 h', tone: 'calm' });
     expect(firstCallText(consultation({ nextDueAt: NOW + HOUR }), NOW)?.tone).toBe('warn');
@@ -90,6 +96,16 @@ describe('inspections and reports (O3)', () => {
     ]);
     expect(unitLine({ unitName: '506-JAD288-C', project: 'JAD 288' })).toBe('506-JAD288-C · JAD 288');
     expect(unitLine({ unitName: null, project: null })).toBe('Unit name not on file');
+  });
+
+  it('O3: a valuation office reads reports due and delivered, never snagging words', () => {
+    const work = reportWork(['leasing', 'resale', 'valuation', 'education']);
+    expect(work).toEqual({ snagging: false, valuation: true });
+    expect(inspectionSections([inspection({ id: 'due' })], work).map((s) => s.label)).toEqual([
+      'Reports due',
+      'Delivered',
+    ]);
+    expect(reportWork(['handover', 'property-management']).snagging).toBe(true);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   handoverProgressText,
   seatsText,
   sessionBodyOf,
+  sessionsInOrder,
   staffBase,
   unitText,
 } from '../src/lib/owner-journey';
@@ -115,6 +116,17 @@ describe('education pages (O5)', () => {
     expect(formOf(session)).toMatchObject({ date: '2026-11-12', from: '18:00', to: '20:00', seats: '2' });
     expect(seatsText(session)).toBe('1 of 2 seats booked');
     expect(seatsText({ seats: 2, booked: 2 })).toBe('Full (2 seats)');
+  });
+
+  it('O5: sessions read in date order, the soonest coming one first, past and cancelled ones last', () => {
+    const at = (day: number, cancelled = false) => ({
+      ...session,
+      id: `d${String(day)}${cancelled ? 'x' : ''}`,
+      startsAt: NOW + day * 86_400_000,
+      cancelledAt: cancelled ? NOW : null,
+    });
+    const ordered = sessionsInOrder([at(20), at(-3), at(5), at(2, true), at(-1)], NOW);
+    expect(ordered.map((s) => s.id)).toEqual(['d5', 'd20', 'd2x', 'd-1', 'd-3']);
   });
 
   it('O5: the bookings CSV lists seats held, spreadsheet-safe', () => {

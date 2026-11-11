@@ -9,6 +9,7 @@ import {
   EMERGENCY_ACK_MINUTES,
   MISSED_EMERGENCY_WINDOW_DAYS,
   PARTNER_DOCUMENT_KINDS,
+  PARTNER_DOCUMENT_LABELS,
   PARTNER_TARGETS,
   RATING_WINDOW_DAYS,
   dubaiDate,
@@ -40,13 +41,6 @@ import {
 const MIN = 60_000;
 type Alert = OverviewAlert;
 
-export const DOCUMENT_LABELS: Record<PartnerDocumentKind, string> = {
-  trade_licence: 'Trade licence',
-  insurance: 'Insurance',
-  signed_sop_sla_kpi: 'Signed SOP / SLA / KPI',
-  rate_card: 'Rate card',
-};
-
 /** Latest verified expiry per document kind; `onFile` false when JAD+ holds none of that kind. */
 export async function verifiedDocuments(
   db: D1Database,
@@ -67,7 +61,7 @@ async function documentAlerts(c: Ctx, partnerId: string, today: string): Promise
   for (const kind of PARTNER_DOCUMENT_KINDS) {
     const expiresOn = docs.get(kind);
     const standing = partnerDocumentStanding(expiresOn === undefined ? null : { expiresOn }, today);
-    const label = DOCUMENT_LABELS[kind];
+    const label = PARTNER_DOCUMENT_LABELS[kind];
     if (standing === 'expiring_soon') {
       alerts.push({ kind: 'document', level: 'warning', text: `${label} expires on ${expiresOn ?? ''}.` });
     } else if (standing === 'lapsed') {

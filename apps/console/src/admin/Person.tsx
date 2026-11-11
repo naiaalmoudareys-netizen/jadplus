@@ -39,9 +39,11 @@ export function Person({ id }: { id: string }): ReactNode {
         const isOwner = p.roles.some((r) => r.role === 'owner');
         return (
           <>
-            <PageHeader eyebrow="Person" title={p.name ?? 'No name on file'}>
-              <Tag tone={tone}>{standing}</Tag>
-            </PageHeader>
+            <PageHeader
+              eyebrow="Person"
+              title={p.name ?? 'No name on file'}
+              tags={<Tag tone={tone}>{standing}</Tag>}
+            />
             {done === null ? null : <Notice tone="good">{done}</Notice>}
             <section className="card">
               <dl className="facts">

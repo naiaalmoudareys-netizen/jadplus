@@ -10,6 +10,29 @@ const DUBAI_OFFSET = 4 * 3_600_000;
 /** "YYYY-MM": a calendar month, January to December. */
 export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use YYYY-MM.');
 
+const SHORT_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const;
+
+/** "9 Nov 2026" for a day written YYYY-MM-DD, for text people read (never the raw code). */
+export function dayLabel(date: string): string {
+  const [year, month, day] = date.split('-');
+  const name = SHORT_MONTHS[Number(month) - 1];
+  if (year === undefined || day === undefined || name === undefined) return date;
+  return `${String(Number(day))} ${name} ${year}`;
+}
+
 /** The Dubai month that contains the instant `t`. */
 export function monthOf(t: number): string {
   return new Date(t + DUBAI_OFFSET).toISOString().slice(0, 7);

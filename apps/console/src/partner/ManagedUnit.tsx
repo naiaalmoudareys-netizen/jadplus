@@ -28,9 +28,11 @@ export function ManagedUnit({ id }: { id: string }): ReactNode {
     <Loaded state={state} reload={reload}>
       {(d) => (
         <>
-          <PageHeader eyebrow="Managed unit" title={d.unit.unitName ?? d.unit.sfUnitId}>
-            <Tag tone="good">Managed by {d.unit.providerName}</Tag>
-          </PageHeader>
+          <PageHeader
+            eyebrow="Managed unit"
+            title={d.unit.unitName ?? d.unit.sfUnitId}
+            tags={<Tag tone="good">Managed by {d.unit.providerName}</Tag>}
+          />
           {done === null ? null : <Notice tone="good">{done}</Notice>}
           <section className="card">
             <dl className="facts">

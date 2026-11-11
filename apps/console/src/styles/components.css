@@ -16,6 +16,19 @@
   margin-bottom: 24px;
 }
 
+.title-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.title-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .section-title {
   color: var(--night);
   font-size: 13px;
@@ -60,6 +73,15 @@
   border-bottom: 1px solid var(--line);
 }
 
+.table th.row-head {
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  padding: 12px 10px;
+}
+
 .table td {
   padding: 12px 10px;
   border-bottom: 1px solid var(--line);
@@ -70,8 +92,10 @@
   border-bottom: none;
 }
 
-.num {
+.num,
+.table th.num {
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .plain {
@@ -325,4 +349,9 @@ textarea {
   .columns {
     grid-template-columns: 1fr;
   }
+}
+
+/* A hint that introduces a card's content keeps a little air before the table or list under it. */
+.card > .hint:not(:last-child) {
+  margin-bottom: 12px;
 }

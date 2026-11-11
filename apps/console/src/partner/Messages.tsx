@@ -5,7 +5,7 @@
 import { partnerMessagesResponse } from '@jadplus/shared';
 import type { z } from 'zod';
 import type { ReactNode } from 'react';
-import { dateTime, STATUS_LABELS } from '../lib/format';
+import { dateTime, OFFICE_STATUS_LABELS } from '../lib/format';
 import { useConsole, useLoad } from '../ui/hooks';
 import { Empty, Link, Loaded, PageHeader, Section, StatusTag, Tag } from '../ui/parts';
 import { SortHeader, useSort } from '../ui/table';
@@ -27,7 +27,7 @@ function value(t: Thread, column: Column): string | number {
     case 'ref':
       return t.ref;
     case 'status':
-      return STATUS_LABELS[t.status];
+      return OFFICE_STATUS_LABELS[t.status];
     case 'last':
       return t.lastAt;
   }

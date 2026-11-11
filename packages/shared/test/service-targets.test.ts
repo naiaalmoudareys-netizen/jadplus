@@ -92,7 +92,7 @@ describe('first deadline per service (S4)', () => {
 
 describe('provider companies (ADR 0030)', () => {
   it('S7/S10: a new provider starts with the reason the daily check gives when nothing is on file', () => {
-    const nothing = partnerCompliance({ licence: null, insurance: null }, '2026-11-09');
+    const nothing = partnerCompliance({ trade_licence: null, insurance: null }, '2026-11-09');
     expect(nothing.action).toBe('suspend');
     expect(NEW_PROVIDER_REASON).toBe(suspensionReason(nothing));
   });

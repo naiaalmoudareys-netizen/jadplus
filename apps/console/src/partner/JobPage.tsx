@@ -126,9 +126,11 @@ export function JobPage({ id }: { id: string }): ReactNode {
     <Loaded state={state} reload={reload}>
       {([d, team]) => (
         <>
-          <PageHeader eyebrow={`Job ${d.request.ref}`} title={jobWhat(d.request)}>
-            {d.request.emergency ? <Tag tone="bad">Emergency</Tag> : null}
-          </PageHeader>
+          <PageHeader
+            eyebrow={`Job ${d.request.ref}`}
+            title={jobWhat(d.request)}
+            tags={d.request.emergency ? <Tag tone="bad">Emergency</Tag> : null}
+          />
           <Progress status={d.request.status} />
           <Steps d={d} team={team.technicians} now={now} onChanged={reload} />
           <ConsultationSteps id={id} onChanged={reload} />

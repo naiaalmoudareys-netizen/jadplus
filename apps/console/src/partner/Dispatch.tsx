@@ -10,6 +10,7 @@ import { apiPath, withQuery } from '../lib/api';
 import { today, shiftDay, weekdayOf } from '../lib/dates';
 import { choiceOrder, hourLabels, placeVisit } from '../lib/dispatch';
 import { dayText, deadlineText, windowText } from '../lib/format';
+import { jobWhat } from '../lib/jobs';
 import { SKILL_LABELS, UNAVAILABLE_LABELS } from '../lib/labels';
 import { formatRoute } from '../lib/router';
 import { technicianAssignedResponse } from '../lib/schemas';
@@ -44,7 +45,12 @@ function TechnicianRow({ t, date, now }: { t: Technician; date: string; now: num
               className={`visit gs-${String(at.start)} ge-${String(at.end)}`}
               title={windowText(v.windowStart, v.windowEnd, now)}
             >
-              <strong>{v.ref}</strong> {v.service ?? ''}
+              <strong>{v.ref}</strong>{' '}
+              {jobWhat({
+                emergency: v.emergencyType !== null,
+                emergencyType: v.emergencyType,
+                serviceName: v.service,
+              })}
               <span className="block">{v.building ?? ''}</span>
             </a>
           ),
@@ -134,18 +140,32 @@ function UnassignedList({
           {plan.unassigned.map((j) => {
             const due = deadlineText(j.nextDueAt, now);
             const first = plan.technicians.find((t) => t.id === j.suggested[0]);
+            const skill = j.skill === null ? null : SKILL_LABELS[j.skill];
+            const nobody =
+              j.skill !== null &&
+              !plan.technicians.some((t) => j.skill !== null && t.skills.includes(j.skill));
             return (
               <li key={j.id} className="job">
                 <p>
                   <Link to={{ name: 'request', id: j.id }}>
-                    <span className="ref">{j.ref}</span> {j.service ?? 'Service request'}
+                    <span className="ref">{j.ref}</span>{' '}
+                    {jobWhat({
+                      emergency: j.emergency,
+                      emergencyType: j.emergencyType,
+                      serviceName: j.service,
+                    })}
                   </Link>{' '}
                   {j.emergency ? <Tag tone="bad">Emergency</Tag> : null}
                 </p>
                 <p className="muted">
                   {j.building ?? 'Building with JAD+'}
-                  {j.skill === null ? '' : ` · needs ${SKILL_LABELS[j.skill]}`}
+                  {skill === null ? '' : ` · needs ${skill}`}
                 </p>
+                {nobody && skill !== null ? (
+                  <Notice tone="warn">
+                    No technician with {skill}: add the skill in <Link to={{ name: 'team' }}>Team</Link>.
+                  </Notice>
+                ) : null}
                 {due === null ? null : <p className={due.startsWith('Overdue') ? 'late' : 'muted'}>{due}</p>}
                 {first === undefined ? null : <p className="hint">Suggested: {first.name}</p>}
                 <Assign job={j} technicians={plan.technicians} onAssigned={onAssigned} />

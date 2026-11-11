@@ -34,12 +34,18 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
         const ws = workspaceSummary(partner);
         return (
           <>
-            <PageHeader eyebrow="Partner" title={partner.name}>
-              <Tag tone={PROVIDER_KIND_LABELS[partner.kind].tone}>
-                {PROVIDER_KIND_LABELS[partner.kind].label}
-              </Tag>
-              <Tag tone={standing.tone}>{standing.label}</Tag>
-            </PageHeader>
+            <PageHeader
+              eyebrow="Partner"
+              title={partner.name}
+              tags={
+                <>
+                  <Tag tone={PROVIDER_KIND_LABELS[partner.kind].tone}>
+                    {PROVIDER_KIND_LABELS[partner.kind].label}
+                  </Tag>
+                  <Tag tone={standing.tone}>{standing.label}</Tag>
+                </>
+              }
+            />
             {done === null ? null : <Notice tone="good">{done}</Notice>}
             <section className="card">
               <dl className="facts">
@@ -82,7 +88,8 @@ export function PartnerPage({ id }: { id: string }): ReactNode {
               ) : null}
             </section>
             <PartnerDocuments partnerId={id} editable={editable} />
-            <RateChanges partnerId={id} editable={editable} />
+            {/* JAD Global teams have no rate card (ADR 0036): nothing to change, so no section. */}
+            {partner.kind === 'external' ? <RateChanges partnerId={id} editable={editable} /> : null}
             <PartnerScorecard partnerId={id} />
             {partner.kind === 'jad_group' ? <ManagedUnits providerId={id} editable={editable} /> : null}
           </>

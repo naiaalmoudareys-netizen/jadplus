@@ -92,9 +92,11 @@ export function DeskItem({ id }: { id: string }): ReactNode {
     <Loaded state={state} reload={reload}>
       {(d) => (
         <>
-          <PageHeader eyebrow="Documents & account request" title={d.type}>
-            <Tag tone={DESK_TONES[d.status]}>{d.status}</Tag>
-          </PageHeader>
+          <PageHeader
+            eyebrow="Documents & account request"
+            title={d.type}
+            tags={<Tag tone={DESK_TONES[d.status]}>{d.status}</Tag>}
+          />
           {done ? <Notice tone="good">Saved.</Notice> : null}
           {d.inSalesforce ? (
             <Notice tone="calm">This request is worked in Salesforce; change it there.</Notice>

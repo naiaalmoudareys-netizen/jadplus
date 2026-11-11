@@ -8,7 +8,8 @@ import { isMonday } from '../oncall.js';
 import { SERVICE_CODES } from '../services.js';
 import { monthSchema } from '../periods.js';
 import { daysBetween } from '../tenancy.js';
-import { PARTNER_DOCUMENT_KINDS, QUOTE_STATUSES_FOR_OFFICE, SKILLS, UNAVAILABLE_REASONS } from './rules.js';
+import { PARTNER_DOCUMENT_KINDS } from '../partner-documents.js';
+import { QUOTE_STATUSES_FOR_OFFICE, SKILLS, UNAVAILABLE_REASONS } from './rules.js';
 
 /** A real calendar date, YYYY-MM-DD. */
 export const calendarDate = z

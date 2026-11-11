@@ -95,11 +95,15 @@ export function Handovers(): ReactNode {
   );
   return (
     <>
-      <PageHeader title="Handovers" />
+      <PageHeader title="Handovers">
+        <button type="button" className="btn btn-outline" onClick={reload}>
+          Refresh
+        </button>
+      </PageHeader>
       <Loaded state={state} reload={reload}>
         {({ handovers, waiting }) => (
           <>
-            <p className="hint">
+            <p className="hint page-intro">
               A checklist starts from the owner&apos;s handover request. The owner follows every step in the
               app.
             </p>

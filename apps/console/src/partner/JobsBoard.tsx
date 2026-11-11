@@ -168,7 +168,7 @@ export function JobsBoard(): ReactNode {
   );
   return (
     <>
-      <PageHeader title="Jobs board">
+      <PageHeader title="Jobs">
         <button type="button" className="btn btn-outline" onClick={reload}>
           Refresh
         </button>

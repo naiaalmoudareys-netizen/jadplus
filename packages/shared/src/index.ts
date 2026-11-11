@@ -26,6 +26,7 @@ export * from './messages.js';
 export * from './oncall.js';
 export * from './news.js';
 export * from './owners.js';
+export * from './partner-documents.js';
 export * from './partner-office.js';
 export * from './payments.js';
 export * from './portal.js';

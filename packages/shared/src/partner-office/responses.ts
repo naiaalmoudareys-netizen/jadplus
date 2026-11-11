@@ -4,9 +4,11 @@
  * their own company's office. Money is in fils (1 AED = 100 fils).
  */
 import { z } from 'zod';
+import { EMERGENCY_TYPES } from '../emergency.js';
 import { STATUSES } from '../lifecycle.js';
 import { SLA_METRICS } from '../sla.js';
-import { PARTNER_DOCUMENT_KINDS, QUOTE_STATUSES_FOR_OFFICE, SKILLS, UNAVAILABLE_REASONS } from './rules.js';
+import { PARTNER_DOCUMENT_KINDS } from '../partner-documents.js';
+import { QUOTE_STATUSES_FOR_OFFICE, SKILLS, UNAVAILABLE_REASONS } from './rules.js';
 import { RATE_UNITS } from './schemas.js';
 
 const int = z.number().int();
@@ -86,6 +88,8 @@ export const dispatchResponse = z.object({
           requestId: z.string(),
           ref: z.string(),
           service: z.string().nullable(),
+          /** The emergency type when the visit is an emergency, so every page names it the same way. */
+          emergencyType: z.enum(EMERGENCY_TYPES).nullable(),
           building: z.string().nullable(),
           windowStart: int,
           windowEnd: int,
@@ -99,6 +103,7 @@ export const dispatchResponse = z.object({
       id: z.string(),
       ref: z.string(),
       emergency: z.boolean(),
+      emergencyType: z.enum(EMERGENCY_TYPES).nullable(),
       service: z.string().nullable(),
       building: z.string().nullable(),
       nextDueAt: int.nullable(),

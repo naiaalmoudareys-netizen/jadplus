@@ -1,7 +1,7 @@
 /** Small building blocks used by every console page (docs/DESIGN.md: calm, cream, slate, bronze). */
 import { useState, type SyntheticEvent, type ReactNode } from 'react';
 import { errorMessage } from '../lib/api';
-import { STATUS_LABELS, statusTone, type Tone } from '../lib/format';
+import { statusLabel, statusTone, type Tone } from '../lib/format';
 import { formatRoute, type Route } from '../lib/router';
 import type { Status } from '@jadplus/shared';
 import type { Load } from './hooks';
@@ -11,13 +11,16 @@ import { useWorkspace } from './workspace';
  * A page's header: the eyebrow names where the page belongs (ADR 0036: the office's workspace title, or
  * "JAD+ Admin", unless the page names something more precise), the title names the page.
  */
+/** The page title with its eyebrow; `tags` sit on the title line, `children` (buttons) on the right. */
 export function PageHeader({
   eyebrow,
   title,
+  tags,
   children,
 }: {
   eyebrow?: string;
   title: string;
+  tags?: ReactNode;
   children?: ReactNode;
 }): ReactNode {
   const ws = useWorkspace();
@@ -25,7 +28,10 @@ export function PageHeader({
     <header className="page-header">
       <div>
         <p className="eyebrow">{eyebrow ?? ws?.workspace.title ?? 'JAD+ Admin'}</p>
-        <h1 className="title">{title}</h1>
+        <div className="title-line">
+          <h1 className="title">{title}</h1>
+          {tags === undefined ? null : <span className="title-tags">{tags}</span>}
+        </div>
       </div>
       {children}
     </header>
@@ -37,7 +43,8 @@ export function Tag({ tone, children }: { tone: Tone; children: ReactNode }): Re
 }
 
 export function StatusTag({ status }: { status: Status }): ReactNode {
-  return <Tag tone={statusTone(status)}>{STATUS_LABELS[status]}</Tag>;
+  const office = useWorkspace() !== null;
+  return <Tag tone={statusTone(status)}>{statusLabel(status, office)}</Tag>;
 }
 
 export function Link({ to, children }: { to: Route; children: ReactNode }): ReactNode {

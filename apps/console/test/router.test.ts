@@ -147,9 +147,9 @@ describe('hash router (ADR 0023, 0025)', () => {
       ['Today', ['Overview', 'Dispatch']],
       [
         'Work',
-        ['Jobs', 'Consultations', 'Inspections & reports', 'Handovers', 'Snags to fix', 'Quotes', 'Messages'],
+        ['Jobs', 'Consultations', 'Reports', 'Handovers', 'Snags to fix', 'Education', 'Quotes', 'Messages'],
       ],
-      ['Clients', ['Managed units', 'Education']],
+      ['Clients', ['Managed units']],
       ['Company', ['Team', 'Performance', 'After-hours', 'Documents', 'Rate card', 'Invoices']],
     ]);
     for (const role of ['jad_admin', 'jad_viewer', 'partner_admin'] as const) {

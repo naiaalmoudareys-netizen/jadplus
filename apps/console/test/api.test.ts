@@ -193,7 +193,7 @@ describe('partner review list (S6, S7)', () => {
     expect(reviewDetailText({ average: 3.4, ratings: 5 })).toBe('average 3.4 from 5 ratings');
     expect(reviewDetailText({ reason: 'Insurance lapsed' })).toBe('Insurance lapsed');
     expect(reviewDetailText({ document: 'insurance', expiresOn: '2026-12-01' })).toBe(
-      'insurance expires 2026-12-01',
+      'Insurance expires 1 Dec 2026',
     );
     expect(reviewDetailText({})).toBeNull();
     expect(reviewDetailText(null)).toBeNull();

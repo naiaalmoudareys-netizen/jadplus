@@ -169,10 +169,60 @@
   color: var(--cream);
 }
 
-.figures {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 20px;
+/*
+ * Figure and overview tiles fill their rows evenly: the number of columns follows the number of tiles (6 tiles
+ * read 3 + 3, never 5 + 1), and a shorter last row stretches to the full width instead of leaving an empty slot.
+ */
+.figures,
+.tiles {
+  --cols: 4;
+  --gap: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.figures > *,
+.tiles > * {
+  flex: 1 1 calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols));
+  min-width: 180px;
+  margin-bottom: 0;
+}
+
+.figures:has(> :last-child:nth-child(1)),
+.tiles:has(> :last-child:nth-child(1)) {
+  --cols: 1;
+}
+
+.figures:has(> :last-child:nth-child(2)),
+.tiles:has(> :last-child:nth-child(2)) {
+  --cols: 2;
+}
+
+.figures:has(> :last-child:nth-child(3)),
+.tiles:has(> :last-child:nth-child(3)),
+.figures:has(> :last-child:nth-child(5)),
+.tiles:has(> :last-child:nth-child(5)),
+.figures:has(> :last-child:nth-child(6)),
+.tiles:has(> :last-child:nth-child(6)),
+.figures:has(> :last-child:nth-child(9)),
+.tiles:has(> :last-child:nth-child(9)) {
+  --cols: 3;
+}
+
+.figure-date {
+  color: var(--night);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin: 8px 0 0;
+}
+
+.figure-time {
+  color: var(--ink-2);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0 6px;
 }
 
 .figure-value {

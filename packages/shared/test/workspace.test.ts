@@ -140,12 +140,8 @@ describe('workspace pages (ADR 0036)', () => {
 
 describe('overview sections (ADR 0036)', () => {
   it('each demo company stacks its own sections, main work first', () => {
-    expect(overviewSections(workspaceFor(harborPm))).toEqual([
-      'handover',
-      'managed',
-      'consultations',
-      'reports',
-    ]);
+    // Harbor PM holds no report service: its soft snagging is on the handovers section, never counted twice.
+    expect(overviewSections(workspaceFor(harborPm))).toEqual(['handover', 'managed', 'consultations']);
     expect(overviewSections(workspaceFor(harborRe))).toEqual(['consultations', 'reports', 'education']);
     expect(overviewSections(workspaceFor(demoFixers))).toEqual(['visits', 'reports', 'consultations']);
   });

@@ -71,8 +71,16 @@
 
 .page-intro {
   color: var(--ink-2);
-  margin: -12px 0 24px;
+  margin: -8px 0 24px;
   max-width: 720px;
+}
+
+.unit-cell a {
+  white-space: nowrap;
+}
+
+.section-intro {
+  margin-bottom: 14px;
 }
 
 .subhead {
@@ -90,14 +98,23 @@
   overflow-x: auto;
 }
 
-/* Consultations pipeline: one row of stage columns per service, scrolling sideways on small screens. */
+/*
+ * Consultations pipeline: the stage columns of a service share the card's width and wrap onto a second row when
+ * the window is narrow, so no column is ever cut off at the right edge.
+ */
 .pipeline {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(170px, 1fr);
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 10px;
+}
+
+.pipeline-column .label {
+  overflow-wrap: anywhere;
+}
+
+.pipeline-card {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .pipeline-column {

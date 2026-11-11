@@ -101,7 +101,7 @@ export const OFFICE_PAGE_ITEMS: Readonly<Record<OfficePage, NavItem>> = {
   dispatch: { label: 'Dispatch', route: { name: 'dispatch', date: null }, icon: 'dispatch' },
   jobs: { label: 'Jobs', route: { name: 'jobs' }, icon: 'jobs' },
   consultations: { label: 'Consultations', route: { name: 'consultations' }, icon: 'consultation' },
-  inspections: { label: 'Inspections & reports', route: { name: 'inspections' }, icon: 'inspection' },
+  inspections: { label: 'Reports', route: { name: 'inspections' }, icon: 'inspection' },
   handovers: { label: 'Handovers', route: { name: 'handovers' }, icon: 'handover' },
   snags: { label: 'Snags to fix', route: { name: 'snags' }, icon: 'snag' },
   quotes: { label: 'Quotes', route: { name: 'quotes' }, icon: 'quote' },
@@ -121,9 +121,9 @@ const OFFICE_GROUPS: readonly { readonly label: string; readonly pages: readonly
   { label: 'Today', pages: ['overview', 'dispatch'] },
   {
     label: 'Work',
-    pages: ['jobs', 'consultations', 'inspections', 'handovers', 'snags', 'quotes', 'messages'],
+    pages: ['jobs', 'consultations', 'inspections', 'handovers', 'snags', 'education', 'quotes', 'messages'],
   },
-  { label: 'Clients', pages: ['managed_units', 'education'] },
+  { label: 'Clients', pages: ['managed_units'] },
   { label: 'Company', pages: ['team', 'performance', 'after_hours', 'documents', 'rate_card', 'invoices'] },
 ];
 

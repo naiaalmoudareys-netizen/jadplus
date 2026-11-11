@@ -19,7 +19,11 @@ export function ManagedUnits(): ReactNode {
   );
   return (
     <>
-      <PageHeader title="Managed units" />
+      <PageHeader title="Managed units">
+        <button type="button" className="btn btn-outline" onClick={reload}>
+          Refresh
+        </button>
+      </PageHeader>
       <Loaded state={state} reload={reload}>
         {({ units }) => (
           <Section title="Units you manage" count={units.length}>
@@ -32,8 +36,10 @@ export function ManagedUnits(): ReactNode {
                     <th scope="col">Unit</th>
                     <th scope="col">Period</th>
                     <th scope="col">Tenant</th>
-                    <th scope="col">Waiting for you</th>
-                    <th scope="col">Open repairs</th>
+                    <th scope="col">Tenant repairs to decide</th>
+                    <th scope="col" className="num">
+                      Open repairs
+                    </th>
                     <th scope="col">Last statement</th>
                   </tr>
                 </thead>
@@ -42,7 +48,7 @@ export function ManagedUnits(): ReactNode {
                     const tenant = u.tenantStatus === null ? null : TENANT_LABELS[u.tenantStatus];
                     return (
                       <tr key={u.id}>
-                        <td>
+                        <td className="unit-cell">
                           <Link to={{ name: 'managed_unit', id: u.id }}>{u.unitName ?? u.sfUnitId}</Link>
                           {u.project === null ? null : <span className="block muted">{u.project}</span>}
                         </td>
@@ -50,12 +56,12 @@ export function ManagedUnits(): ReactNode {
                         <td>{tenant === null ? 'No tenant' : <Tag tone={tenant[1]}>{tenant[0]}</Tag>}</td>
                         <td>
                           {u.awaitingApproval === 0 ? (
-                            '—'
+                            <span className="muted">None</span>
                           ) : (
                             <Tag tone="warn">{`${String(u.awaitingApproval)} to decide`}</Tag>
                           )}
                         </td>
-                        <td>{u.openRequests}</td>
+                        <td className="num">{u.openRequests}</td>
                         <td>
                           {u.lastStatementMonth === null ? 'None yet' : monthText(u.lastStatementMonth)}
                         </td>

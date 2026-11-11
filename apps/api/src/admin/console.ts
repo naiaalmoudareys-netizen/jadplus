@@ -16,6 +16,7 @@ import {
   QUOTE_STUCK_AFTER,
   adminRequestsQuery,
   attentionOrder,
+  dayLabel,
   dubaiDate,
   onCallGaps,
   weekStarting,
@@ -97,7 +98,7 @@ async function onCallItems(db: D1Database, now: number): Promise<Item[]> {
     requestId: null,
     deskId: null,
     ref: null,
-    what: `On-call week of ${g.week}: ${g.missing.map((p) => POSITION_TEXT[p]).join(' and ')} missing`,
+    what: `On-call rota, week of ${dayLabel(g.week)}: ${g.missing.map((p) => POSITION_TEXT[p]).join(' and ')} missing`,
     unit: null,
     partnerName: null,
     since: Date.parse(`${g.week}T00:00:00Z`) - DUBAI_OFFSET,
@@ -245,7 +246,7 @@ export function adminConsoleRoutes(): Hono<AppEnv> {
       .bind(...open)
       .all<{ partner_id: string; service_code: string }>();
     const managing = await db
-      .prepare(`SELECT DISTINCT provider_id FROM managed_units m WHERE ${managedNowSql('m', '?')}`)
+      .prepare(`SELECT DISTINCT provider_id FROM managed_units m WHERE ${managedNowSql('m', '?1')}`)
       .bind(dubaiDate(c.get('now')))
       .all<{ provider_id: string }>();
     const codes = (rows: readonly { partner_id: string; service_code: string }[], id: string): string[] =>

@@ -82,8 +82,8 @@ describe('JAD+ Admin: needs action', () => {
       (await everything(w, token)).filter((i) => i.kind === 'on_call_gap').map((i) => i.what);
     // NOW is in the week starting Monday 9 November 2026 (Dubai).
     expect(await gaps()).toEqual([
-      'On-call week of 2026-11-09: first person and second person missing',
-      'On-call week of 2026-11-16: first person and second person missing',
+      'On-call rota, week of 9 Nov 2026: first person and second person missing',
+      'On-call rota, week of 16 Nov 2026: first person and second person missing',
     ]);
     const staffId = await w.h.addUser({ email: 'oncall@example.com', roles: ['jad_admin'] });
     const put = w.h.sqlite.prepare(

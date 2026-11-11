@@ -33,22 +33,8 @@ export type Skill = (typeof SKILLS)[number];
 /** Why a technician is away. Mirrors the CHECK list in migration 0021. */
 export const UNAVAILABLE_REASONS = ['leave', 'sick', 'training', 'other'] as const;
 
-/** Contract documents (S10). Mirrors partner_documents.kind in migration 0003. */
-export const PARTNER_DOCUMENT_KINDS = [
-  'trade_licence',
-  'insurance',
-  'signed_sop_sla_kpi',
-  'rate_card',
-] as const;
-export type PartnerDocumentKind = (typeof PARTNER_DOCUMENT_KINDS)[number];
-
 /** Quote statuses (A2, A3). Mirrors quotes.status in migration 0005. */
 export const QUOTE_STATUSES_FOR_OFFICE = ['pending', 'approved', 'declined', 'expired', 'withdrawn'] as const;
-
-/** A licence and an insurance always carry an expiry date (S7); the other documents may. */
-export function expiryRequired(kind: PartnerDocumentKind): boolean {
-  return kind === 'trade_licence' || kind === 'insurance';
-}
 
 /** Largest contract PDF accepted (matches the attachments PDF limit in migration 0005). */
 export const PARTNER_DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;

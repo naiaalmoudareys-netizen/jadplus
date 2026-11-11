@@ -6,7 +6,7 @@
 import { monthOf, partnerScorecardResponse } from '@jadplus/shared';
 import { useState, type ReactNode } from 'react';
 import { apiPath, withQuery } from '../../lib/api';
-import { minutesText, monthText, percentText, shiftMonth, starsText } from '../../lib/format';
+import { humanize, minutesText, monthText, percentText, ratingText, shiftMonth } from '../../lib/format';
 import { SLA_METRIC_LABELS, label } from '../../lib/labels';
 import { useConsole, useLoad, useNow } from '../../ui/hooks';
 import { Empty, Fact, Loaded, Section, Tag } from '../../ui/parts';
@@ -64,8 +64,7 @@ export function PartnerScorecard({ partnerId }: { partnerId: string }): ReactNod
                 {percentText(s.onTimePercent)} <Meets value={s.meets.onTime} />
               </Fact>
               <Fact label={`Rating (target ${s.targets.averageRating.toFixed(1)})`}>
-                {starsText(s.rating.average)} <span className="hint">from {s.rating.count}</span>{' '}
-                <Meets value={s.meets.rating} />
+                {ratingText(s.rating.average, s.rating.count)} <Meets value={s.meets.rating} />
               </Fact>
               <Fact label={`Repeat visits (target ≤ ${String(s.targets.repeatVisitPercent)} %)`}>
                 {s.repeatVisits} · {percentText(s.repeatVisitPercent)} <Meets value={s.meets.repeatVisits} />
@@ -109,8 +108,7 @@ export function PartnerScorecard({ partnerId }: { partnerId: string }): ReactNod
             )}
             {s.incidents.length === 0 ? null : (
               <p className="hint">
-                Incidents:{' '}
-                {s.incidents.map((i) => `${i.kind.replace(/_/g, ' ')} ${String(i.count)}`).join(', ')}
+                Incidents: {s.incidents.map((i) => `${humanize(i.kind)} ${String(i.count)}`).join(', ')}
               </p>
             )}
           </>

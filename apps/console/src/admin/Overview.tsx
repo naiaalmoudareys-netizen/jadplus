@@ -32,11 +32,11 @@ function Tile({
   );
 }
 
-function MonthRow({ m, label }: { m: MonthStats; label: string }): ReactNode {
+function MonthRow({ m }: { m: MonthStats }): ReactNode {
   return (
     <tr>
-      <th scope="row">
-        {label} <span className="hint">{monthText(m.month)}</span>
+      <th scope="row" className="row-head">
+        {monthText(m.month)}
       </th>
       <td className="num">{m.raised}</td>
       <td className="num">{m.closed}</td>
@@ -129,8 +129,8 @@ export function Overview(): ReactNode {
                     </tr>
                   </thead>
                   <tbody>
-                    <MonthRow m={thisMonth} label="This month" />
-                    <MonthRow m={lastMonth} label="Last month" />
+                    <MonthRow m={thisMonth} />
+                    <MonthRow m={lastMonth} />
                   </tbody>
                 </table>
                 <p className="hint">

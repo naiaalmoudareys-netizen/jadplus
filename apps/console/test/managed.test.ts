@@ -47,7 +47,7 @@ describe('each office menu is exactly its workspace (ADR 0036)', () => {
       navGroups('partner_admin', workspaceFor(PM).pages).map((g) => [g.label, g.items.map((n) => n.label)]),
     ).toEqual([
       ['Today', ['Overview', 'Dispatch']],
-      ['Work', ['Jobs', 'Consultations', 'Inspections & reports', 'Handovers', 'Snags to fix', 'Messages']],
+      ['Work', ['Jobs', 'Consultations', 'Reports', 'Handovers', 'Snags to fix', 'Messages']],
       ['Clients', ['Managed units']],
       ['Company', ['Team', 'Performance', 'Documents']],
     ]);
@@ -57,9 +57,9 @@ describe('each office menu is exactly its workspace (ADR 0036)', () => {
     expect(labels(RE)).toEqual([
       'Overview',
       'Consultations',
-      'Inspections & reports',
-      'Messages',
+      'Reports',
       'Education',
+      'Messages',
       'Team',
       'Documents',
     ]);
@@ -108,15 +108,7 @@ describe('each office menu is exactly its workspace (ADR 0036)', () => {
   it('JAD+ Admin reads each provider’s workspace and the pages its console shows', () => {
     expect(workspaceSummary(RE)).toEqual({
       title: 'Sales & leasing advisory',
-      pages: [
-        'Overview',
-        'Consultations',
-        'Inspections & reports',
-        'Messages',
-        'Education',
-        'Team',
-        'Documents',
-      ],
+      pages: ['Overview', 'Consultations', 'Reports', 'Education', 'Messages', 'Team', 'Documents'],
     });
     expect(navFor('jad_admin').map((n) => n.label)).not.toContain('Managed units');
   });
