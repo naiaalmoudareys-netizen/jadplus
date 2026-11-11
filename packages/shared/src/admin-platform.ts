@@ -189,8 +189,9 @@ export const plainText = (max: number): z.ZodString =>
 
 const projectSchema = plainText(120);
 const buildingSchema = plainText(80).nullable();
-const placeFields = { project: projectSchema, building: buildingSchema };
-const placeView = { project: z.string(), building: z.string().nullable() };
+/** The place fields of a body (project, and building or null for the whole project). */
+export const placeFields = { project: projectSchema, building: buildingSchema };
+export const placeView = { project: z.string(), building: z.string().nullable() };
 
 export const serviceCodeParam = z.strictObject({ code: z.enum(SERVICE_CODES) });
 export const platformIdParam = z.strictObject({ id: idSchema });

@@ -5,7 +5,8 @@
  * (RequestSheet), so nobody scrolls through one long form. The answer names who has the request: the partner
  * company or the JAD+ team. Photos are re-saved on the phone without location data before they are sent.
  * A tenant raises one for their home; it first waits for the owner's approval (A1, ADR 0021), and the answer
- * says so.
+ * says so. A line at the top sends problems outside the home (lobby, lift, corridor, parking, noise) to Building
+ * help, the building's own numbers, instead of a partner request (E12, ADR 0029).
  */
 import { SERVICE_GROUPS, type MyPlace, type RequestRaised, type ServiceView } from '@jadplus/shared';
 import { Redirect, useRouter } from 'expo-router';
@@ -13,6 +14,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { errorText } from '../src/api/client.js';
 import { addRequestPhoto, myPlaces, raiseRequest, services } from '../src/api/endpoints.js';
+import { LinkRow } from '../src/building/HelpLines.js';
 import { placeLabel } from '../src/jobs/format.js';
 import { useT } from '../src/i18n/I18nProvider.js';
 import { serviceBlurb, serviceName } from '../src/i18n/sharedLabels.js';
@@ -128,6 +130,15 @@ export default function NewRequest(): ReactNode {
   return (
     <Page>
       <Heading>{t('title.newRequest')}</Heading>
+      <LinkRow
+        icon="business-outline"
+        title={t('buildingHelp.requestLine')}
+        note={t('buildingHelp.requestLineNote')}
+        bordered={false}
+        onPress={() => {
+          router.push('/building-help');
+        }}
+      />
 
       {projects.length === 0 ? (
         <Notice tone="error">{t('req.noResidence')}</Notice>

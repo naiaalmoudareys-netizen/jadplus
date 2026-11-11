@@ -192,6 +192,13 @@ pnpm --filter @jadplus/mobile start   # Expo
   apps); other Settings stay read-only with a note; console menu "Service requests" and "Documents & account"
   (was Requests / Desk); "Needs action" warns when this week or next has someone missing on the on-call rota
   (E6, E7). 793 tests.
+- 11-Nov-2026 (cont.): invoice payment text allows bank details and links, refuses phones/emails (ADR 0026).
+  Management deck with real screenshots (89 slides) on Naya's Desktop: "JAD+ Every Case Every Screen.pptx" (built
+  outside the repo). Building help lines (ADR 0029, migration 0026): Security and Building management numbers per
+  building or project set in the console; app shows Call buttons when a leak comes from outside the home, on New
+  request ("problem outside your home") and on a Building help page (noise complaints → security). 836 tests.
+  Open: whole-building AC failure and common-area reports routed to building management (E12, asked Naya),
+  linking requests to one building incident (V1).
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

@@ -1,7 +1,8 @@
 /**
  * Demo data for a developer's LOCAL database only (never preview or production): a fictional partner with
- * one technician, a fictional owner with two units, and one open demo emergency (added only when none is open;
- * older ones and kinds no longer offered are closed, ADR 0017), so the app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
+ * one technician, a fictional owner with two units, fictional building help lines (E12), and one open demo
+ * emergency (added only when none is open; older ones and kinds no longer offered are closed, ADR 0017), so the
+ * app can be tried end to end. Run: pnpm --filter @jadplus/api db:seed:local (after db:migrate:local).
  *
  * People are obviously fictional (CLAUDE.md "People"). Personal fields are encrypted with the local keys from
  * .dev.vars, exactly as the API stores them; the SQL file is written under .wrangler/ (git-ignored).
@@ -38,6 +39,19 @@ async function user(id: string, email: string, name: string): Promise<string> {
   VALUES (${text(id)}, ${emailHash}, ${emailEnc}, ${nameEnc}, ${now}, ${now});`;
 }
 
+/** E12 (ADR 0029): fictional building help lines for the demo projects, so Building help shows numbers. */
+async function line(
+  id: string,
+  project: string,
+  kind: string,
+  phone: string,
+  hours: string,
+): Promise<string> {
+  const phoneEnc = hex(await encryptField(keys, phone, `building_lines.phone:${id}`));
+  return `INSERT OR IGNORE INTO building_lines (id, project, building, kind, phone_enc, hours, updated_at, updated_by)
+  VALUES (${text(id)}, ${text(project)}, '', ${text(kind)}, ${phoneEnc}, ${text(hours)}, ${now}, 'demo-admin');`;
+}
+
 const UNIT = 'a0XDEMO0000000001A';
 const UNIT_2 = 'a0XDEMO0000000002A';
 const OPEN = "status NOT IN ('closed', 'cancelled')";
@@ -67,6 +81,10 @@ const sql = [
     ON CONFLICT (user_id, sf_unit_id) DO UPDATE SET unit_name = excluded.unit_name, project = excluded.project,
       building = excluded.building, address = excluded.address, synced_at = excluded.synced_at;`,
   `UPDATE users SET owner_synced_at = ${now} WHERE id = 'demo-owner';`,
+  await line('demo-line-1', 'J188', 'security', '+97140000000', '24/7'),
+  await line('demo-line-2', 'J188', 'management', '+97140000001', 'Sun-Fri 8:00-18:00'),
+  await line('demo-line-3', 'JAD 288', 'security', '+971500000000', '24/7'),
+  await line('demo-line-4', 'JAD 288', 'management', '+97140000002', 'Mon-Sat 9:00-17:00'),
   // ADR 0017: emergencies are water leak and AC failure only; demo requests of other kinds are closed.
   `UPDATE requests SET status = 'cancelled', close_reason = 'cancelled_by_jad', next_due_at = NULL, next_due_kind = NULL,
     updated_at = ${now}, status_changed_at = ${now}, version = version + 1

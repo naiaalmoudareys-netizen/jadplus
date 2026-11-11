@@ -10,7 +10,8 @@
  * - GET  /api/admin/on-call/weeks?from=              8 weeks of the rota with names, and who may be on call
  * - GET  /api/admin/settings                         versions, limits, calendar, SLA targets (read-only; the
  *                                                    holidays come from the table JAD+ Admin keeps, ADR 0028)
- * Holidays: platform/holidays.ts. Services: platform/services.ts. Buildings and contacts: platform/buildings.ts. Notices, guide: platform/notices.ts.
+ * Holidays: platform/holidays.ts. Services: platform/services.ts. Buildings and contacts: platform/buildings.ts.
+ * Notices, guide: platform/notices.ts. Building help lines (E12, ADR 0029): platform/lines.ts.
  */
 import {
   canBeOnCall,
@@ -35,6 +36,7 @@ import { parseParams, parseQuery } from '../validate.js';
 import { platformBuildingRoutes } from './platform/buildings.js';
 import { CHANGERS, READERS, audit } from './platform/common.js';
 import { platformHolidayRoutes } from './platform/holidays.js';
+import { platformLineRoutes } from './platform/lines.js';
 import { platformNoticeRoutes } from './platform/notices.js';
 import { platformServiceRoutes } from './platform/services.js';
 
@@ -51,6 +53,7 @@ export function adminPlatformRoutes(): Hono<AppEnv> {
   r.route('/', platformBuildingRoutes());
   r.route('/', platformNoticeRoutes());
   r.route('/', platformHolidayRoutes());
+  r.route('/', platformLineRoutes());
 
   r.get('/offer-interests', requireRole(...READERS), async (c) => {
     const { state } = parseQuery(c, offerInterestsQuery);

@@ -8,6 +8,7 @@ import { legal } from './strings/legal.js';
 import { profile } from './strings/profile.js';
 import { screensAccess } from './strings/screens-access.js';
 import { screensBuilding } from './strings/screens-building.js';
+import { screensBuildingHelp } from './strings/screens-building-help.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
@@ -46,6 +47,7 @@ export const PARTS = [
   screensPartner,
   screensJob,
   screensBuilding,
+  screensBuildingHelp,
   screensInvoices,
 ] as const;
 

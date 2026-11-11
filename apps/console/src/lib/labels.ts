@@ -4,6 +4,7 @@
  * readable version of itself, never to nothing.
  */
 import type {
+  BuildingLineKind,
   DeskStatus,
   GuideSection,
   NoticeKind,
@@ -65,6 +66,12 @@ export const GUIDE_SECTION_LABELS: Readonly<Record<GuideSection, string>> = {
   access: 'Access and keys',
   amenities: 'Amenities',
   other: 'Other',
+};
+
+/** E12 (ADR 0029): the building help lines residents may call, and what each is for. */
+export const BUILDING_LINE_LABELS: Readonly<Record<BuildingLineKind, { name: string; scope: string }>> = {
+  security: { name: 'Security', scope: 'Noise, parking, access, visitors' },
+  management: { name: 'Building management', scope: 'Common areas, lifts, shared pipes, building-wide AC' },
 };
 
 export const SLA_METRIC_LABELS: Readonly<Record<SlaMetric, string>> = {

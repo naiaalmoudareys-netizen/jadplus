@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { acceptTenancy } from '../api/endpoints.js';
 import { GuideLink } from '../building/BuildingParts.js';
+import { BuildingHelpLink } from '../building/HelpLines.js';
 import { useLang } from '../i18n/I18nProvider.js';
 import { longDate } from '../portal/format.js';
 import { useSessionController } from '../session/SessionProvider.js';
@@ -44,7 +45,12 @@ function CurrentHome({ tenancy, today }: { tenancy: TenantTenancy; today: string
       <Text style={styles.place}>{tenantPlace(tenancy, lang.t)}</Text>
       <Body muted>{lang.t('tenancy.homeUntil', { date: longDate(tenancy.endsOn, lang.locale) })}</Body>
       {note === null ? null : <Text style={[styles.note, soon && styles.warn]}>{note}</Text>}
-      {tenancy.startsOn <= today ? <GuideLink /> : null}
+      {tenancy.startsOn <= today ? (
+        <>
+          <GuideLink />
+          <BuildingHelpLink />
+        </>
+      ) : null}
     </Card>
   );
 }

@@ -11,10 +11,10 @@ const partnerRef = z.object({
   status: z.enum(['active', 'suspended', 'ended']),
 });
 
-/** 201 on POST /api/admin/building-contacts, POST /api/admin/notices; PUT /api/admin/guide. */
+/** 201 on POST /api/admin/building-contacts, POST /api/admin/notices; PUT /api/admin/guide, PUT /api/admin/building-lines. */
 export const createdResponse = z.object({ id: z.string() });
 
-/** DELETE /api/admin/building-contacts/:id and DELETE /api/admin/guide/:id. */
+/** DELETE /api/admin/building-contacts/:id, /api/admin/guide/:id and /api/admin/building-lines/:id. */
 export const removedResponse = z.object({ id: z.string(), removed: z.literal(true) });
 
 /** POST /api/admin/services/:code/listed (S1, S2). */

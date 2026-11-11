@@ -13,4 +13,6 @@ export const ADMIN_PLATFORM_ACTIONS = [
   'offer_interest_handled',
   'holiday_added',
   'holiday_removed',
+  'building_line_set',
+  'building_line_removed',
 ] as const;

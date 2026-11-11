@@ -3,14 +3,18 @@
  * - GET /api/me/notices   current notices, and those starting within NOTICE_LEAD_DAYS, for the buildings of the
  *                         signed-in owner's units or the tenant's current tenancy (building and project-wide)
  * - GET /api/me/guide     the home guide per place, a building's own section overriding the project-wide one
+ * - GET /api/me/building-lines  per place, the building's security and management numbers residents may call
+ *                         (E12; ADR 0029), a building's own line overriding the project-wide one
  * The places come from the session's role only (C-AZ-2): an owner's units, or a tenant's current tenancy.
  */
 import {
   dubaiDate,
   guideFor,
+  linesFor,
   noticesFor,
   placesOf,
   type Place,
+  type ResidentBuildingLines,
   type ResidentGuide,
   type ResidentNotices,
 } from '@jadplus/shared';
@@ -24,6 +28,7 @@ import {
   type GuideRow,
   type NoticeRow,
 } from '../admin/platform/notices.js';
+import { LINE_COLUMNS, lineView, type LineRow } from '../admin/platform/lines.js';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
 
@@ -101,6 +106,26 @@ export function residentBuildingRoutes(): Hono<AppEnv> {
       .map((place) => ({ ...place, sections: guideFor(sections, place) }))
       .filter((p) => p.sections.length > 0);
     return c.json({ places: guide });
+  });
+
+  r.get('/me/building-lines', requireRole('owner', 'tenant'), async (c) => {
+    const places = await myPlaces(c);
+    const projects = projectsOf(places);
+    if (projects.length === 0) return c.json({ places: [] } satisfies ResidentBuildingLines);
+    const { results } = await c.env.DB.prepare(
+      `SELECT ${LINE_COLUMNS} FROM building_lines WHERE project IN (${marks(projects.length)})`,
+    )
+      .bind(...projects)
+      .all<LineRow>();
+    const keys = c.get('keys');
+    const lines = await Promise.all(results.map((row) => lineView(keys, row)));
+    const shown = (line: (typeof lines)[number] | null) =>
+      line === null ? null : { phone: line.phone, hours: line.hours };
+    const out: ResidentBuildingLines['places'] = places.map((place) => {
+      const chosen = linesFor(lines, place);
+      return { ...place, security: shown(chosen.security), management: shown(chosen.management) };
+    });
+    return c.json({ places: out });
   });
 
   return r;

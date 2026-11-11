@@ -15,6 +15,7 @@ import {
   inboxResponse,
   ownerTenanciesResponse,
   tenantTenanciesResponse,
+  residentBuildingLinesResponse,
   residentGuideResponse,
   residentNoticesResponse,
   ownerInvoicesResponse,
@@ -48,6 +49,7 @@ import {
   type DeskRequestBody,
   type EmergencyRaised,
   type MyPlace,
+  type ResidentBuildingLines,
   type OwnerPortalAnswer,
   type RaiseEmergencyBody,
   type RaiseRequestBody,
@@ -292,6 +294,10 @@ export const myNotices = async (api: ApiClient): Promise<ResidentNotices['notice
 /** V1, owner or tenant: the home guide for each of their buildings (information only, L3). */
 export const myGuide = async (api: ApiClient): Promise<ResidentGuide['places']> =>
   (await api.get('/api/me/guide', residentGuideResponse)).places;
+
+/** E12 (ADR 0029), owner or tenant: per building of their homes, the security and management numbers. */
+export const myBuildingLines = async (api: ApiClient): Promise<ResidentBuildingLines['places']> =>
+  (await api.get('/api/me/building-lines', residentBuildingLinesResponse)).places;
 
 /** ADR 0026, owner: their partner invoices (paid directly to the partner) and what is still to pay. */
 export const ownerInvoices = (

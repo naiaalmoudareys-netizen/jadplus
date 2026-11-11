@@ -1,13 +1,15 @@
 /**
- * Pure rules behind JAD+ Admin's platform pages (ADR 0025): which contacts, notices and guide sections belong
- * to one building page (E12, V1), the audit log filters as a query (C-AUD-1), and the on-call calendar's
+ * Pure rules behind JAD+ Admin's platform pages (ADR 0025): which contacts, notices, guide sections and help
+ * lines (ADR 0029) belong to one building page (E12, V1), the audit log filters as a query (C-AUD-1), and the on-call calendar's
  * weeks (E6, E7).
  */
 import {
+  BUILDING_LINE_KINDS,
   GUIDE_SECTIONS,
   addDays,
   auditPersonLookup,
   calendarDate,
+  type BuildingLineKind,
   type GuideSection,
   type Place,
 } from '@jadplus/shared';
@@ -58,6 +60,31 @@ export function guideRows<G extends Place & { readonly section: GuideSection }>(
             (s) => s.section === section && s.project === place.project && s.building === null,
           ) ?? null);
     return { section, own, inherited };
+  });
+}
+
+export interface LineRow<L> {
+  readonly kind: BuildingLineKind;
+  /** The line set for this exact place, if any. */
+  readonly own: L | null;
+  /** For a building without its own line: the project-wide line residents call instead. */
+  readonly inherited: L | null;
+}
+
+/** E12 (ADR 0029): one row per help line (security, then building management), with what residents see. */
+export function lineRows<L extends Place & { readonly kind: BuildingLineKind }>(
+  lines: readonly L[],
+  place: Place,
+): LineRow<L>[] {
+  return BUILDING_LINE_KINDS.map((kind) => {
+    const own =
+      lines.find((l) => l.kind === kind && l.project === place.project && l.building === place.building) ??
+      null;
+    const inherited =
+      own !== null || place.building === null
+        ? null
+        : (lines.find((l) => l.kind === kind && l.project === place.project && l.building === null) ?? null);
+    return { kind, own, inherited };
   });
 }
 
