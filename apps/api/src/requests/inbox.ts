@@ -3,7 +3,7 @@
  * a notification exists exactly when the change does. Who receives a request item is inboxRecipients (shared):
  * the owner, the person who raised it, or both. Tenancy items go to the people named.
  */
-import { inboxRecipients, type InboxData, type InboxKind } from '@jadplus/shared';
+import { inboxRecipients, type InboxData, type InboxKind, type NoticeKind } from '@jadplus/shared';
 import { newId } from '../crypto.js';
 
 export interface InboxTarget {
@@ -102,4 +102,24 @@ export function tenancyInboxStatement(
       item.at,
       item.dedupeKey === undefined ? null : `${item.dedupeKey}:${item.userId}`,
     );
+}
+
+/**
+ * V1 (ADR 0027): "a notice was published for your building", one item per person in `userIds` (the audience
+ * chosen by noticeAudience in shared). One statement whatever the number of people: the ids travel as a JSON
+ * array. The item holds the notice kind only; the app writes the sentence and the notice itself is on Home.
+ */
+export function noticeInboxStatement(
+  db: D1Database,
+  notice: { readonly id: string; readonly kind: NoticeKind },
+  userIds: readonly string[],
+  at: number,
+): D1PreparedStatement {
+  const data: InboxData = { noticeKind: notice.kind };
+  return db
+    .prepare(
+      `INSERT INTO inbox (id, user_id, notice_id, kind, data, at)
+       SELECT lower(hex(randomblob(16))), people.value, ?, 'building_notice', ?, ? FROM json_each(?) people`,
+    )
+    .bind(notice.id, JSON.stringify(data), at, JSON.stringify(userIds));
 }

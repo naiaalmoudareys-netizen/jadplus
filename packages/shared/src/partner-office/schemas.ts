@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { idSchema } from '../schemas.js';
 import { isMonday } from '../oncall.js';
 import { SERVICE_CODES } from '../services.js';
-import { monthSchema } from '../admin-ops.js';
+import { monthSchema } from '../periods.js';
 import { daysBetween } from '../tenancy.js';
 import { PARTNER_DOCUMENT_KINDS, QUOTE_STATUSES_FOR_OFFICE, SKILLS, UNAVAILABLE_REASONS } from './rules.js';
 

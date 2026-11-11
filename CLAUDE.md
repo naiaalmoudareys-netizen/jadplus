@@ -180,6 +180,13 @@ pnpm --filter @jadplus/mobile start   # Expo
   management delivery, after-hours contact in escalation, resident notice when JAD+ cancels/moves a request or
   posts a building notice, PDF tab vs CSP check, console bundle split. Waiting on Naya: whether payment
   instructions may hold bank details/links; partner targets (95% on time, 4.0 rating, 5% repeat visits).
+- 11-Nov-2026: those open items built (ADR 0025 follow-up, ADR 0027, migrations 0023-0024): console invoice
+  pages, per-technician numbers, deadline + acknowledged on job pages, office completion photos, offer titles,
+  audit lookup by exact email/mobile, PDFs download, console split per role; residents told when JAD+ cancels,
+  moves or reclassifies a request and of building notices; after-hours technician alerted out of hours;
+  building management alerts queued (undelivered until providers). 768 tests. Open: invoice CSV export, E13
+  misuse reporting, V1 incident linking, after-hours per-partner calendar, whether building management may get
+  the unit number by SMS/email (Naya).
 - Parked by Naya (10-Nov-2026, "put it aside"): tenant page extras: "My home" card (dates, days left, managed
   via JAD+), tenant "needs your attention", building notices (V1), move-in / move-out checklists with photos,
   home guide per building. Tenants request repairs only (ADR 0021).

@@ -26,6 +26,7 @@ interface DueDelivery {
   channel: Channel;
   recipient_user_id: string | null;
   recipient_partner_id: string | null;
+  recipient_contact_id: string | null;
   attempts: number;
   template: NotificationTemplate;
   recipient_kind: RecipientKind;
@@ -45,6 +46,16 @@ export interface SendResult {
 
 /** The address of a delivery, decrypted, or null when it is no longer on file. */
 async function addressOf(db: D1Database, keys: Keys, d: DueDelivery): Promise<string | null> {
+  const column = d.channel === 'email' ? 'email' : 'phone';
+  if (d.recipient_contact_id !== null) {
+    // E12: a building management contact (ADR 0027). Gone if JAD+ Admin removed the contact meanwhile.
+    const row = await db
+      .prepare(`SELECT ${column}_enc AS enc FROM building_contacts WHERE id = ?`)
+      .bind(d.recipient_contact_id)
+      .first<{ enc: unknown }>();
+    if (row === null || row.enc === null) return null;
+    return decryptField(keys, toBytes(row.enc), `building_contacts.${column}:${d.recipient_contact_id}`);
+  }
   if (d.recipient_partner_id !== null) {
     const row = await db
       .prepare('SELECT alert_phone_enc FROM partners WHERE id = ?')
@@ -53,7 +64,6 @@ async function addressOf(db: D1Database, keys: Keys, d: DueDelivery): Promise<st
     if (row === null || row.alert_phone_enc === null) return null;
     return decryptField(keys, toBytes(row.alert_phone_enc), `partners.alert_phone:${d.recipient_partner_id}`);
   }
-  const column = d.channel === 'email' ? 'email' : 'phone';
   const row = await db
     .prepare(`SELECT ${column}_enc AS enc FROM users WHERE id = ? AND status <> 'closed'`)
     .bind(d.recipient_user_id)
@@ -97,7 +107,8 @@ export async function sendDue(
   const db = env.DB;
   const { results } = await db
     .prepare(
-      `SELECT d.id, d.notification_id, d.channel, d.recipient_user_id, d.recipient_partner_id, d.attempts,
+      `SELECT d.id, d.notification_id, d.channel, d.recipient_user_id, d.recipient_partner_id, d.recipient_contact_id,
+              d.attempts,
               n.template, n.recipient_kind, n.urgent, n.request_id,
               r.ref, r.emergency_type, r.arrival_window_start, r.arrival_window_end
        FROM notification_deliveries d

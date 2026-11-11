@@ -35,9 +35,11 @@ The partner overview compares each partner with: on time 95% or more, average ra
 visits 5% or less. It warns when the 30-day rating is within 0.3 of 4.0, or after one missed emergency (two in 90
 days flag the partner, S6). These figures live in `PARTNER_TARGETS` (packages/shared) and can be changed.
 
-## Known gaps after this round
+## Follow-up (11-Nov-2026)
 
-- Building management alerts (E12) still cannot be delivered: building contacts are not JAD+ accounts, so the
-  delivery engine needs its own recipient type.
-- The partner's after-hours contact is recorded but not yet used by the escalation job (E5-E7).
-- Residents get no notification when JAD+ cancels or moves their request, or publishes a building notice.
+The gaps listed here first are closed: building management alerts, the after-hours contact in escalation and
+resident notices are in ADR 0027. The console also gained invoice pages (ADR 0026), numbers per technician,
+the next deadline and "acknowledged" on job pages, finished-work photos from the office, offer titles (kept
+with each interest, migration 0024), audit log lookup by exact email or mobile (names are encrypted without
+an index, ADR 0003), PDFs downloaded instead of opened in a tab (the CSP blocks the browser's PDF viewer), and
+the admin and office pages loaded separately after sign-in.

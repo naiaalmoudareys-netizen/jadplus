@@ -252,7 +252,8 @@ describe('notifications (ADR 0019)', () => {
   it('the database allows exactly the shared kinds (no drift)', () => {
     const db = migratedDb();
     const check = db.prepare("SELECT sql FROM sqlite_master WHERE name = 'inbox'").get() as { sql: string };
-    for (const kind of INBOX_KINDS) expect(check.sql).toContain(`'${kind}'`);
-    expect(check.sql.match(/'[a-z_]+'/g)?.length).toBe(INBOX_KINDS.length);
+    // The list inside "kind IN (...)", not the other CHECKs that name one kind (e.g. 'building_notice').
+    const list = /kind IN \(([^)]*)\)/.exec(check.sql)?.[1] ?? '';
+    expect(list.match(/'[a-z_]+'/g)?.map((k) => k.slice(1, -1))).toEqual([...INBOX_KINDS]);
   });
 });

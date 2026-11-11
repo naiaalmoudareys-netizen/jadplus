@@ -1,7 +1,8 @@
 /**
  * Building notices (V1) and the home guide (ADR 0025). Information only, plain text (L3: never instructions).
  * - GET    /api/admin/notices?project=&state=live|all   notices, newest first (live: not ended or withdrawn)
- * - POST   /api/admin/notices                           publish a notice for a project or one building
+ * - POST   /api/admin/notices                           publish a notice for a project or one building; every
+ *                                                       owner and current tenant there gets an in-app item (ADR 0027)
  * - POST   /api/admin/notices/:id/withdraw              take a notice down (kept as evidence)
  * - GET    /api/admin/guide?project=                    the guide sections of a project and its buildings
  * - PUT    /api/admin/guide                             create or replace one section for a project or building
@@ -9,7 +10,9 @@
  */
 import {
   adminNoticesQuery,
+  dubaiDate,
   guideSectionBody,
+  noticeAudience,
   noticeBody,
   noticeState,
   platformIdParam,
@@ -17,13 +20,16 @@ import {
   type AdminGuide,
   type AdminNotices,
   type GuideSection,
+  type Home,
   type NoticeKind,
+  type Place,
 } from '@jadplus/shared';
 import { Hono } from 'hono';
 import { requireRole } from '../../auth/middleware.js';
 import { newId } from '../../crypto.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
+import { noticeInboxStatement } from '../../requests/inbox.js';
 import { parseJsonBody, parseParams, parseQuery } from '../../validate.js';
 import { CHANGERS, READERS, audit, placeBuilding, requireKnownPlace, storedBuilding } from './common.js';
 
@@ -82,6 +88,28 @@ export function guideView(g: GuideRow): AdminGuide['sections'][number] {
   };
 }
 
+/**
+ * V1: everyone with a home in the project (owners of its units, tenants of a current tenancy there), with the
+ * building Salesforce last named for the unit. noticeAudience (shared) keeps those the notice covers.
+ */
+async function noticeRecipients(db: D1Database, place: Place, today: string): Promise<string[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT ou.user_id AS userId, ou.project, ou.building FROM owner_units ou JOIN users u ON u.id = ou.user_id
+       WHERE ou.project = ?1 AND u.status = 'active'
+       UNION ALL
+       SELECT t.tenant_user_id, ou.project, ou.building FROM tenancies t
+       JOIN owner_units ou ON ou.rowid =
+         (SELECT x.rowid FROM owner_units x WHERE x.sf_unit_id = t.sf_unit_id ORDER BY x.synced_at DESC LIMIT 1)
+       JOIN users u ON u.id = t.tenant_user_id
+       WHERE ou.project = ?1 AND t.status = 'active' AND t.starts_on <= ?2 AND t.ends_on >= ?2
+         AND u.status = 'active'`,
+    )
+    .bind(place.project, today)
+    .all<Home>();
+  return noticeAudience(place, results);
+}
+
 export function platformNoticeRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
 
@@ -107,6 +135,7 @@ export function platformNoticeRoutes(): Hono<AppEnv> {
     await requireKnownPlace(db, body);
     const id = newId();
     const building = storedBuilding(body.building);
+    const people = await noticeRecipients(db, body, dubaiDate(now));
     await db.batch([
       db
         .prepare(
@@ -125,10 +154,12 @@ export function platformNoticeRoutes(): Hono<AppEnv> {
           now,
           c.get('auth').userId,
         ),
+      noticeInboxStatement(db, { id, kind: body.kind }, people, now),
       audit(c, 'building_notice_published', 'building_notice', id, {
         project: body.project,
         building,
         kind: body.kind,
+        residentsTold: people.length,
       }),
     ]);
     return c.json({ id }, 201);

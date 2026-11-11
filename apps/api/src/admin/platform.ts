@@ -4,7 +4,8 @@
  * and so is every read that shows personal data.
  *
  * Here:
- * - GET  /api/admin/offer-interests?state=open|all   owners who tapped "I'm interested" (N2), for sales
+ * - GET  /api/admin/offer-interests?state=open|all   owners who tapped "I'm interested" (N2), for sales, with
+ *                                                    the offer's title
  * - POST /api/admin/offer-interests/:id/handled      sales picked it up
  * - GET  /api/admin/on-call/weeks?from=              8 weeks of the rota with names, and who may be on call
  * - GET  /api/admin/settings                         versions, limits, calendar, SLA targets (read-only)
@@ -27,6 +28,7 @@ import { requireRole } from '../auth/middleware.js';
 import { decryptField, toBytes, type Keys } from '../crypto.js';
 import type { AppEnv } from '../env.js';
 import { ApiError } from '../errors.js';
+import { demoOwnerPortal } from '../portal/demo.js';
 import { parseParams, parseQuery } from '../validate.js';
 import { platformBuildingRoutes } from './platform/buildings.js';
 import { CHANGERS, READERS, audit } from './platform/common.js';
@@ -49,8 +51,15 @@ export function adminPlatformRoutes(): Hono<AppEnv> {
   r.get('/offer-interests', requireRole(...READERS), async (c) => {
     const { state } = parseQuery(c, offerInterestsQuery);
     const keys = c.get('keys');
+    // Offers are Salesforce posts; JAD+ keeps the title each owner saw with their interest (migration 0024).
+    // Outside production, interests recorded before that are named from the demo posts.
+    const demoTitles = new Map<string, string>(
+      c.env.ENVIRONMENT === 'production'
+        ? []
+        : demoOwnerPortal(c.get('now')).posts.map((p) => [p.id, p.title] as const),
+    );
     const { results } = await c.env.DB.prepare(
-      `SELECT i.id, i.post_id, i.user_id, u.name_enc, u.sf_contact_id, i.at, i.handled_at, i.withdrawn_at
+      `SELECT i.id, i.post_id, i.user_id, u.name_enc, u.sf_contact_id, i.at, i.handled_at, i.withdrawn_at, i.title
        FROM offer_interests i JOIN users u ON u.id = i.user_id
        WHERE ? = 'all' OR (i.handled_at IS NULL AND i.withdrawn_at IS NULL)
        ORDER BY i.at DESC LIMIT 500`,
@@ -59,6 +68,7 @@ export function adminPlatformRoutes(): Hono<AppEnv> {
       .all<{
         id: string;
         post_id: string;
+        title: string | null;
         user_id: string;
         name_enc: Uint8Array | null;
         sf_contact_id: string | null;
@@ -70,6 +80,7 @@ export function adminPlatformRoutes(): Hono<AppEnv> {
       results.map(async (i) => ({
         id: i.id,
         postId: i.post_id,
+        title: i.title ?? demoTitles.get(i.post_id) ?? null,
         owner: {
           userId: i.user_id,
           name: await nameOf(keys, i.user_id, i.name_enc),

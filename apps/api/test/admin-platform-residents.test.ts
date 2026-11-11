@@ -139,7 +139,17 @@ describe('building notices (V1)', () => {
     expect(live.notices).toHaveLength(4);
     expect(
       rows(w, "SELECT detail FROM audit_log WHERE action = 'building_notice_published' LIMIT 1"),
-    ).toEqual([{ detail: JSON.stringify({ project: 'JAD 288', building: 'Building B', kind: 'water' }) }]);
+    ).toEqual([
+      // ADR 0027: how many residents got the in-app item (the owner and the tenant of the unit in Building B).
+      {
+        detail: JSON.stringify({
+          project: 'JAD 288',
+          building: 'Building B',
+          kind: 'water',
+          residentsTold: 2,
+        }),
+      },
+    ]);
   });
 
   it('V1/C-AZ-1: only JAD+ Admin publishes, for a known building, ending in the future, as plain text', async () => {

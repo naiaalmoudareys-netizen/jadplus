@@ -348,6 +348,8 @@ export const offerInterestsResponse = z.object({
     z.object({
       id: z.string(),
       postId: z.string(),
+      /** The offer's title when the owner tapped "I'm interested"; null if it was not recorded. */
+      title: z.string().nullable(),
       owner: z.object({
         userId: z.string(),
         name: z.string().nullable(),

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { EMERGENCY_TYPES, LIFE_SAFETY_TYPES } from './emergency.js';
 import { JOB_ACTIONS } from './jobflow.js';
 import { ROLES, STATUSES } from './lifecycle.js';
+import { requestClockSchema } from './request-clock.js';
 import { VISIT_SLOT_KEYS } from './visits.js';
 
 const roleContext = z.object({
@@ -193,6 +194,11 @@ export const requestDetailResponse = z.object({
   rating: z.object({ stars: z.number().int(), comment: z.string().nullable() }).nullable(),
   /** What the signed-in person can do now (jobflow.ts). */
   actions: z.array(z.enum(JOB_ACTIONS)),
+  /**
+   * Answered or not, and the next deadline (request-clock.ts): for the partner and JAD+ staff only; null for
+   * owners and tenants (S8).
+   */
+  clock: requestClockSchema.nullable(),
 });
 export type RequestDetail = z.infer<typeof requestDetailResponse>;
 

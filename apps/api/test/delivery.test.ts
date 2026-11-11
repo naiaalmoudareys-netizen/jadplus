@@ -203,7 +203,7 @@ describe('who receives on-call and building alerts (E3, E6, E7, E12)', () => {
     ]);
   });
 
-  it('E12: building management has no contact in JAD+ yet, so its alert is flagged at once', async () => {
+  it('E12: with no building management contact on file, its alert is flagged at once', async () => {
     const w = await world();
     await w.h.addUser({ email: 'demo@jadplus.ae', roles: ['jad_admin'] });
     await raise(w, { ...leak, faultSource: 'building' });

@@ -51,7 +51,8 @@ export type InboxIcon =
   | 'refresh-outline'
   | 'star-outline'
   | 'receipt-outline'
-  | 'cash-outline';
+  | 'cash-outline'
+  | 'megaphone-outline';
 
 export interface InboxText {
   readonly title: string;
@@ -110,6 +111,10 @@ const LOOK: Readonly<Record<InboxKind, KindLook>> = {
   invoice_not_received: { icon: 'help-circle-outline', needsYou: true },
   invoice_cancelled: { icon: 'close-circle-outline', needsYou: false },
   invoice_paid_claimed: { icon: 'cash-outline', needsYou: true },
+  request_cancelled_by_jad: { icon: 'close-circle-outline', needsYou: false },
+  request_moved_by_jad: { icon: 'swap-horizontal-outline', needsYou: false },
+  request_reclassified: { icon: 'refresh-outline', needsYou: false },
+  building_notice: { icon: 'megaphone-outline', needsYou: false },
 };
 
 const key = (kind: InboxKind, part: 'title' | 'detail'): MessageKey => `inbox.${kind}.${part}`;
@@ -138,6 +143,8 @@ function values(item: InboxItem, lang: Lang): Record<string, string | number> {
     // Invoices (ADR 0026): the number (the request reference if an older item has none) and the due date.
     number: item.data.invoiceNumber ?? item.ref ?? '',
     dueOn: longDate(item.data.dueOn ?? null, lang.locale),
+    // V1 (ADR 0027): what the building notice is about.
+    topic: lang.t(`building.kind.${item.data.noticeKind ?? 'other'}`),
   };
 }
 
@@ -193,8 +200,8 @@ export function inboxText(item: InboxItem, lang: Lang): InboxText {
 }
 
 /**
- * Where tapping a notification goes. Residents: its request, or (a tenancy item) My unit for owners and Home for
- * tenants. Partners: the job page; an emergency moved to the backup partner is no longer theirs (E6), so it opens
+ * Where tapping a notification goes. Residents: its request, a building notice to Home (where notices are
+ * shown, ADR 0027), or (a tenancy item) My unit for owners and Home for tenants. Partners: the job page; an emergency moved to the backup partner is no longer theirs (E6), so it opens
  * nothing (null) and stays in the list to read.
  */
 export type InboxTarget =
@@ -206,6 +213,7 @@ export function inboxTarget(item: InboxItem, role: Role): InboxTarget {
     return { jobId: item.requestId };
   }
   if (item.requestId !== null) return { requestId: item.requestId };
+  if (item.kind === 'building_notice') return { tab: 'home' };
   return { tab: role === 'owner' ? 'unit' : 'home' };
 }
 

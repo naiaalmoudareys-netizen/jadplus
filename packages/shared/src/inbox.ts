@@ -7,6 +7,7 @@
  * push, respecting the person's switches (preferences.ts). Request updates are the service itself: always on.
  */
 import { z } from 'zod';
+import { NOTICE_KINDS } from './admin-platform.js';
 import { idSchema } from './schemas.js';
 
 export const INBOX_KINDS = [
@@ -48,6 +49,12 @@ export const INBOX_KINDS = [
   'invoice_not_received', // to the owner: the partner has not received the payment the owner reported
   'invoice_cancelled', // to the owner: the partner cancelled the invoice
   'invoice_paid_claimed', // to the partner office: the owner says they have paid; please confirm
+  // When JAD+ acts on a request (ADR 0027): to the owner and the person who raised it.
+  'request_cancelled_by_jad', // JAD+ Admin cancelled the request
+  'request_moved_by_jad', // JAD+ Admin gave the job to another partner
+  'request_reclassified', // E13: JAD+ reviewed an emergency and handles it as a routine request
+  // V1 (ADR 0027): a notice was published for the person's building; the item points at the notice.
+  'building_notice',
 ] as const;
 export type InboxKind = (typeof INBOX_KINDS)[number];
 
@@ -110,6 +117,8 @@ export const inboxData = z.object({
   /** An invoice's due date (YYYY-MM-DD) and number (ADR 0026). */
   dueOn: z.string().optional(),
   invoiceNumber: z.string().optional(),
+  /** V1: what a building notice is about (water, power, lift...), so the app can name it (ADR 0027). */
+  noticeKind: z.enum(NOTICE_KINDS).optional(),
 });
 export type InboxData = z.infer<typeof inboxData>;
 
@@ -119,7 +128,7 @@ export const inboxResponse = z.object({
     z.object({
       id: z.string(),
       kind: z.enum(INBOX_KINDS),
-      /** The request the item is about, or null for a tenancy item (then tenancyId is set). */
+      /** The request the item is about, or null for a tenancy item (tenancyId set) or a building notice. */
       requestId: z.string().nullable(),
       tenancyId: z.string().nullable(),
       ref: z.string().nullable(),

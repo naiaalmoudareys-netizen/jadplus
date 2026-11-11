@@ -249,3 +249,37 @@ describe('A8: where the visit stands', () => {
     expect(visitStatusLabel('on_the_way', 'resident', fr.t)).toBe('Le technicien est en route');
   });
 });
+
+describe('ADR 0027: JAD+ acting on a request, and building notices', () => {
+  it('E13 and JAD+ actions read as plain sentences with the reference', () => {
+    expect(inboxText(item({ kind: 'request_cancelled_by_jad' }), en)).toMatchObject({
+      title: 'Request cancelled by JAD+',
+      detail: 'No visit will take place · JAD-AB12CD',
+      needsYou: false,
+    });
+    expect(inboxText(item({ kind: 'request_moved_by_jad' }), en).title).toBe('New partner for your request');
+    expect(inboxText(item({ kind: 'request_reclassified' }), en).title).toBe('Handled as a routine request');
+    expect(inboxTarget(item({ kind: 'request_reclassified' }), 'tenant')).toEqual({ requestId: 'r1' });
+  });
+
+  it('V1: a building notice names its subject in the person’s language and opens Home', () => {
+    const notice = item({
+      kind: 'building_notice',
+      requestId: null,
+      ref: null,
+      data: { noticeKind: 'lift' },
+    });
+    expect(inboxText(notice, en)).toMatchObject({
+      title: 'New notice for your building',
+      detail: 'Lift · read it on Home',
+      icon: 'megaphone-outline',
+    });
+    expect(inboxText(notice, fr).detail).toBe('Ascenseur · à lire sur l’Accueil');
+    expect(inboxText(item({ kind: 'building_notice', requestId: null, ref: null }), en).detail).toBe(
+      'Notice · read it on Home',
+    );
+    expect(inboxTarget(notice, 'owner')).toEqual({ tab: 'home' });
+    expect(inboxTarget(notice, 'tenant')).toEqual({ tab: 'home' });
+    expect(inboxText(notice, ar).title).toBe('إشعار جديد لمبناك');
+  });
+});

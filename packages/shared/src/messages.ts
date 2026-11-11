@@ -64,6 +64,13 @@ export function renderMessage(template: NotificationTemplate, to: RecipientKind,
   const what = f.type === null ? 'Emergency' : EMERGENCY_TYPE_LABELS[f.type];
   switch (template) {
     case 'emergency_new_job':
+      // E12: building management is not a JAD+ user, so it is told what was reported, not asked to acknowledge.
+      if (to === 'building_fm') {
+        return {
+          subject: `JAD+ BUILDING ALERT ${f.ref}`,
+          body: `${what} reported at a unit in your building; it may come from shared parts or building systems. Please check the building side. The JAD+ on-call team may call you.`,
+        };
+      }
       return {
         subject: `JAD+ EMERGENCY ${f.ref}`,
         body: `${what}. New emergency job for you. Open JAD+ and acknowledge within 15 minutes.`,

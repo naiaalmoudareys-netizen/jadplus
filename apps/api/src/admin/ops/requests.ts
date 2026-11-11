@@ -8,6 +8,8 @@
  * - POST /requests/:id/reassign    { partnerId, reason } to another active partner (E6, S6)
  * - POST /requests/:id/reclassify  { reason } emergency -> routine (E13)
  * - POST /requests/:id/cancel      { reason } cancelled by JAD+
+ * The owner and the person who raised the request are told in the app when JAD+ moves, reclassifies or cancels
+ * it (ADR 0027); the reason stays a staff note.
  */
 import {
   OPEN_STATUSES,
@@ -26,7 +28,7 @@ import { newId } from '../../crypto.js';
 import type { AppEnv } from '../../env.js';
 import { ApiError } from '../../errors.js';
 import { withConflictCheck } from '../../requests/concurrency.js';
-import { partnerInboxStatement } from '../../requests/inbox.js';
+import { inboxStatements, partnerInboxStatement } from '../../requests/inbox.js';
 import { eventStatement, notificationStatement } from '../../requests/store.js';
 import { changeStatements } from '../../requests/transition.js';
 import { parseJsonBody, parseParams } from '../../validate.js';
@@ -182,6 +184,7 @@ async function reassign(c: Ctx) {
             }),
           ]
         : []),
+      ...inboxStatements(db, row, 'request_moved_by_jad', now),
       note.statement,
     ]),
   );
@@ -229,6 +232,7 @@ async function reclassify(c: Ctx) {
           c.get('auth').role,
           JSON.stringify({ from: row.emergency_type, to: 'routine' }),
         ),
+      ...inboxStatements(db, row, 'request_reclassified', now),
       note.statement,
     ]),
   );
@@ -240,6 +244,7 @@ async function cancel(c: Ctx) {
   const body = await parseJsonBody(c, adminReasonBody);
   const row = await requestForAction(c, id, 'cancelled');
   const db = c.env.DB;
+  const now = c.get('now');
   const note = await noteStatement(c, id, 'cancelled', body.reason);
   await withConflictCheck(() =>
     db.batch([
@@ -252,14 +257,8 @@ async function cancel(c: Ctx) {
       ...callOffStatements(c, id),
       ...(row.partner_id === null
         ? []
-        : [
-            partnerInboxStatement(
-              db,
-              { requestId: id, partnerId: row.partner_id },
-              'job_cancelled',
-              c.get('now'),
-            ),
-          ]),
+        : [partnerInboxStatement(db, { requestId: id, partnerId: row.partner_id }, 'job_cancelled', now)]),
+      ...inboxStatements(db, row, 'request_cancelled_by_jad', now),
       note.statement,
     ]),
   );

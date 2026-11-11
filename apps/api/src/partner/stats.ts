@@ -3,6 +3,9 @@
  * visits, over the last 7, 30 or 90 days.
  *
  * - GET /api/partner/stats?days=7   a technician sees their own jobs; the partner office its whole company
+ * - GET /api/partner/technician-stats?month=   the office's per-technician numbers (technician-stats.ts)
+ *
+ * Mounted on /api/partner next to other routers, so each route declares its roles (no '*' middleware).
  *
  * Owners and tenants never see scorecards (S8). Ratings are counted, never shown one by one, so a technician
  * cannot tell which resident rated them.
@@ -12,14 +15,15 @@ import { Hono } from 'hono';
 import { requireRole } from '../auth/middleware.js';
 import type { AppEnv } from '../env.js';
 import { parseQuery } from '../validate.js';
+import { registerTechnicianStats } from './technician-stats.js';
 
 const DAY = 86_400_000;
 
 export function partnerStatsRoutes(): Hono<AppEnv> {
   const r = new Hono<AppEnv>();
-  r.use('*', requireRole('partner', 'partner_admin'));
+  registerTechnicianStats(r);
 
-  r.get('/stats', async (c) => {
+  r.get('/stats', requireRole('partner', 'partner_admin'), async (c) => {
     const { days: raw } = parseQuery(c, partnerStatsQuery);
     const days = Number(raw ?? '7');
     const actor = c.get('auth');

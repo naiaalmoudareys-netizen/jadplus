@@ -11,6 +11,7 @@ import { screensBuilding } from './strings/screens-building.js';
 import { screensHelp } from './strings/screens-help.js';
 import { screensExtras } from './strings/screens-extras.js';
 import { screensInbox } from './strings/screens-inbox.js';
+import { screensInboxJad } from './strings/screens-inbox-jad.js';
 import { screensInboxPartner } from './strings/screens-inbox-partner.js';
 import { screensInvoices } from './strings/screens-invoices.js';
 import { screensJob } from './strings/screens-job.js';
@@ -38,6 +39,7 @@ export const PARTS = [
   screensJourney,
   screensInbox,
   screensInboxPartner,
+  screensInboxJad,
   screensExtras,
   screensTenancy,
   screensTenancy2,

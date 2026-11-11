@@ -24,6 +24,9 @@ import { ownerFile } from './source.js';
 
 type Ctx = Context<AppEnv>;
 
+/** Longest offer title kept with the interest's audit entry. */
+const OFFER_TITLE_MAX = 200;
+
 const postParam = z.strictObject({ postId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/) });
 /** Salesforce file version ids only (068…, 15 or 18 characters). */
 /** Salesforce file version ids (068…), or demo file ids outside production. */
@@ -80,8 +83,9 @@ export function portalRoutes(deps: Deps): Hono<AppEnv> {
     const now = c.get('now');
     await db.batch([
       db
-        .prepare('INSERT INTO offer_interests (id, post_id, user_id, at) VALUES (?, ?, ?, ?)')
-        .bind(id, postId, actor.userId, now),
+        .prepare('INSERT INTO offer_interests (id, post_id, user_id, at, title) VALUES (?, ?, ?, ?, ?)')
+        // The title as the owner saw it (posts live in Salesforce): how the console's Offers page names it.
+        .bind(id, postId, actor.userId, now, offer.title.slice(0, OFFER_TITLE_MAX) || null),
       auditStatement(db, {
         at: now,
         actorUserId: actor.userId,

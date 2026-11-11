@@ -5,7 +5,8 @@
  * - POST /api/me/inbox/read   mark some (ids) or all as read
  *
  * Only the person's own items (C-AZ-2), and only for requests they may still see: a tenant whose tenancy ended
- * no longer sees that unit's notifications.
+ * no longer sees that unit's notifications. Building notice items (V1) show in the owner and tenant views while
+ * the notice has not been withdrawn.
  */
 import {
   ROLES,
@@ -30,6 +31,8 @@ interface Row {
   kind: string;
   request_id: string | null;
   item_tenancy_id: string | null;
+  notice_id: string | null;
+  notice_withdrawn_at: number | null;
   ref: string | null;
   at: number;
   read_at: number | null;
@@ -46,6 +49,9 @@ interface Row {
  * view they belong to (the owner's in the owner view, the tenant's in the tenant view).
  */
 async function visibleTo(db: D1Database, actor: Actor, row: Row, today: string): Promise<boolean> {
+  if (row.notice_id !== null) {
+    return (actor.role === 'owner' || actor.role === 'tenant') && row.notice_withdrawn_at === null;
+  }
   if (row.item_tenancy_id !== null) {
     return (
       (actor.role === 'owner' && row.t_owner === actor.userId) ||
@@ -70,9 +76,11 @@ export function inboxRoutes(): Hono<AppEnv> {
     const today = dubaiDate(c.get('now'));
     const { results } = await db
       .prepare(
-        `SELECT i.id, i.kind, i.request_id, i.tenancy_id AS item_tenancy_id, r.ref, i.at, i.read_at, i.data,
+        `SELECT i.id, i.kind, i.request_id, i.tenancy_id AS item_tenancy_id, i.notice_id,
+                bn.withdrawn_at AS notice_withdrawn_at, r.ref, i.at, i.read_at, i.data,
                 r.owner_user_id, r.tenancy_id, r.partner_id, t.owner_user_id AS t_owner, t.tenant_user_id AS t_tenant
          FROM inbox i LEFT JOIN requests r ON r.id = i.request_id LEFT JOIN tenancies t ON t.id = i.tenancy_id
+           LEFT JOIN building_notices bn ON bn.id = i.notice_id
          WHERE i.user_id = ? ORDER BY i.at DESC, i.rowid DESC LIMIT ?`,
       )
       .bind(actor.userId, LIMIT)

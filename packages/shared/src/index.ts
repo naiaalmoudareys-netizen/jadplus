@@ -1,7 +1,9 @@
 export * from './access.js';
+export * from './audiences.js';
 export * from './auth.js';
 export * from './calendar.js';
 export * from './admin-ops.js';
+export * from './periods.js';
 export * from './admin-platform.js';
 export * from './console.js';
 export * from './conversation.js';
@@ -20,6 +22,7 @@ export * from './partner-office.js';
 export * from './payments.js';
 export * from './portal.js';
 export * from './preferences.js';
+export * from './request-clock.js';
 export * from './responses.js';
 export * from './schemas.js';
 export * from './scorecard.js';

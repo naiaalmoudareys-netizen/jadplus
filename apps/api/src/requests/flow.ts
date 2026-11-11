@@ -7,6 +7,7 @@ import {
   canActOnRequest,
   dubaiDate,
   jobActions,
+  requestClock,
   type CloseReason,
   type JobAction,
   type JobState,
@@ -123,14 +124,20 @@ interface QuoteRow {
   expires_at: number;
 }
 
-type Extras = Pick<RequestDetail, 'visit' | 'quote' | 'makeSafe' | 'completionPhotos' | 'rating' | 'actions'>;
+type Extras = Pick<
+  RequestDetail,
+  'visit' | 'quote' | 'makeSafe' | 'completionPhotos' | 'rating' | 'actions' | 'clock'
+>;
+
+/** Who sees the SLA clock on a request: the partner and JAD+ staff, never residents (S8). */
+const CLOCK_ROLES: ReadonlySet<string> = new Set(['partner', 'partner_admin', 'jad_admin', 'jad_viewer']);
 
 /** What the request page shows beyond the summary and messages (the caller has checked the person may see it). */
 export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise<Extras> {
   const db = c.env.DB;
   const row = await readFlowRow(db, id);
   if (row === null) throw new ApiError(404, 'Not found.');
-  const [visit, quote, photos, rating, makeSafe] = await Promise.all([
+  const [visit, quote, photos, rating, makeSafe, booked] = await Promise.all([
     db
       .prepare(
         `SELECT v.window_start, v.window_end, v.status, t.user_id AS tech_user_id, u.name_enc AS tech_name_enc
@@ -160,6 +167,10 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
       .prepare('SELECT amount_fils, scope, at FROM make_safe_works WHERE request_id = ?')
       .bind(row.id)
       .first<{ amount_fils: number; scope: string; at: number }>(),
+    db
+      .prepare("SELECT MIN(at) AS at FROM request_events WHERE request_id = ? AND kind = 'visit_booked'")
+      .bind(row.id)
+      .first<{ at: number | null }>(),
   ]);
   // E4: the resident sees the technician's name (only the name, never contact details).
   const techUser = visit?.tech_user_id ?? null;
@@ -192,5 +203,18 @@ export async function detailExtras(c: Ctx, id: string, canAct: boolean): Promise
     completionPhotos: photos.results,
     rating,
     actions: canAct ? jobActions(c.get('auth').role, await stateOf(db, row, c.get('auth').userId)) : [],
+    clock: CLOCK_ROLES.has(c.get('auth').role)
+      ? requestClock(
+          {
+            status: row.status,
+            isEmergency: row.is_emergency === 1,
+            acknowledgedAt: row.acknowledged_at,
+            firstVisitBookedAt: booked?.at ?? null,
+            nextDueAt: row.next_due_at,
+            nextDueKind: row.next_due_kind,
+          },
+          c.get('now'),
+        )
+      : null,
   };
 }
