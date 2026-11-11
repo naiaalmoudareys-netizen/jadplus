@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { calendarDate } from '../partner-office/schemas.js';
 import { idSchema } from '../schemas.js';
+import { paymentTextProblem } from './payment-text.js';
 import {
   AGEING_BUCKETS,
   DEFAULT_DUE_DAYS,
@@ -28,8 +29,19 @@ export const invoiceIdParam = z.strictObject({ id: idSchema });
 export const issueInvoiceBody = z.strictObject({
   requestId: idSchema,
   trn: trnSchema,
-  /** Bank details (IBAN) or the partner's payment link, as plain text. Stored encrypted. */
-  paymentInstructions: z.string().trim().min(5).max(PAYMENT_INSTRUCTIONS_MAX),
+  /**
+   * Bank details (IBAN, account) or the partner's payment link, as plain text; no phone numbers, emails or
+   * chat links (P2, payment-text.ts). Stored encrypted.
+   */
+  paymentInstructions: z
+    .string()
+    .trim()
+    .min(5)
+    .max(PAYMENT_INSTRUCTIONS_MAX)
+    .superRefine((text, ctx) => {
+      const problem = paymentTextProblem(text);
+      if (problem !== null) ctx.addIssue({ code: 'custom', message: problem });
+    }),
   dueInDays: z.number().int().min(0).max(MAX_DUE_DAYS).default(DEFAULT_DUE_DAYS),
   /** A lower subtotal than approved, in AED (before VAT). Never more than the owner approved. */
   amountAed: z

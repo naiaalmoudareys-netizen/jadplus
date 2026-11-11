@@ -156,7 +156,8 @@ export function IssueForm({
           }}
         />
         <span className="hint">
-          Your bank details (IBAN) or your payment link. Shown only to this owner, stored encrypted.
+          Your bank details (bank, account name, IBAN) or your payment link. No phone numbers or emails:
+          owners contact you through JAD+. Shown only to this owner, stored encrypted.
         </span>
       </label>
       <Preview job={job} amount={amount} />

@@ -101,6 +101,25 @@ describe('partner office issues an invoice (ADR 0026 §1)', () => {
     expect((await issue(w, token, 'r1', { paymentInstructions: '' })).status).toBe(400);
   });
 
+  it('P2: payment instructions keep bank details and links but refuse a phone number or email', async () => {
+    const w = await world();
+    const token = await office(w);
+    job(w, 'r1');
+    const phone = await issue(w, token, 'r1', {
+      paymentInstructions: 'Pay by transfer or call +971 50 000 0000',
+    });
+    expect(phone.status).toBe(400);
+    expect(JSON.stringify(await phone.json())).toContain('phone numbers, emails');
+    expect(
+      (await issue(w, token, 'r1', { paymentInstructions: 'Send proof to pay@example.com' })).status,
+    ).toBe(400);
+    const link = await issue(w, token, 'r1', {
+      paymentInstructions:
+        'Bank: Example Bank. IBAN AE07 0000 0000 0000 0000 000. Or pay online: https://pay.example.com/inv',
+    });
+    expect(link.status).toBe(201);
+  });
+
   it('C-AZ-1/2: technicians, residents and another company cannot issue or list', async () => {
     const w = await world();
     const token = await office(w);

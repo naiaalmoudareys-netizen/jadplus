@@ -19,6 +19,11 @@ JAD+ records partner invoices and whether they are paid; it never holds or moves
 4. **JAD+ Admin** sees every invoice, who has paid and who has not, by partner and by owner, for follow-up and
    disputes (handled by the JAD+ desk), but takes no part in the payment.
 
+**How to pay (Naya, 11-Nov-2026: "yes they should for sure")**: the partner may write its bank details (bank,
+account name, IBAN, account number) and a payment link. Phone numbers, emails and chat links are refused, because
+all contact stays on JAD+ (ADR 0009, P2); the check (`packages/shared/src/invoices/payment-text.ts`) is written
+so that an IBAN or account number is never mistaken for a phone number.
+
 ## Why
 
 JAD Global stays out of the money flow: no client funds held, no refunds or payouts to run, no payment
