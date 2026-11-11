@@ -13,7 +13,7 @@
   "dependencies": {
     "@fontsource/hanken-grotesk": "5.3.0",
     "@jadplus/shared": "workspace:*",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-dom": "19.3.0",
     "zod": "4.6.7"
   },
